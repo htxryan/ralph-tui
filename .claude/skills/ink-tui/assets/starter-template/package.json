@@ -1,0 +1,33 @@
+{
+  "name": "my-cli",
+  "version": "1.0.0",
+  "description": "My Ink CLI application",
+  "type": "module",
+  "bin": {
+    "my-cli": "./dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/cli.js",
+    "dev": "tsc --watch",
+    "test": "vitest",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "cli",
+    "ink",
+    "react",
+    "terminal"
+  ],
+  "dependencies": {
+    "commander": "^12.0.0",
+    "ink": "^5.0.1",
+    "react": "^18.2.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.0",
+    "ink-testing-library": "^4.0.0",
+    "typescript": "^5.3.0",
+    "vitest": "^1.0.0"
+  }
+}

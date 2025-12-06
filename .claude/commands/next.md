@@ -1,0 +1,1 @@
+Pick up the next highest priority item from the provided beads epic (or the specified task if given a task ID), and implement it.
