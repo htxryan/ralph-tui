@@ -70,6 +70,11 @@ Personal overrides that should NOT be committed (add to `.gitignore`):
     "archiveDir": ".ralph/archive",
     "promptsDir": ".ralph/prompts",
     "planningDir": ".ralph/planning"
+  },
+  "taskManagement": {
+    "provider": "vibe-kanban",
+    "autoInstall": true,
+    "providerConfig": {}
   }
 }
 ```
@@ -108,6 +113,82 @@ Personal overrides that should NOT be committed (add to `.gitignore`):
 | `archiveDir` | string | `".ralph/archive"` | Directory for archived sessions |
 | `promptsDir` | string | `".ralph/prompts"` | Directory for prompt templates |
 | `planningDir` | string | `".ralph/planning"` | Directory for planning files |
+
+### Task Management Configuration
+
+Ralph supports pluggable task management backends through adapters. Configure which system to use for tracking tasks displayed in the Task tab.
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `provider` | string | `"vibe-kanban"` | Task backend: `vibe-kanban`, `jira`, `linear`, `beads`, or `github-issues` |
+| `autoInstall` | boolean | `true` | Auto-install Vibe Kanban if not available (only applies to vibe-kanban) |
+| `providerConfig` | object | `{}` | Provider-specific configuration (see below) |
+
+#### Supported Providers
+
+| Provider | Status | Description |
+|----------|--------|-------------|
+| `vibe-kanban` | **Implemented** | MCP-based local task management (default) |
+| `jira` | Planned | Atlassian Jira integration |
+| `linear` | Planned | Linear.app integration |
+| `beads` | Planned | Git-native CLI tool (bd) |
+| `github-issues` | Planned | GitHub Issues integration |
+
+#### Provider-Specific Configuration
+
+Each provider may have additional configuration options in `providerConfig`:
+
+**Vibe Kanban:**
+```json
+{
+  "taskManagement": {
+    "provider": "vibe-kanban",
+    "providerConfig": {
+      "vibeKanbanProjectId": "uuid-of-project"
+    }
+  }
+}
+```
+
+**Jira** (planned):
+```json
+{
+  "taskManagement": {
+    "provider": "jira",
+    "providerConfig": {
+      "jiraHost": "https://yourcompany.atlassian.net",
+      "jiraProject": "PROJ",
+      "jiraApiToken": "your-api-token"
+    }
+  }
+}
+```
+
+**Linear** (planned):
+```json
+{
+  "taskManagement": {
+    "provider": "linear",
+    "providerConfig": {
+      "linearTeam": "team-id",
+      "linearApiKey": "your-api-key"
+    }
+  }
+}
+```
+
+**GitHub Issues** (planned):
+```json
+{
+  "taskManagement": {
+    "provider": "github-issues",
+    "providerConfig": {
+      "githubRepo": "owner/repo",
+      "githubToken": "your-github-token"
+    }
+  }
+}
+```
 
 ## CLI Options
 
