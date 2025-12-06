@@ -578,7 +578,7 @@ Workflows define the high-level decision logic that determines what the executor
         "priority": 15,
         "conditions": {
           "onMain": true,
-          "hasInProgressIssues": true
+          "hasInProgressTasks": true
         }
       },
       "new-work": {
@@ -629,7 +629,7 @@ Workflows define the high-level decision logic that determines what the executor
 | `prStatus` | array | PR status: "none", "draft", "open", "merged" |
 | `hasFailingPRPipelines` | boolean | Has open PRs with failing CI |
 | `cdPipelineFailing` | boolean | CD pipeline is failing |
-| `hasInProgressIssues` | boolean | Has bd issues in "in_progress" status |
+| `hasInProgressTasks` | boolean | Has task in "in_progress" status |
 | `noBlockers` | boolean | No blocking conditions exist |
 
 #### Workflow Selection Algorithm

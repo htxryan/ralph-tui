@@ -211,7 +211,7 @@ EOF
     generate_tool_result "$id" "Todos have been modified successfully. Ensure that you continue to use the todo list to track your progress." "false"
 }
 
-# Generate a BD issue read
+# Generate a task read
 generate_bd_read() {
     local id="$1"
     local bd_output=$(cat <<EOF
@@ -256,7 +256,7 @@ main() {
     # Assistant response with various tool calls
     generate_assistant_message "I'll help you continue working on the Ralph TUI monitoring interface. Let me first check the current status and then complete the implementation." 1500 750
     
-    # Read BD issue
+    # Read task
     generate_bd_read "tool-001"
     
     # Update todos

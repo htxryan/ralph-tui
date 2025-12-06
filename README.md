@@ -8,7 +8,3 @@ Run an agent in a long-running loop, with a rich TUI.
 - `.ai-docs/design/`: Design documentation for the project
 - `.ai-docs/adr/`: Architecture Decision Records for the project
 - `.ai-docs/prompts/`: Prompts for the project
-
-## Helpful Commands
-
-- Run the beads UI: `bdui start --open`

@@ -50,11 +50,6 @@ public/fallback-*.js
 .ralph/planning/
 planning/
 
-# Beads CLI runtime files (Unix sockets, daemon files)
-.beads/bd.sock
-.beads/daemon.lock
-.beads/daemon.pid
-
 # Ralph TUI
 .ralph/tui/node_modules/
 .ralph/tui/dist/

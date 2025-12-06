@@ -85,7 +85,7 @@ src/
 - `ProcessedMessage` - Normalized message for display
 - `ToolCall` - Tool invocation with status, result, subagent data
 - `SessionStats` - Token counts, timing, error counts
-- `TabName` - 'messages' | 'bdissue' | 'todos' | 'errors' | 'stats'
+- `TabName` - 'messages' | 'task' | 'todos' | 'errors' | 'stats'
 
 ## Testing Patterns
 
@@ -107,4 +107,4 @@ Test files are co-located with components (`*.test.tsx`) or in `src/test/` for i
 
 ## Work Tracking
 
-This project uses Beads (`bd`) for issue tracking instead of markdown TODOs. See the quickstart in the session hook for commands like `bd ready`, `bd create`, `bd close`.
+This project uses Vibe Kanban for task tracking instead of markdown TODOs. Use the Vibe Kanban MCP server to manage tasks.

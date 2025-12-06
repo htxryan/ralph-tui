@@ -1,6 +1,6 @@
 # Task
 
-Your job is to determine which workflow to execute for the Background Assassins web application, identify or create the associated BD issue, and write the assignment file.
+Your job is to determine which workflow to execute for the Background Assassins web application, identify or create the associated task, and write the assignment file.
 
 ## Workflow Selection Process
 
@@ -16,12 +16,12 @@ Collect the following information:
    - Check for any unmerged PRs targeting `develop`
    - If PRs exist, check their CI/CD pipeline status
    - Check the CD pipeline status for the `develop` branch itself
-   - Run `bd list --status=in_progress` to check for any in_progress issues
+   - Check for any in_progress issues
 
 1.3. If NOT on `develop` branch (feature/bugfix branch):
    - Check if a PR exists for this branch
    - Assess whether work appears complete or incomplete
-   - Run `bd list --status=in_progress` to find the associated issue
+   - Find the associated task
 
 ### Step 2: Select Workflow
 
@@ -60,7 +60,7 @@ Use this decision tree to select the appropriate workflow:
 │                  │                                                          │
 │                  └─ NO (CD pipeline passing)                                │
 │                      │                                                      │
-│                      └─ Q5: Are there any `bd` issues with                  │
+│                      └─ Q5: Are there any tasks with                  │
 │                             status "in_progress"?                           │
 │                          │                                                  │
 │                          ├─ YES                                             │
@@ -72,12 +72,12 @@ Use this decision tree to select the appropriate workflow:
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### Step 3: Identify or Create BD Issue
+### Step 3: Identify or Create Task
 
-Based on the selected workflow, identify or create the BD issue to work on:
+Based on the selected workflow, identify or create the task to work on:
 
 #### For Workflow 01 (feature-branch-incomplete) or 02 (feature-branch-pr-ready):
-- Find the existing BD issue associated with the current branch
+- Find the existing task associated with the current branch
 - Search by: `bd list --status=in_progress` or check recent issues that match the branch name/feature
 - If no issue is found, create one:
   ```bash
@@ -86,21 +86,21 @@ Based on the selected workflow, identify or create the BD issue to work on:
   ```
 
 #### For Workflow 03 (pr-pipeline-fix):
-- Create a new BD issue for the pipeline fix:
+- Create a new task for the pipeline fix:
   ```bash
   bd create --title="Fix failing CI/CD pipeline for PR #[number]" --type=bug
   bd update <id> --status=in_progress
   ```
 
 #### For Workflow 04 (cd-pipeline-fix):
-- Create a new BD issue for the CD pipeline fix:
+- Create a new task for the CD pipeline fix:
   ```bash
   bd create --title="Fix failing CD pipeline for develop branch" --type=bug
   bd update <id> --status=in_progress
   ```
 
 #### For Workflow 05 (resume-in-progress):
-- Use the in_progress BD issue found in Step 1
+- Use the in_progress task found in Step 1
 - This is the highest priority issue from `bd list --status=in_progress`
 
 #### For Workflow 06 (new-work):
@@ -109,7 +109,7 @@ Based on the selected workflow, identify or create the BD issue to work on:
   ```bash
   bd update <id> --status=in_progress
   ```
-- If no ready issues exist, create a new BD issue:
+- If no ready issues exist, create a new task:
   ```bash
   bd create --title="[Brief description - will be updated during planning]" --type=task
   bd update <id> --status=in_progress
@@ -129,7 +129,7 @@ Create the assignment file at `./.ralph/planning/assignment.json`:
    ```json
    {
      "workflow": ".ralph/workflows/[XX-workflow-name].md",
-     "bd_issue": "<issue-id-from-bd-list>"
+     "task_id": "<issue-id-from-bd-list>"
    }
    ```
 
@@ -138,14 +138,14 @@ Create the assignment file at `./.ralph/planning/assignment.json`:
 ```json
 {
   "workflow": ".ralph/workflows/01-feature-branch-incomplete.md",
-  "bd_issue": "background-assassins-abc"
+  "task_id": "background-assassins-abc"
 }
 ```
 
 ```json
 {
   "workflow": ".ralph/workflows/06-new-work.md",
-  "bd_issue": "background-assassins-xyz"
+  "task_id": "background-assassins-xyz"
 }
 ```
 
@@ -163,7 +163,7 @@ See `./.ralph/workflows/index.md` for a complete index of available workflows.
 | 02 | feature-branch-pr-ready | On feature branch + unmerged PR exists | Find existing or create |
 | 03 | pr-pipeline-fix | On develop + PR has failing CI/CD | Create new (bug) |
 | 04 | cd-pipeline-fix | On develop + CD pipeline failed | Create new (bug) |
-| 05 | resume-in-progress | On develop + has in_progress bd issues | Use found issue |
+| 05 | resume-in-progress | On develop + has in_progress tasks | Use found issue |
 | 06 | new-work | On develop + nothing in progress | Pick from ready or create new |
 
 ---
@@ -175,7 +175,7 @@ See `./.ralph/workflows/index.md` for a complete index of available workflows.
 ```json
 {
   "workflow": "string - relative path to workflow file from repo root",
-  "bd_issue": "string - BD issue ID (full: 'background-assassins-abc' or short: 'abc')"
+  "task_id": "string - task ID (full: 'background-assassins-abc' or short: 'abc')"
 }
 ```
 
@@ -198,7 +198,7 @@ flowchart TD
     Q3 -->|No/Passing| Q4{Q4: CD pipeline failed?}
 
     Q4 -->|Yes/Running| W4([04-cd-pipeline-fix])
-    Q4 -->|No, passing| Q5{Q5: Any in_progress<br/>bd issues?}
+    Q4 -->|No, passing| Q5{Q5: Any in_progress<br/>tasks?}
 
     Q5 -->|Yes| W5([05-resume-in-progress])
     Q5 -->|No| W6([06-new-work])

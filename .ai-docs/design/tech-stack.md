@@ -315,9 +315,8 @@ For optimal npm package size, consider:
 
 ### Technical Debt
 1. Shell scripts (`ralph.sh`, `sync.sh`) are project-specific
-2. Beads integration (`use-bd-issue`, `use-assignment`) is tightly coupled
-3. Some hardcoded paths assume `.ralph/` structure
-4. Limited configuration system
+2. Some hardcoded paths assume `.ralph/` structure
+3. Limited configuration system
 
 ## Development Workflow
 

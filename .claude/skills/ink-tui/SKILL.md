@@ -649,7 +649,7 @@ const App = () => {
 ```typescript
 const TabbedView = () => {
   const [activeTab, setActiveTab] = useState(0);
-  const tabs = ['Messages', 'Tools', 'BD Issue', 'Todos'];
+  const tabs = ['Messages', 'Tools', 'Task', 'Todos'];
 
   useInput((input, key) => {
     if (key.tab && !key.shift) {
@@ -686,7 +686,7 @@ const TabbedView = () => {
       <Box flexGrow={1}>
         {activeTab === 0 && <MessagesTab />}
         {activeTab === 1 && <ToolsTab />}
-        {activeTab === 2 && <BDIssueTab />}
+        {activeTab === 2 && <TaskTab />}
         {activeTab === 3 && <TodosTab />}
       </Box>
     </Box>

@@ -1,14 +1,14 @@
 # Task Planning with bd (beads)
 
-This document describes how to plan and execute work using `bd` (beads), the project's issue tracking system. All task management happens through bd issues rather than markdown files on disk. This approach keeps plans version-controlled alongside code, enables dependency tracking, and prevents stale documentation from accumulating.
+This document describes how to plan and execute work using `bd` (beads), the project's issue tracking system. All task management happens through tasks rather than markdown files on disk. This approach keeps plans version-controlled alongside code, enables dependency tracking, and prevents stale documentation from accumulating.
 
 ## Philosophy
 
-Every piece of work should be tracked in bd. The issue description serves as the execution plan—a self-contained document that enables any agent or contributor to complete the work without prior context. Think of bd issues as living documents that evolve as work progresses.
+Every piece of work should be tracked in bd. The issue description serves as the execution plan—a self-contained document that enables any agent or contributor to complete the work without prior context. Think of tasks as living documents that evolve as work progresses.
 
 ## When to Create Issues
 
-Create a bd issue when:
+Create a task when:
 - Starting any non-trivial feature, bug fix, or task
 - Breaking down a large piece of work into smaller steps
 - Discovering new work while implementing something else (use `discovered-from` dependency)
@@ -20,7 +20,7 @@ Do NOT create issues for:
 
 ## Issue Structure
 
-Every bd issue should contain a well-structured description. The description is the plan—treat it as a self-contained document that enables a novice to complete the work.
+Every task should contain a well-structured description. The description is the plan—treat it as a self-contained document that enables a novice to complete the work.
 
 ### Required Elements for Non-Trivial Issues
 

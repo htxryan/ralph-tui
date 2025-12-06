@@ -18,7 +18,7 @@ flowchart TD
     PR -->|No/Passing| CD{CD pipeline status?}
 
     CD -->|Failed| W4[04-cd-pipeline-fix]
-    CD -->|Passing| IP{In-progress bd issues?}
+    CD -->|Passing| IP{In-progress tasks?}
 
     IP -->|Yes| W5[05-resume-in-progress]
     IP -->|No| W6[06-new-work]
@@ -39,7 +39,7 @@ flowchart TD
 | 02 | [feature-branch-pr-ready](./02-feature-branch-pr-ready.md) | On feature branch with complete work & unmerged PR | Merge PR |
 | 03 | [pr-pipeline-fix](./03-pr-pipeline-fix.md) | On develop with failing PR pipelines | Fix CI/CD to unblock merge |
 | 04 | [cd-pipeline-fix](./04-cd-pipeline-fix.md) | On develop with failing CD pipeline | Fix deployment |
-| 05 | [resume-in-progress](./05-resume-in-progress.md) | On develop with in_progress bd issues | Continue existing work |
+| 05 | [resume-in-progress](./05-resume-in-progress.md) | On develop with in_progress tasks | Continue existing work |
 | 06 | [new-work](./06-new-work.md) | On develop with nothing in progress | Start new feature/fix |
 
 ## Quick Reference

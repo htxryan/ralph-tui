@@ -10,7 +10,7 @@ Quick reference for selecting the appropriate workflow based on current conditio
 | On feature/bugfix branch + PR exists but unmerged | [02-feature-branch-pr-ready](./02-feature-branch-pr-ready.md) |
 | On develop + unmerged PR with failing CI/CD | [03-pr-pipeline-fix](./03-pr-pipeline-fix.md) |
 | On develop + CD pipeline failed | [04-cd-pipeline-fix](./04-cd-pipeline-fix.md) |
-| On develop + has in_progress bd issues | [05-resume-in-progress](./05-resume-in-progress.md) |
+| On develop + has in_progress tasks | [05-resume-in-progress](./05-resume-in-progress.md) |
 | On develop + no in_progress issues + all pipelines passing | [06-new-work](./06-new-work.md) |
 
 ## Decision Tree
@@ -27,7 +27,7 @@ START
 │           ├─ YES with failing pipelines → 03-pr-pipeline-fix
 │           └─ NO or passing → CD pipeline status?
 │                    ├─ Failed → 04-cd-pipeline-fix
-│                    └─ Passing → Any bd issues in_progress?
+│                    └─ Passing → Any tasks in_progress?
 │                             ├─ YES → 05-resume-in-progress
 │                             └─ NO → 06-new-work
 ```
@@ -51,7 +51,7 @@ START
 **Goal**: Fix CD pipeline so app deploys to dev environment (PRIME DIRECTIVE)
 
 ### 05-resume-in-progress
-**When**: On develop with existing in_progress bd issues
+**When**: On develop with existing in_progress tasks
 **Goal**: Continue working on highest priority in_progress issue through completion
 
 ### 06-new-work

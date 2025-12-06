@@ -2,8 +2,8 @@
 #
 # Sync2: Two-phase Claude orchestration
 #
-# Phase 1: Run orchestrate.md to determine workflow and BD issue (with retry loop)
-# Phase 2: Execute the selected workflow with the BD issue
+# Phase 1: Run orchestrate.md to determine workflow and task (with retry loop)
+# Phase 2: Execute the selected workflow with the task
 #
 # This script implements a separation of concerns:
 # - Orchestration decides WHAT to do (with validation and retry)
@@ -119,7 +119,7 @@ validate_assignment() {
 The orchestration process must create this file with the following JSON structure:
 {
   \"workflow\": \".ralph/workflows/[XX-workflow-name].md\",
-  \"bd_issue\": \"<project-name>-<issue-id>\"
+  \"task_id\": \"<project-name>-<issue-id>\"
 }
 
 Please ensure the file is written to: $file"
@@ -141,17 +141,17 @@ $file_content
 Expected JSON structure:
 {
   \"workflow\": \".ralph/workflows/[XX-workflow-name].md\",
-  \"bd_issue\": \"<project-name>-<issue-id>\"
+  \"task_id\": \"<project-name>-<issue-id>\"
 }"
         return 1
     fi
 
     # Check for required fields
     local workflow
-    local bd_issue
+    local task_id
 
     workflow=$(jq -r '.workflow // empty' "$file")
-    bd_issue=$(jq -r '.bd_issue // empty' "$file")
+    task_id=$(jq -r '.task_id // empty' "$file")
 
     if [ -z "$workflow" ]; then
         local file_content
@@ -166,15 +166,15 @@ The 'workflow' field must contain the relative path to a workflow file, e.g.:
         return 1
     fi
 
-    if [ -z "$bd_issue" ]; then
+    if [ -z "$task_id" ]; then
         local file_content
         file_content=$(cat "$file")
-        VALIDATION_ERROR="Assignment file missing required field: 'bd_issue'
+        VALIDATION_ERROR="Assignment file missing required field: 'task_id'
 
 Current file contents:
 $file_content
 
-The 'bd_issue' field must contain a valid BD issue ID, e.g.:
+The 'task_id' field must contain a valid task ID, e.g.:
   \"background-assassins-abc\""
         return 1
     fi
@@ -193,11 +193,11 @@ $available_workflows"
         return 1
     fi
 
-    # Validate bd_issue format (either full ID with hyphen or short 3-char code)
-    if [[ ! "$bd_issue" =~ -[a-zA-Z0-9]+$ && ! "$bd_issue" =~ ^[a-zA-Z0-9]{3}$ ]]; then
-        VALIDATION_ERROR="Invalid bd_issue format: '$bd_issue'
+    # Validate task_id format (either full ID with hyphen or short 3-char code)
+    if [[ ! "$task_id" =~ -[a-zA-Z0-9]+$ && ! "$task_id" =~ ^[a-zA-Z0-9]{3}$ ]]; then
+        VALIDATION_ERROR="Invalid task_id format: '$task_id'
 
-The 'bd_issue' field must be a valid BD issue ID.
+The 'task_id' field must be a valid task ID.
 Accepted formats:
   - Full ID: 'background-assassins-abc'
   - Short code: 'abc' (3 alphanumeric characters)
@@ -208,7 +208,7 @@ You can find valid issue IDs by running: bd list"
 
     log "Assignment validated successfully"
     log "  Workflow: $workflow"
-    log "  BD Issue: $bd_issue"
+    log "  BD Issue: $task_id"
 
     return 0
 }
@@ -289,9 +289,9 @@ $PREVIOUS_ERROR
 Please re-read the orchestrate.md instructions below and ensure you:
 1. Create the assignment file at the correct path: ./.ralph/planning/assignment.json
 2. Use valid JSON syntax
-3. Include both required fields: 'workflow' and 'bd_issue'
+3. Include both required fields: 'workflow' and 'task_id'
 4. Use a valid workflow path that exists
-5. Use a valid BD issue ID (run 'bd list' to see valid IDs)
+5. Use a valid task ID
 
 ---
 
@@ -313,7 +313,7 @@ Please ensure you complete the orchestration process within the time limit.
 Focus on:
 1. Quickly gathering the required context
 2. Making the workflow selection decision
-3. Identifying or creating the BD issue
+3. Identifying or creating the task
 4. Writing the assignment.json file"
         attempt=$((attempt + 1))
         continue
@@ -358,14 +358,14 @@ if [ $attempt -gt $MAX_ORCHESTRATION_ATTEMPTS ]; then
     error "Expected JSON structure:"
     error '  {'
     error '    "workflow": ".ralph/workflows/[XX-workflow-name].md",'
-    error '    "bd_issue": "beads-XXXXXXXXX"'
+    error '    "task_id": "beads-XXXXXXXXX"'
     error '  }'
     error ""
     error "Please check:"
     error "  1. The orchestrate.md prompt is correctly formatted"
     error "  2. Claude has permission to write files"
     error "  3. The .ralph/planning/ directory exists and is writable"
-    error "  4. BD issues can be created/listed (try: bd list)"
+    error "  4. Tasks can be created/listed"
     error ""
     error "============================================================"
     exit 1
@@ -373,12 +373,12 @@ fi
 
 # Extract values from validated assignment
 WORKFLOW=$(jq -r '.workflow' "$ASSIGNMENT_FILE")
-BD_ISSUE=$(jq -r '.bd_issue' "$ASSIGNMENT_FILE")
+TASK_ID=$(jq -r '.task_id' "$ASSIGNMENT_FILE")
 WORKFLOW_PATH="$PROJECT_DIR/$WORKFLOW"
 
 log "Assignment ready:"
 log "  Workflow: $WORKFLOW"
-log "  BD Issue: $BD_ISSUE"
+log "  BD Issue: $TASK_ID"
 
 # ----------------------------------------------------------------------------
 # PHASE 2: Workflow Execution
@@ -390,12 +390,12 @@ log_phase "Phase 2: Workflow Execution"
 WORKFLOW_CONTENT=$(cat "$WORKFLOW_PATH")
 
 # Build the prompt for workflow execution
-WORKFLOW_PROMPT="Execute the workflow below for \`bd\` issue #${BD_ISSUE}:
+WORKFLOW_PROMPT="Execute the workflow below for task #${TASK_ID}:
 
 ${WORKFLOW_CONTENT}"
 
 log "Executing workflow: $WORKFLOW"
-log "For BD issue: $BD_ISSUE"
+log "For task: $TASK_ID"
 
 # Calculate remaining timeout for workflow execution
 elapsed_orchestration=$((attempt * orchestrate_timeout))
@@ -425,6 +425,6 @@ log_phase "Complete"
 log "Two-phase orchestration completed successfully"
 log "  Orchestration attempts: $attempt"
 log "  Workflow executed: $WORKFLOW"
-log "  BD Issue: $BD_ISSUE"
+log "  Task: $TASK_ID"
 
 exit 0

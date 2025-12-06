@@ -1,6 +1,6 @@
 # Resume In-Progress Work
 
-**Trigger**: You are on the develop branch and there are `bd` issues with status "in_progress"
+**Trigger**: You are on the develop branch and there are tasks with status "in_progress"
 
 ## Path Overview
 
@@ -11,14 +11,14 @@ flowchart TD
         A2[1.2 Read product-brief]
         A3[1.3 Check current branch]
         A4[1.4 Review git history]
-        A5[1.5 Read specs/PLANS.md]
+        A5[1.5 Read ./.ai-docs/prompts/PLANS.md]
         A1 --> A2 --> A3 --> A4 --> A5
     end
 
     A5 --> B{On develop branch?}
     B -->|Yes| D1{Any unmerged PRs targeting develop?}
     D1 -->|No or passing| E1{Latest CD pipeline succeeded?}
-    E1 -->|Yes| F1{Any bd issues in_progress?}
+    E1 -->|Yes| F1{Any tasks in_progress?}
     F1 -->|Yes| F2[3.1 Pick first highest priority in_progress issue]
     F2 --> C1
 
@@ -28,7 +28,7 @@ flowchart TD
         C3[4.3 Verify CI for THIS SPECIFIC PR]
         C4[4.4 Merge PR after verification]
         C5[4.5 Validate CD and deployment]
-        C6[4.6 Close bd issue with reason finished]
+        C6[4.6 Close task with reason finished]
         C7[4.7 Checkout develop and pull]
         C1 --> C2 --> C3 --> C4 --> C5 --> C6 --> C7
     end
@@ -52,7 +52,7 @@ flowchart TD
 
 1.4. Review git history
 
-1.5. Read `./specs/PLANS.md` to understand the planning for this project.
+1.5. Read `././.ai-docs/prompts/PLANS.md` to understand the planning for this project.
 
 ### 2. Verify Conditions
 
@@ -64,9 +64,9 @@ flowchart TD
 
 ### 3. Find In-Progress Issue
 
-3.1. Check for `bd` issues with a status of "in_progress".
+3.1. Check for tasks with a status of "in_progress".
 
-3.2. Pick the first highest priority issue you find that has a status of "in_progress". This is now the issue you're working on.
+3.2. Pick the first highest priority task you find that has a status of "in_progress". This is now the task you're working on.
 
 ### 4. Implementation
 
@@ -91,7 +91,7 @@ flowchart TD
 
 4.5. Validate that all CD pipelines run successfully after your PR is merged, and that the app is successfully deployed to Vercel (`develop` will deploy to the dev environment).
 
-4.6. Update your `bd` issue's status to "closed" with a reason of "finished", and push that change (this will NOT trigger a new CI pipeline run).
+4.6. Update your task's status to "closed" with a reason of "finished".
 
 4.7. Checkout `develop` locally and pull the latest changes from `develop`.
 

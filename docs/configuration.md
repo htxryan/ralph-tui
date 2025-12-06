@@ -88,7 +88,7 @@ Personal overrides that should NOT be committed (add to `.gitignore`):
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
 | `showSidebar` | boolean | `false` | Show sidebar on startup |
-| `defaultTab` | string | `"messages"` | Default tab: `messages`, `bdissue`, `todos`, `errors`, or `stats` |
+| `defaultTab` | string | `"messages"` | Default tab: `messages`, `task`, `todos`, `errors`, or `stats` |
 | `defaultFilters` | string[] | (all) | Message types to show by default |
 | `theme` | string | `"default"` | Color theme: `default`, `minimal`, or `colorblind` |
 
@@ -118,7 +118,7 @@ ralph [options]
 
 Options:
   -f, --file <path>      Path to JSONL file to monitor (overrides config)
-  -i, --issue <id>       BD issue ID to display
+  -i, --issue <id>       Task ID to display
   -s, --sidebar          Show the sidebar on startup
   -S, --no-sidebar       Hide the sidebar on startup
   -a, --agent <type>     Agent type (claude-code, codex, opencode, kiro, custom)

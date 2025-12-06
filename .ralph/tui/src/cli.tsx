@@ -73,7 +73,7 @@ program
   )
   .option(
     '-i, --issue <id>',
-    'BD issue ID to display'
+    'Task ID to display'
   )
   .option(
     '-s, --sidebar',

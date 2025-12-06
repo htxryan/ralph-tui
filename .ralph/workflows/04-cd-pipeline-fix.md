@@ -13,7 +13,7 @@ flowchart TD
         A2[1.2 Read product-brief]
         A3[1.3 Check current branch]
         A4[1.4 Review git history]
-        A5[1.5 Read specs/PLANS.md]
+        A5[1.5 Read ./.ai-docs/prompts/PLANS.md]
         A1 --> A2 --> A3 --> A4 --> A5
     end
 
@@ -50,7 +50,7 @@ flowchart TD
 
 1.4. Review git history
 
-1.5. Read `./specs/PLANS.md` to understand the planning for this project.
+1.5. Read `././.ai-docs/prompts/PLANS.md` to understand the planning for this project.
 
 ### 2. Verify Conditions
 

@@ -14,7 +14,7 @@ Your job is to complete the implementation of the MVP of the Background Assassin
     
     1.4. Review git history
 
-    1.5. Read `./specs/PLANS.md` to understand the planning for this project.
+    1.5. Read `././.ai-docs/prompts/PLANS.md` to understand the planning for this project.
 
 2. IF you are NOT in the `develop` branch (if you are in a feature or bugfix branch):
 
@@ -29,9 +29,9 @@ Your job is to complete the implementation of the MVP of the Background Assassin
 
 4. Verify that the latest CD pipelines targeting the `develop` branch has succeeded. If the latest CD pipeline targeting the `develop` branch is still running, wait for it to finish. If there ARE any unmerged and open PRs, for the first unmerged PR targeting the `develop` branch, your PRIME DIRECTIVE is to fix the pipeline so that the application will be deployed. Once they are fixed and the Dev environment is deployed, EXIT. If the latest CD pipelines targeting the `develop` branch has succeeded, proceed to the next step.
 
-5. IF you ARE in the `develop` branch and there are ANY `bd` issues with a status of "in_progress": Pick the first highest priority issue you find that has a status of "in_progress". This is now the issue you're working on. Skip to 6.4. and continue from there.
+5. IF you ARE in the `develop` branch and there are ANY tasks with a status of "in_progress": Pick the first highest priority issue you find that has a status of "in_progress". This is now the issue you're working on. Skip to 6.4. and continue from there.
 
-6. IF you ARE in the `develop` branch and there are NO `bd` issues with a status of "in_progress":
+6. IF you ARE in the `develop` branch and there are NO tasks with a status of "in_progress":
 
     6.1. Review the product brief in `./.ai-docs/design/product-brief.md` and the game rules in `./.ai-docs/design/game-rules.md` to understand the product and the game rules.
     6.2. Pick a next most important feature, change, or fix to implement. Use `./.ai-docs/prompts/PLANS.md` to create a new implementation plan for your chosen task.
@@ -54,7 +54,7 @@ flowchart TD
         A2[1.2 Read product-brief]
         A3[1.3 Check current branch]
         A4[1.4 Review git history]
-        A5[1.5 Read specs/PLANS.md]
+        A5[1.5 Read ./.ai-docs/prompts/PLANS.md]
         A1 --> A2 --> A3 --> A4 --> A5
     end
 
@@ -79,7 +79,7 @@ flowchart TD
     end
 
     subgraph inProgressCheck[5. Check In-Progress Issues]
-        F1{Any bd issues with<br/>status in_progress?}
+        F1{Any tasks with<br/>status in_progress?}
         F2[Pick first highest<br/>priority in_progress issue]
     end
 
@@ -91,7 +91,7 @@ flowchart TD
         C5[6.5 Create Pull Request]
         C6[6.6 Merge PR when CI passes]
         C7[6.7 Validate CD and deployment]
-        C8[6.8 Close bd issue<br/>with reason finished]
+        C8[6.8 Close task<br/>with reason finished]
         C9[6.9 Checkout develop and pull]
     end
 

@@ -11,7 +11,7 @@ flowchart TD
         A2[1.2 Read product-brief]
         A3[1.3 Check current branch]
         A4[1.4 Review git history]
-        A5[1.5 Read specs/PLANS.md]
+        A5[1.5 Read ./.ai-docs/prompts/PLANS.md]
         A1 --> A2 --> A3 --> A4 --> A5
     end
 
@@ -24,7 +24,7 @@ flowchart TD
         C1[3.1 Verify CI for THIS SPECIFIC PR]
         C2[3.2 Merge PR after verification]
         C3[3.3 Validate CD and deployment]
-        C4[3.4 Close bd issue with reason finished]
+        C4[3.4 Close task with reason finished]
         C5[3.5 Checkout develop and pull]
         C1 --> C2 --> C3 --> C4 --> C5
     end
@@ -48,7 +48,7 @@ flowchart TD
 
 1.4. Review git history
 
-1.5. Read `./specs/PLANS.md` to understand the planning for this project.
+1.5. Read `././.ai-docs/prompts/PLANS.md` to understand the planning for this project.
 
 ### 2. Feature Branch Assessment
 
@@ -75,7 +75,7 @@ flowchart TD
 
 3.3. Validate that all CD pipelines run successfully after your PR is merged, and that the app is successfully deployed to Vercel (`develop` will deploy to the dev environment).
 
-3.4. Update your `bd` issue's status to "closed" with a reason of "finished", and push that change (this will NOT trigger a new CI pipeline run).
+3.4. Update your task's status to "closed" with a reason of "finished".
 
 3.5. Checkout `develop` locally and pull the latest changes from `develop`.
 
