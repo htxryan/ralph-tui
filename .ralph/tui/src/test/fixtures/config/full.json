@@ -1,0 +1,20 @@
+{
+  "agent": {
+    "name": "claude-code",
+    "command": "claude",
+    "args": ["--output-format", "stream-json"]
+  },
+  "ui": {
+    "theme": "dark",
+    "showSidebar": true,
+    "compactMode": false
+  },
+  "sessions": {
+    "autoArchive": true,
+    "maxHistory": 50
+  },
+  "logging": {
+    "level": "info",
+    "file": "./ralph.log"
+  }
+}

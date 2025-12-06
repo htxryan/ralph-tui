@@ -1,0 +1,8 @@
+{"type":"system","message":{"content":[{"type":"text","text":"You are Claude, an AI assistant made by Anthropic."}]},"timestamp":"2024-12-06T10:00:00.000Z"}
+{"type":"user","message":{"content":[{"type":"text","text":"Hello, can you help me understand how this codebase works?"}]},"timestamp":"2024-12-06T10:00:01.000Z"}
+{"type":"assistant","message":{"content":[{"type":"text","text":"I'd be happy to help you understand this codebase! Let me explore the structure and key files."}],"usage":{"input_tokens":150,"output_tokens":25}},"timestamp":"2024-12-06T10:00:02.000Z"}
+{"type":"assistant","message":{"content":[{"type":"tool_use","id":"toolu_01XYZ","name":"Read","input":{"file_path":"/project/README.md"}}],"usage":{"input_tokens":175,"output_tokens":50}},"timestamp":"2024-12-06T10:00:03.000Z"}
+{"type":"tool_result","tool_use_id":"toolu_01XYZ","content":"# Project README\n\nThis is a sample project for testing.","timestamp":"2024-12-06T10:00:04.000Z"}
+{"type":"assistant","message":{"content":[{"type":"text","text":"Based on the README, this appears to be a testing project. The codebase is organized with clear documentation and follows standard practices."}],"usage":{"input_tokens":200,"output_tokens":30}},"timestamp":"2024-12-06T10:00:05.000Z"}
+{"type":"user","message":{"content":[{"type":"text","text":"Thanks! That's helpful."}]},"timestamp":"2024-12-06T10:00:06.000Z"}
+{"type":"assistant","message":{"content":[{"type":"text","text":"You're welcome! Feel free to ask if you have any more questions about the codebase."}],"usage":{"input_tokens":230,"output_tokens":20}},"timestamp":"2024-12-06T10:00:07.000Z"}

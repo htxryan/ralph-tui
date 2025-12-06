@@ -1,0 +1,10 @@
+{
+  "agent": {
+    "name": "unknown-agent",
+    "invalidProperty": true
+  },
+  "ui": {
+    "theme": 12345,
+    "showSidebar": "not-a-boolean"
+  }
+}
