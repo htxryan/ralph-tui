@@ -17,7 +17,6 @@ export function getSubagentColor(subagentType: string | undefined): string {
     'neon-operator': colors.subagentNeonOperator,
     'web-researcher': colors.subagentWebResearcher,
     'product-architect': colors.subagentProductArchitect,
-    'bd-operator': colors.subagentBdOperator,
     'claude-code-guide': colors.subagentClaudeCodeGuide,
     'general-purpose': colors.subagentGeneralPurpose,
   };

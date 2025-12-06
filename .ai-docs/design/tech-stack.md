@@ -98,7 +98,7 @@ Ralph TUI is built as a modern TypeScript CLI application using React-based term
 │   │   ├── todos/        # Todo list components
 │   │   ├── stats/        # Statistics display
 │   │   ├── subagent/     # Subagent detail views
-│   │   └── bd-issue/     # Beads issue integration
+│   │   └── kanban/       # Vibe Kanban integration
 │   ├── hooks/            # React hooks
 │   │   ├── use-jsonl-stream.ts
 │   │   ├── use-ralph-process.ts

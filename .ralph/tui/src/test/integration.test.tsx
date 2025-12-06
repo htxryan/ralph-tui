@@ -113,13 +113,13 @@ describe('App Integration Tests', () => {
       stdin.write('1');
       expect(lastFrame()).toContain('Messages');
 
-      // Press '2' to switch to Todos tab
+      // Press '2' to switch to Task tab
       stdin.write('2');
-      expect(lastFrame()).toContain('Todos');
+      expect(lastFrame()).toContain('Task');
 
-      // Press '3' to switch to Issue tab
+      // Press '3' to switch to Todos tab
       stdin.write('3');
-      expect(lastFrame()).toContain('Issue');
+      expect(lastFrame()).toContain('Todos');
 
       // Press '4' to switch to Errors tab
       stdin.write('4');

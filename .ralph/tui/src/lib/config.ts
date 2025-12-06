@@ -43,7 +43,7 @@ export interface DisplayConfig {
   /** Show sidebar on startup */
   showSidebar: boolean;
   /** Default tab to show on startup */
-  defaultTab: 'messages' | 'bdissue' | 'todos' | 'errors' | 'stats';
+  defaultTab: 'messages' | 'task' | 'todos' | 'errors' | 'stats';
   /** Enable/disable message filters by default */
   defaultFilters: string[];
   /** Color theme (reserved for future use) */
@@ -331,7 +331,7 @@ export function loadConfigFile(configPath: string): ConfigLoadResult {
 // ============================================================================
 
 const VALID_AGENT_TYPES: AgentType[] = ['claude-code', 'codex', 'opencode', 'kiro', 'custom'];
-const VALID_TABS = ['messages', 'bdissue', 'todos', 'errors', 'stats'];
+const VALID_TABS = ['messages', 'task', 'todos', 'errors', 'stats'];
 const VALID_THEMES = ['default', 'minimal', 'colorblind'];
 
 /**

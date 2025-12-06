@@ -15,7 +15,7 @@ export interface UseKeyboardOptions {
   tabCount?: number;
 }
 
-const tabs: TabName[] = ['messages', 'bdissue', 'todos', 'errors', 'stats'];
+const tabs: TabName[] = ['messages', 'task', 'todos', 'errors', 'stats'];
 
 export function useKeyboard(options: UseKeyboardOptions): void {
   const {

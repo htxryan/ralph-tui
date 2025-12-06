@@ -16,7 +16,7 @@ interface TabConfig {
 
 const tabs: TabConfig[] = [
   { name: 'messages', label: 'Messages', shortcut: '1' },
-  { name: 'bdissue', label: 'BD Issue', shortcut: '2' },
+  { name: 'task', label: 'Task', shortcut: '2' },
   { name: 'todos', label: 'Todos', shortcut: '3' },
   { name: 'errors', label: 'Errors', shortcut: '4' },
   { name: 'stats', label: 'Stats', shortcut: '5' },

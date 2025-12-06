@@ -1,13 +1,13 @@
 import React from 'react';
 import { Box, Text } from 'ink';
 import { colors, icons } from '../lib/colors.js';
-import { Todo, BDIssue, SessionStats } from '../lib/types.js';
+import { Todo, KanbanTask, SessionStats } from '../lib/types.js';
 import { formatTokens, formatDuration } from '../lib/parser.js';
 import { ProgressBar } from './common/progress-bar.js';
 
 export interface SidebarProps {
   todos: Todo[];
-  issue: BDIssue | null;
+  task: KanbanTask | null;
   stats: SessionStats;
   width?: number;
   isRalphRunning?: boolean;
@@ -46,7 +46,7 @@ function calculateDurationBetween(start: Date | null | undefined, end: Date | nu
 
 export function Sidebar({
   todos,
-  issue,
+  task,
   stats,
   width = 24,
   isRalphRunning = false,
@@ -109,25 +109,25 @@ export function Sidebar({
         </Text>
       </Box>
 
-      {/* BD Issue section */}
+      {/* Task section */}
       <Box flexDirection="column" marginBottom={1}>
         <Text bold color={colors.header}>
-          {'\uD83C\uDFAF'} Issue
+          {'\uD83C\uDFAF'} Task
         </Text>
-        {issue ? (
+        {task ? (
           <>
             <Text color={colors.subagent}>
-              {issue.id.length > width - 4
-                ? issue.id.slice(0, width - 7) + '...'
-                : issue.id}
+              {task.id.length > width - 4
+                ? task.id.slice(0, width - 7) + '...'
+                : task.id}
             </Text>
             <Text color={colors.dimmed}>
-              {issue.title.length > width - 4
-                ? issue.title.slice(0, width - 7) + '...'
-                : issue.title}
+              {task.title.length > width - 4
+                ? task.title.slice(0, width - 7) + '...'
+                : task.title}
             </Text>
-            <Text color={colors[issue.status as keyof typeof colors] || colors.dimmed}>
-              {issue.status}
+            <Text color={colors[task.status as keyof typeof colors] || colors.dimmed}>
+              {task.status}
             </Text>
           </>
         ) : (

@@ -8,7 +8,7 @@ import { calculateSessionStats } from './lib/parser.js';
 import { archiveCurrentSession } from './lib/archive.js';
 import { getContextualShortcuts, getAllShortcutsForDialog } from './lib/shortcuts.js';
 import { useJSONLStream } from './hooks/use-jsonl-stream.js';
-import { useBDIssue } from './hooks/use-bd-issue.js';
+import { useTask } from './hooks/use-task.js';
 import { useAssignment } from './hooks/use-assignment.js';
 import { useClaudeCodeTodos } from './hooks/use-claude-code-todos.js';
 import { useRalphProcess } from './hooks/use-ralph-process.js';
@@ -20,7 +20,7 @@ import { Sidebar } from './components/sidebar.js';
 import { MessagesView } from './components/messages/messages-view.js';
 import { MessageDetailView } from './components/messages/message-detail-view.js';
 import { SubagentDetailView } from './components/subagent/subagent-detail-view.js';
-import { BDIssueView } from './components/bd-issue/bd-issue-view.js';
+import { TaskView } from './components/task/task-view.js';
 import { TodosView } from './components/todos/todos-view.js';
 import { ErrorsView, ErrorDetailView } from './components/errors/index.js';
 import { StatsView } from './components/stats/stats-view.js';
@@ -81,7 +81,7 @@ export function App({
 
   // Data hooks
   const { assignment } = useAssignment();
-  const effectiveIssueId = providedIssueId || assignment?.bd_issue || null;
+  const effectiveTaskId = providedIssueId || assignment?.task_id || null;
 
   const {
     messages,
@@ -92,11 +92,11 @@ export function App({
   } = useJSONLStream({ filePath: currentJsonlPath });
 
   const {
-    issue,
-    isLoading: isLoadingIssue,
-    error: issueError,
-    refresh: refreshIssue,
-  } = useBDIssue({ issueId: effectiveIssueId });
+    task,
+    isLoading: isLoadingTask,
+    error: taskError,
+    refresh: refreshTask,
+  } = useTask({ taskId: effectiveTaskId });
 
   const {
     todos,
@@ -168,9 +168,9 @@ export function App({
 
   const handleRefresh = useCallback(() => {
     refreshStream();
-    refreshIssue();
+    refreshTask();
     refreshTodos();
-  }, [refreshStream, refreshIssue, refreshTodos]);
+  }, [refreshStream, refreshTask, refreshTodos]);
 
   // Wrapper for starting Ralph that archives the current session and starts fresh
   const handleStartRalph = useCallback(async () => {
@@ -303,7 +303,7 @@ export function App({
   );
 
   // Global keyboard handling
-  const tabs: TabName[] = ['messages', 'bdissue', 'todos', 'errors', 'stats'];
+  const tabs: TabName[] = ['messages', 'task', 'todos', 'errors', 'stats'];
 
   useInput((input, key) => {
     // Close shortcuts dialog on ANY key, but continue processing the key
@@ -480,13 +480,13 @@ export function App({
             isSessionPickerOpen={isSessionPickerOpen}
           />
         );
-      case 'bdissue':
+      case 'task':
         return (
-          <BDIssueView
-            issue={issue}
-            isLoading={isLoadingIssue}
-            error={issueError}
-            onRefresh={refreshIssue}
+          <TaskView
+            task={task}
+            isLoading={isLoadingTask}
+            error={taskError}
+            onRefresh={refreshTask}
             height={contentHeight}
           />
         );
@@ -528,7 +528,7 @@ export function App({
     <Box flexDirection="column" width="100%" height={terminalRows}>
       {/* Header */}
       <Header
-        issue={issue}
+        task={task}
         stats={sessionStats}
         isLoading={isLoadingStream}
         error={streamError}
@@ -552,7 +552,7 @@ export function App({
         {sidebarVisible && (
           <Sidebar
             todos={todos}
-            issue={issue}
+            task={task}
             stats={sessionStats}
             isRalphRunning={isRalphRunning}
           />

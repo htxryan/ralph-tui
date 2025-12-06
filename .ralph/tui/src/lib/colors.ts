@@ -34,7 +34,6 @@ export const colors = {
   subagentNeonOperator: 'green',
   subagentWebResearcher: 'blue',
   subagentProductArchitect: 'magenta',
-  subagentBdOperator: 'yellow',
   subagentClaudeCodeGuide: 'cyan',
   subagentGeneralPurpose: 'gray',
 
@@ -49,7 +48,7 @@ export const colors = {
   activeTab: 'green',
   inactiveTab: 'gray',
 
-  // BD Issue status
+  // Task status
   open: 'yellow',
   in_progress: 'blue',
   closed: 'green',

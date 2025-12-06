@@ -19,7 +19,7 @@ describe('TabBar', () => {
 
     expect(lastFrame()).toContain('Messages');
     expect(lastFrame()).toContain('Todos');
-    expect(lastFrame()).toContain('BD Issue');
+    expect(lastFrame()).toContain('Task');
     expect(lastFrame()).toContain('Errors');
     expect(lastFrame()).toContain('Stats');
   });

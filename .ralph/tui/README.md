@@ -64,7 +64,7 @@ Ralph automatically detects your project root by looking for:
 ### Tabs
 
 1. **Messages** - Main conversation stream
-2. **BD Issue** - Current work item (if using Beads)
+2. **Task** - Current work item (from Vibe Kanban)
 3. **Todos** - Agent's task list
 4. **Errors** - Aggregated tool errors
 5. **Stats** - Token usage and metrics

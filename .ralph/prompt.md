@@ -40,7 +40,7 @@ Your job is to complete the implementation of the MVP of the Background Assassin
     6.5. Create a Pull Request (using the `github-operator` subagent) for your work.
     6.6. When all CI pipelines are successful, merge your PR into `develop` using the `github-operator` subagent.
     6.7. Validate that all CD pipelines run successfully after your PR is merged, and that the app is successfully deployed to Vercel (`develop` will deploy to the dev environment).
-    6.8. Update your `bd` issue's status to "closed" with a reason of "finished", and push that change (this will NOT trigger a new CI pipeline run).
+    6.8. Update your task's status to "closed" with a reason of "finished".
     6.9. Checkout `develop` locally and pull the latest changes from `develop`.
 
 7. EXIT.

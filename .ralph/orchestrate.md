@@ -12,13 +12,22 @@ Collect the following information:
 
 1.1. Check the current git branch name
 
-1.2. If on `develop` branch:
+1.2. Get the Vibe Kanban project ID for this repository:
+   ```
+   mcp__vibe_kanban__list_projects()
+   ```
+   Find the project matching this git repository path and note the `project_id`.
+
+1.3. If on `develop` branch:
    - Check for any unmerged PRs targeting `develop`
    - If PRs exist, check their CI/CD pipeline status
    - Check the CD pipeline status for the `develop` branch itself
-   - Check for any in_progress issues
+   - Check for any in_progress tasks:
+     ```
+     mcp__vibe_kanban__list_tasks(project_id=<uuid>, status="inprogress")
+     ```
 
-1.3. If NOT on `develop` branch (feature/bugfix branch):
+1.4. If NOT on `develop` branch (feature/bugfix branch):
    - Check if a PR exists for this branch
    - Assess whether work appears complete or incomplete
    - Find the associated task
@@ -60,8 +69,8 @@ Use this decision tree to select the appropriate workflow:
 │                  │                                                          │
 │                  └─ NO (CD pipeline passing)                                │
 │                      │                                                      │
-│                      └─ Q5: Are there any tasks with                  │
-│                             status "in_progress"?                           │
+│                      └─ Q5: Are there any tasks with                        │
+│                             status "inprogress"?                            │
 │                          │                                                  │
 │                          ├─ YES                                             │
 │                          │   └─► WORKFLOW: 05-resume-in-progress            │
@@ -74,47 +83,77 @@ Use this decision tree to select the appropriate workflow:
 
 ### Step 3: Identify or Create Task
 
-Based on the selected workflow, identify or create the task to work on:
+Based on the selected workflow, identify or create the task to work on using Vibe Kanban MCP tools.
 
 #### For Workflow 01 (feature-branch-incomplete) or 02 (feature-branch-pr-ready):
 - Find the existing task associated with the current branch
-- Search by: `bd list --status=in_progress` or check recent issues that match the branch name/feature
-- If no issue is found, create one:
-  ```bash
-  bd create --title="[Feature/Fix description from branch]" --type=task
-  bd update <id> --status=in_progress
+- Search by listing in-progress tasks or check recent tasks that match the branch name/feature:
+  ```
+  mcp__vibe_kanban__list_tasks(project_id=<uuid>, status="inprogress")
+  ```
+- If no task is found, create one:
+  ```
+  mcp__vibe_kanban__create_task(
+      project_id=<uuid>,
+      title="[Feature/Fix description from branch]"
+  )
+  ```
+  Then update its status:
+  ```
+  mcp__vibe_kanban__update_task(task_id=<uuid>, status="inprogress")
   ```
 
 #### For Workflow 03 (pr-pipeline-fix):
 - Create a new task for the pipeline fix:
-  ```bash
-  bd create --title="Fix failing CI/CD pipeline for PR #[number]" --type=bug
-  bd update <id> --status=in_progress
+  ```
+  mcp__vibe_kanban__create_task(
+      project_id=<uuid>,
+      title="Fix failing CI/CD pipeline for PR #[number]"
+  )
+  ```
+  Then update its status:
+  ```
+  mcp__vibe_kanban__update_task(task_id=<uuid>, status="inprogress")
   ```
 
 #### For Workflow 04 (cd-pipeline-fix):
 - Create a new task for the CD pipeline fix:
-  ```bash
-  bd create --title="Fix failing CD pipeline for develop branch" --type=bug
-  bd update <id> --status=in_progress
+  ```
+  mcp__vibe_kanban__create_task(
+      project_id=<uuid>,
+      title="Fix failing CD pipeline for develop branch"
+  )
+  ```
+  Then update its status:
+  ```
+  mcp__vibe_kanban__update_task(task_id=<uuid>, status="inprogress")
   ```
 
 #### For Workflow 05 (resume-in-progress):
 - Use the in_progress task found in Step 1
-- This is the highest priority issue from `bd list --status=in_progress`
+- This is the highest priority task from the list_tasks query with status="inprogress"
 
 #### For Workflow 06 (new-work):
-- Run `bd ready` to see available issues ready to work on
-- If there's an existing issue ready to work on, use that issue and update its status:
-  ```bash
-  bd update <id> --status=in_progress
+- List available tasks ready to work on:
   ```
-- If no ready issues exist, create a new task:
-  ```bash
-  bd create --title="[Brief description - will be updated during planning]" --type=task
-  bd update <id> --status=in_progress
+  mcp__vibe_kanban__list_tasks(project_id=<uuid>, status="todo")
   ```
-- Note: The issue details will be fleshed out during the workflow's planning phase
+- If there's an existing task ready to work on, use that task and update its status:
+  ```
+  mcp__vibe_kanban__update_task(task_id=<uuid>, status="inprogress")
+  ```
+- If no ready tasks exist, create a new task:
+  ```
+  mcp__vibe_kanban__create_task(
+      project_id=<uuid>,
+      title="[Brief description - will be updated during planning]"
+  )
+  ```
+  Then update its status:
+  ```
+  mcp__vibe_kanban__update_task(task_id=<uuid>, status="inprogress")
+  ```
+- Note: The task details will be fleshed out during the workflow's planning phase
 
 ### Step 4: Write Assignment File (Handoff)
 
@@ -129,7 +168,7 @@ Create the assignment file at `./.ralph/planning/assignment.json`:
    ```json
    {
      "workflow": ".ralph/workflows/[XX-workflow-name].md",
-     "task_id": "<issue-id-from-bd-list>"
+     "task_id": "<task-uuid-from-vibe-kanban>"
    }
    ```
 
@@ -138,14 +177,14 @@ Create the assignment file at `./.ralph/planning/assignment.json`:
 ```json
 {
   "workflow": ".ralph/workflows/01-feature-branch-incomplete.md",
-  "task_id": "background-assassins-abc"
+  "task_id": "ac7f8755-3ba5-4aaf-a514-8aef29b7d447"
 }
 ```
 
 ```json
 {
   "workflow": ".ralph/workflows/06-new-work.md",
-  "task_id": "background-assassins-xyz"
+  "task_id": "6dc586ed-924e-4223-bd5b-12d88b7a338a"
 }
 ```
 
@@ -157,14 +196,14 @@ Once the assignment file is written, your job is complete. EXIT.
 
 See `./.ralph/workflows/index.md` for a complete index of available workflows.
 
-| # | Workflow | Trigger Condition | BD Issue Action |
-|---|----------|-------------------|-----------------|
+| # | Workflow | Trigger Condition | Task Action |
+|---|----------|-------------------|-------------|
 | 01 | feature-branch-incomplete | On feature branch + work incomplete | Find existing or create |
 | 02 | feature-branch-pr-ready | On feature branch + unmerged PR exists | Find existing or create |
-| 03 | pr-pipeline-fix | On develop + PR has failing CI/CD | Create new (bug) |
-| 04 | cd-pipeline-fix | On develop + CD pipeline failed | Create new (bug) |
-| 05 | resume-in-progress | On develop + has in_progress tasks | Use found issue |
-| 06 | new-work | On develop + nothing in progress | Pick from ready or create new |
+| 03 | pr-pipeline-fix | On develop + PR has failing CI/CD | Create new |
+| 04 | cd-pipeline-fix | On develop + CD pipeline failed | Create new |
+| 05 | resume-in-progress | On develop + has inprogress tasks | Use found task |
+| 06 | new-work | On develop + nothing in progress | Pick from todo or create new |
 
 ---
 
@@ -175,9 +214,43 @@ See `./.ralph/workflows/index.md` for a complete index of available workflows.
 ```json
 {
   "workflow": "string - relative path to workflow file from repo root",
-  "task_id": "string - task ID (full: 'background-assassins-abc' or short: 'abc')"
+  "task_id": "string - task UUID from Vibe Kanban"
 }
 ```
+
+---
+
+## Vibe Kanban MCP Tools Reference
+
+### List Projects
+```
+mcp__vibe_kanban__list_projects()
+```
+Returns all projects. Find the one matching this repository's git path.
+
+### List Tasks
+```
+mcp__vibe_kanban__list_tasks(project_id=<uuid>, status="todo"|"inprogress"|"done")
+```
+Returns tasks filtered by status. Omit status to get all tasks.
+
+### Get Task Details
+```
+mcp__vibe_kanban__get_task(task_id=<uuid>)
+```
+Returns full task details including description.
+
+### Create Task
+```
+mcp__vibe_kanban__create_task(project_id=<uuid>, title="...", description="...")
+```
+Creates a new task. Description is optional.
+
+### Update Task
+```
+mcp__vibe_kanban__update_task(task_id=<uuid>, status="todo"|"inprogress"|"inreview"|"done"|"cancelled")
+```
+Updates task status, title, or description.
 
 ---
 
@@ -198,24 +271,24 @@ flowchart TD
     Q3 -->|No/Passing| Q4{Q4: CD pipeline failed?}
 
     Q4 -->|Yes/Running| W4([04-cd-pipeline-fix])
-    Q4 -->|No, passing| Q5{Q5: Any in_progress<br/>tasks?}
+    Q4 -->|No, passing| Q5{Q5: Any inprogress<br/>tasks?}
 
     Q5 -->|Yes| W5([05-resume-in-progress])
     Q5 -->|No| W6([06-new-work])
 
-    W1 --> BDISSUE[Step 3: Identify/Create BD Issue]
-    W2 --> BDISSUE
-    W3 --> BDISSUE
-    W4 --> BDISSUE
-    W5 --> BDISSUE
-    W6 --> BDISSUE
+    W1 --> TASK[Step 3: Identify/Create Task]
+    W2 --> TASK
+    W3 --> TASK
+    W4 --> TASK
+    W5 --> TASK
+    W6 --> TASK
 
-    BDISSUE --> WRITE[Step 4: Write assignment.json]
+    TASK --> WRITE[Step 4: Write assignment.json]
     WRITE --> DONE([EXIT])
 
     style START fill:#e3f2fd,stroke:#1565c0
     style GATHER fill:#e8f5e9,stroke:#2e7d32
-    style BDISSUE fill:#e1f5fe,stroke:#0288d1
+    style TASK fill:#e1f5fe,stroke:#0288d1
     style WRITE fill:#fff8e1,stroke:#f9a825
     style DONE fill:#ffebee,stroke:#c62828
 

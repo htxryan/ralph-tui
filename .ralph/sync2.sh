@@ -197,18 +197,13 @@ $available_workflows"
     if [[ ! "$task_id" =~ -[a-zA-Z0-9]+$ && ! "$task_id" =~ ^[a-zA-Z0-9]{3}$ ]]; then
         VALIDATION_ERROR="Invalid task_id format: '$task_id'
 
-The 'task_id' field must be a valid task ID.
-Accepted formats:
-  - Full ID: 'background-assassins-abc'
-  - Short code: 'abc' (3 alphanumeric characters)
-
-You can find valid issue IDs by running: bd list"
+The 'task_id' field must be a valid task ID."
         return 1
     fi
 
     log "Assignment validated successfully"
     log "  Workflow: $workflow"
-    log "  BD Issue: $task_id"
+    log "  Task ID: $task_id"
 
     return 0
 }
@@ -378,7 +373,7 @@ WORKFLOW_PATH="$PROJECT_DIR/$WORKFLOW"
 
 log "Assignment ready:"
 log "  Workflow: $WORKFLOW"
-log "  BD Issue: $TASK_ID"
+log "  Task ID: $TASK_ID"
 
 # ----------------------------------------------------------------------------
 # PHASE 2: Workflow Execution

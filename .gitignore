@@ -56,9 +56,6 @@ planning/
 .ralph/tui/.ralph/
 .ralph/test_output.jsonl
 .ralph/tui/debug-*.js
-.beads/daemon.log
-.beads/*.db-shm
-.beads/*.db-wal
 
 data
 trace

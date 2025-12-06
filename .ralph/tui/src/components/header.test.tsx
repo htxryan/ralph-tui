@@ -2,7 +2,7 @@ import React from 'react';
 import { describe, it, expect, vi } from 'vitest';
 import { render } from 'ink-testing-library';
 import { Header } from './header.js';
-import { SessionStats, BDIssue, Assignment } from '../lib/types.js';
+import { SessionStats, KanbanTask, Assignment } from '../lib/types.js';
 
 describe('Header', () => {
   const mockStats: SessionStats = {
@@ -18,7 +18,7 @@ describe('Header', () => {
   it('renders Ralph TUI title', () => {
     const { lastFrame } = render(
       <Header
-        issue={null}
+        task={null}
         stats={mockStats}
         isRalphRunning={false}
       />
@@ -31,7 +31,7 @@ describe('Header', () => {
   it('shows Running status when Ralph is running', () => {
     const { lastFrame } = render(
       <Header
-        issue={null}
+        task={null}
         stats={mockStats}
         isRalphRunning={true}
       />
@@ -43,12 +43,12 @@ describe('Header', () => {
   it('displays workflow name when provided', () => {
     const assignment: Assignment = {
       workflow: '.ralph/workflows/01-new-work.md',
-      bd_issue: undefined
+      task_id: undefined
     };
 
     const { lastFrame } = render(
       <Header
-        issue={null}
+        task={null}
         stats={mockStats}
         isRalphRunning={true}
         assignment={assignment}
@@ -58,10 +58,10 @@ describe('Header', () => {
     expect(lastFrame()).toContain('Running - New Work');
   });
 
-  it('displays issue information when provided', () => {
-    const issue: BDIssue = {
+  it('displays task information when provided', () => {
+    const task: KanbanTask = {
       id: 'test-123',
-      title: 'Test Issue Title',
+      title: 'Test Task Title',
       status: 'in_progress',
       type: 'feature',
       priority: 'medium' as const,
@@ -71,21 +71,21 @@ describe('Header', () => {
 
     const { lastFrame } = render(
       <Header
-        issue={issue}
+        task={task}
         stats={mockStats}
         isRalphRunning={false}
       />
     );
 
     expect(lastFrame()).toContain('test-123');
-    expect(lastFrame()).toContain('Test Issue Title');
+    expect(lastFrame()).toContain('Test Task Title');
     expect(lastFrame()).toContain('in_progress');
   });
 
   it('shows error status when error is present', () => {
     const { lastFrame } = render(
       <Header
-        issue={null}
+        task={null}
         stats={mockStats}
         isRalphRunning={false}
         error={new Error('Test error')}
@@ -98,7 +98,7 @@ describe('Header', () => {
   it('displays token counts', () => {
     const { lastFrame } = render(
       <Header
-        issue={null}
+        task={null}
         stats={mockStats}
         isRalphRunning={false}
       />
@@ -113,7 +113,7 @@ describe('Header', () => {
   it('displays session statistics', () => {
     const { lastFrame } = render(
       <Header
-        issue={null}
+        task={null}
         stats={mockStats}
         isRalphRunning={false}
       />
@@ -132,7 +132,7 @@ describe('Header', () => {
 
     const { lastFrame } = render(
       <Header
-        issue={null}
+        task={null}
         stats={statsWithErrors}
         isRalphRunning={false}
       />

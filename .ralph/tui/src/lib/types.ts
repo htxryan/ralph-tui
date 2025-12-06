@@ -61,8 +61,8 @@ export interface ToolCall {
   duration?: number;
 }
 
-// BD Issue Types
-export interface BDIssue {
+// Kanban Task Types
+export interface KanbanTask {
   id: string;
   title: string;
   type: 'task' | 'bug' | 'feature';
@@ -75,10 +75,10 @@ export interface BDIssue {
   labels?: string[];
   blockers?: string[];
   blocks?: string[];
-  comments?: BDComment[];
+  comments?: TaskComment[];
 }
 
-export interface BDComment {
+export interface TaskComment {
   id: string;
   author: string;
   content: string;
@@ -87,7 +87,7 @@ export interface BDComment {
 
 export interface Assignment {
   workflow?: string;  // Optional - not set during orchestration phase
-  bd_issue?: string;
+  task_id?: string;
 }
 
 // Claude Code Todo Types
@@ -100,7 +100,7 @@ export interface Todo {
 }
 
 // App State Types
-export type TabName = 'messages' | 'bdissue' | 'todos' | 'errors' | 'stats';
+export type TabName = 'messages' | 'task' | 'todos' | 'errors' | 'stats';
 export type ViewMode = 'main' | 'subagent-detail' | 'message-detail' | 'error-detail';
 
 // Message filter types for the filter dialog

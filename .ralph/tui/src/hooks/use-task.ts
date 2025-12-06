@@ -1,44 +1,44 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { execa } from 'execa';
-import { BDIssue } from '../lib/types.js';
+import { KanbanTask } from '../lib/types.js';
 
-export interface UseBDIssueOptions {
-  issueId: string | null;
+export interface UseTaskOptions {
+  taskId: string | null;
   refreshInterval?: number;
 }
 
-export interface UseBDIssueResult {
-  issue: BDIssue | null;
+export interface UseTaskResult {
+  task: KanbanTask | null;
   isLoading: boolean;
   error: Error | null;
   refresh: () => void;
 }
 
-export function useBDIssue(options: UseBDIssueOptions): UseBDIssueResult {
-  const { issueId, refreshInterval = 30000 } = options;
+export function useTask(options: UseTaskOptions): UseTaskResult {
+  const { taskId, refreshInterval = 30000 } = options;
 
-  const [issue, setIssue] = useState<BDIssue | null>(null);
+  const [task, setTask] = useState<KanbanTask | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  const fetchIssue = useCallback(async () => {
-    if (!issueId) {
-      setIssue(null);
+  const fetchTask = useCallback(async () => {
+    if (!taskId) {
+      setTask(null);
       setIsLoading(false);
       return;
     }
 
     try {
       setIsLoading(true);
-      const { stdout } = await execa('bd', ['show', issueId, '--json']);
-      const parsed = JSON.parse(stdout) as BDIssue;
-      // Validate that we got a real issue with required fields
+      const { stdout } = await execa('bd', ['show', taskId, '--json']);
+      const parsed = JSON.parse(stdout) as KanbanTask;
+      // Validate that we got a real task with required fields
       if (!parsed || !parsed.id || !parsed.title) {
-        setIssue(null);
+        setTask(null);
         setError(null);
       } else {
-        setIssue(parsed);
+        setTask(parsed);
         setError(null);
       }
     } catch (err) {
@@ -46,23 +46,23 @@ export function useBDIssue(options: UseBDIssueOptions): UseBDIssueResult {
       if (err instanceof Error) {
         setError(err);
       } else {
-        setError(new Error('Failed to fetch BD issue'));
+        setError(new Error('Failed to fetch task'));
       }
-      setIssue(null);
+      setTask(null);
     } finally {
       setIsLoading(false);
     }
-  }, [issueId]);
+  }, [taskId]);
 
   const refresh = useCallback(() => {
-    fetchIssue();
-  }, [fetchIssue]);
+    fetchTask();
+  }, [fetchTask]);
 
   useEffect(() => {
-    fetchIssue();
+    fetchTask();
 
     if (refreshInterval > 0) {
-      intervalRef.current = setInterval(fetchIssue, refreshInterval);
+      intervalRef.current = setInterval(fetchTask, refreshInterval);
     }
 
     return () => {
@@ -70,10 +70,10 @@ export function useBDIssue(options: UseBDIssueOptions): UseBDIssueResult {
         clearInterval(intervalRef.current);
       }
     };
-  }, [fetchIssue, refreshInterval]);
+  }, [fetchTask, refreshInterval]);
 
   return {
-    issue,
+    task,
     isLoading,
     error,
     refresh,

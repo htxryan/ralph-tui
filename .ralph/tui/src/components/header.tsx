@@ -1,7 +1,7 @@
 import React from 'react';
 import { Box, Text } from 'ink';
 import { colors, icons } from '../lib/colors.js';
-import { Assignment, BDIssue, SessionStats } from '../lib/types.js';
+import { Assignment, KanbanTask, SessionStats } from '../lib/types.js';
 import { formatTokens, formatDuration, extractWorkflowName } from '../lib/parser.js';
 import { Spinner } from './common/spinner.js';
 
@@ -37,7 +37,7 @@ function calculateDurationBetween(start: Date | null | undefined, end: Date | nu
 }
 
 export interface HeaderProps {
-  issue: BDIssue | null;
+  task: KanbanTask | null;
   stats: SessionStats;
   isLoading?: boolean;
   error?: Error | null;
@@ -46,7 +46,7 @@ export interface HeaderProps {
 }
 
 export function Header({
-  issue,
+  task,
   stats,
   isLoading = false,
   error = null,
@@ -112,27 +112,27 @@ export function Header({
         </Box>
       </Box>
 
-      {/* Second row: BD Issue + Stats */}
+      {/* Second row: Task + Stats */}
       <Box flexDirection="row" justifyContent="space-between">
-        {/* BD Issue summary */}
+        {/* Task summary */}
         <Box flexDirection="row">
-          {issue?.title ? (
+          {task?.title ? (
             <>
               <Text color={colors.subagent} bold>
-                {issue.id}
+                {task.id}
               </Text>
               <Text color={colors.dimmed}>: </Text>
               <Text color={colors.header}>
-                {issue.title.length > 50 ? issue.title.slice(0, 47) + '...' : issue.title}
+                {task.title.length > 50 ? task.title.slice(0, 47) + '...' : task.title}
               </Text>
               <Text color={colors.dimmed}> [</Text>
-              <Text color={colors[issue.status as keyof typeof colors] || colors.dimmed}>
-                {issue.status ?? 'unknown'}
+              <Text color={colors[task.status as keyof typeof colors] || colors.dimmed}>
+                {task.status ?? 'unknown'}
               </Text>
               <Text color={colors.dimmed}>]</Text>
             </>
           ) : (
-            <Text color={colors.dimmed}>No BD issue assigned</Text>
+            <Text color={colors.dimmed}>No task assigned</Text>
           )}
         </Box>
 
