@@ -6,6 +6,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { App } from './app.js';
 import { archiveCurrentSession } from './lib/archive.js';
+import { runInit, formatInitOutput } from './commands/init.js';
 
 // Find the project root by looking for .ralph directory
 function findProjectRoot(): string {
@@ -147,6 +148,38 @@ program
     waitUntilExit().then(() => {
       process.exit(0);
     });
+  });
+
+// ============================================================================
+// init subcommand
+// ============================================================================
+
+program
+  .command('init')
+  .description('Initialize Ralph in the current directory')
+  .option('-a, --agent <name>', 'Pre-configure a specific agent (claude-code, codex, opencode, kiro, custom)')
+  .option('-n, --dry-run', 'Show what would be created without creating files')
+  .option('-f, --force', 'Overwrite existing files')
+  .action((options) => {
+    const projectRoot = process.cwd();
+
+    const result = runInit(projectRoot, {
+      agent: options.agent,
+      dryRun: options.dryRun,
+      force: options.force,
+    });
+
+    const output = formatInitOutput(result, {
+      agent: options.agent,
+      dryRun: options.dryRun,
+      force: options.force,
+    });
+
+    console.log(output);
+
+    if (!result.success) {
+      process.exit(1);
+    }
   });
 
 program.parse();
