@@ -239,16 +239,19 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
  * - Arrays are replaced (not merged)
  * - Undefined values in source don't overwrite target
  * - null values in source DO overwrite target
+ *
+ * Note: Uses Record<string, unknown> internally to handle
+ * complex nested partial types like PartialRalphConfig
  */
-export function deepMerge<T extends Record<string, unknown>>(
+export function deepMerge<T extends object>(
   target: T,
-  source: Partial<T>
+  source: Record<string, unknown>
 ): T {
-  const result = { ...target };
+  const result = { ...target } as Record<string, unknown>;
 
-  for (const key of Object.keys(source) as Array<keyof T>) {
+  for (const key of Object.keys(source)) {
     const sourceValue = source[key];
-    const targetValue = target[key];
+    const targetValue = result[key];
 
     // Skip undefined values in source
     if (sourceValue === undefined) {
@@ -260,14 +263,14 @@ export function deepMerge<T extends Record<string, unknown>>(
       result[key] = deepMerge(
         targetValue as Record<string, unknown>,
         sourceValue as Record<string, unknown>
-      ) as T[keyof T];
+      );
     } else {
       // Otherwise, replace (including arrays, primitives, null)
-      result[key] = sourceValue as T[keyof T];
+      result[key] = sourceValue;
     }
   }
 
-  return result;
+  return result as T;
 }
 
 // ============================================================================

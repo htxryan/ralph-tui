@@ -8,7 +8,15 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
+import { fileURLToPath } from 'url';
 import type { AgentType } from '../lib/config.js';
+
+// Get the package root directory (works in both dev and installed contexts)
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+// In dev: src/commands -> ../ -> src -> ../ -> package root
+// In dist: dist/commands -> ../ -> dist -> ../ -> package root
+const PACKAGE_ROOT = path.resolve(__dirname, '..', '..');
 
 // ============================================================================
 // Types
@@ -48,115 +56,40 @@ interface FileToCreate {
 }
 
 // ============================================================================
-// Example Prompt Templates
+// Template Loading
 // ============================================================================
 
-const PLAN_EXAMPLE_CONTENT = `# Planning Prompt Template
+/**
+ * Load a template file from the templates directory
+ *
+ * Templates are bundled with the npm package and loaded at runtime.
+ * Falls back to empty string if template file is not found.
+ */
+function loadTemplate(templateName: string): string {
+  const templatePath = path.join(PACKAGE_ROOT, 'templates', templateName);
+  try {
+    if (fs.existsSync(templatePath)) {
+      return fs.readFileSync(templatePath, 'utf-8');
+    }
+  } catch {
+    // Ignore read errors, return empty string
+  }
+  return '';
+}
 
-This is an example planning prompt. Customize this for your project.
+/**
+ * Get the path to the templates directory
+ */
+export function getTemplatesDir(): string {
+  return path.join(PACKAGE_ROOT, 'templates');
+}
 
-## Context
-
-You are a senior software engineer tasked with planning the implementation of a feature or fix.
-
-## Task
-
-{{task}}
-
-## Instructions
-
-1. **Analyze the Request**
-   - Break down the task into clear, actionable steps
-   - Identify potential challenges or edge cases
-   - Consider dependencies and order of operations
-
-2. **Review Existing Code**
-   - Search for related code in the codebase
-   - Understand current patterns and conventions
-   - Identify files that will need modification
-
-3. **Create Implementation Plan**
-   - List specific files to create or modify
-   - Outline the changes needed in each file
-   - Note any tests that should be added or updated
-
-4. **Risk Assessment**
-   - Identify potential breaking changes
-   - Note areas requiring careful review
-   - Suggest rollback strategies if applicable
-
-## Output Format
-
-Provide a structured plan with:
-- Summary of the approach
-- Numbered steps for implementation
-- List of files to modify
-- Testing strategy
-- Any open questions that need clarification
-
----
-
-**Variables available:**
-- \`{{task}}\` - The user's original task/request
-- \`{{projectRoot}}\` - Path to project root
-- \`{{date}}\` - Current date/time
-- \`{{step}}\` - Current step name
-`;
-
-const EXECUTE_EXAMPLE_CONTENT = `# Execution Prompt Template
-
-This is an example execution prompt. Customize this for your project.
-
-## Context
-
-You are a senior software engineer implementing a planned feature or fix.
-
-## Task
-
-{{task}}
-
-## Plan Context
-
-{{context}}
-
-## Instructions
-
-1. **Follow the Plan**
-   - Implement each step from the planning phase
-   - Write clean, well-documented code
-   - Follow project conventions and patterns
-
-2. **Quality Standards**
-   - Write meaningful commit messages
-   - Add appropriate comments for complex logic
-   - Ensure code is properly formatted
-
-3. **Testing**
-   - Add unit tests for new functionality
-   - Update existing tests as needed
-   - Verify all tests pass before completion
-
-4. **Documentation**
-   - Update README if public API changes
-   - Add JSDoc comments for public functions
-   - Update any affected documentation
-
-## Completion
-
-When done:
-- Verify all changes compile without errors
-- Ensure tests pass
-- Confirm the original task requirements are met
-
----
-
-**Variables available:**
-- \`{{task}}\` - The user's original task/request
-- \`{{context}}\` - Plan output from previous step
-- \`{{projectRoot}}\` - Path to project root
-- \`{{date}}\` - Current date/time
-- \`{{step}}\` - Current step name
-`;
+/**
+ * Get the path to the defaults directory
+ */
+export function getDefaultsDir(): string {
+  return path.join(PACKAGE_ROOT, 'defaults');
+}
 
 // ============================================================================
 // Valid Agent Types
@@ -220,7 +153,7 @@ function getFilesToCreate(projectRoot: string, options: InitOptions): FileToCrea
   // prompts/plan.example.md - example template
   files.push({
     relativePath: '.ralph/prompts/plan.example.md',
-    content: PLAN_EXAMPLE_CONTENT,
+    content: loadTemplate('plan.example.md'),
     description: 'Example planning prompt template',
   });
 
@@ -234,7 +167,7 @@ function getFilesToCreate(projectRoot: string, options: InitOptions): FileToCrea
   // prompts/execute.example.md - example template
   files.push({
     relativePath: '.ralph/prompts/execute.example.md',
-    content: EXECUTE_EXAMPLE_CONTENT,
+    content: loadTemplate('execute.example.md'),
     description: 'Example execution prompt template',
   });
 
