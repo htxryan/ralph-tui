@@ -300,7 +300,7 @@ export function SessionPicker({
         const lineVisualWidth = visualWidth(lineContent);
 
         return (
-          <Text key={session.filePath} backgroundColor={DIALOG_BG_COLOR}>
+          <Text key={`${session.type}-${session.filePath}`} backgroundColor={DIALOG_BG_COLOR}>
             <Text backgroundColor={DIALOG_BG_COLOR}>{' '.repeat(PADDING)}</Text>
             <Text color={isSelected ? colors.selected : colors.dimmed} backgroundColor={DIALOG_BG_COLOR}>
               {selector}
