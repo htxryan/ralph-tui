@@ -3,6 +3,7 @@ import { Box, useApp, useInput } from 'ink';
 import * as path from 'path';
 import * as fs from 'fs';
 import { TabName, ViewMode, ToolCall, ProcessedMessage, ErrorInfo } from './lib/types.js';
+import { type RalphConfig } from './lib/config.js';
 import { calculateSessionStats } from './lib/parser.js';
 import { archiveCurrentSession } from './lib/archive.js';
 import { getContextualShortcuts, getAllShortcutsForDialog } from './lib/shortcuts.js';
@@ -31,12 +32,15 @@ export interface AppProps {
   jsonlPath: string;
   issueId?: string;
   showSidebar?: boolean;
+  /** Full Ralph configuration (optional for backwards compatibility) */
+  config?: RalphConfig;
 }
 
 export function App({
   jsonlPath,
   issueId: providedIssueId,
   showSidebar: initialShowSidebar = false,
+  config,
 }: AppProps): React.ReactElement {
   const { exit } = useApp();
 
@@ -49,7 +53,15 @@ export function App({
   // when switching to archived sessions. This ensures the session picker always
   // shows the full archive list, even when viewing an archived session.
   const sessionDir = useMemo(() => path.dirname(jsonlPath), [jsonlPath]);
-  const archiveDir = useMemo(() => path.join(sessionDir, 'archive'), [sessionDir]);
+  // Use config.paths.archiveDir if available, otherwise fall back to default
+  const archiveDir = useMemo(() => {
+    if (config?.paths?.archiveDir) {
+      // archiveDir from config is relative to project root, so use sessionDir's parent
+      const projectRoot = path.dirname(sessionDir);
+      return path.resolve(projectRoot, config.paths.archiveDir);
+    }
+    return path.join(sessionDir, 'archive');
+  }, [sessionDir, config?.paths?.archiveDir]);
 
   // App state
   const [currentTab, setCurrentTab] = useState<TabName>('messages');

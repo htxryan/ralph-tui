@@ -6,6 +6,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { App } from './app.js';
 import { archiveCurrentSession } from './lib/archive.js';
+import { loadConfig, type CLIOptions, type RalphConfig } from './lib/config.js';
 
 // Find the project root by looking for .ralph directory
 function findProjectRoot(): string {
@@ -37,8 +38,8 @@ function findProjectRoot(): string {
 }
 
 // Check if Ralph is already running by looking at the lock file
-function isRalphRunning(projectRoot: string): boolean {
-  const lockFile = path.join(projectRoot, '.ralph', 'claude.lock');
+function isRalphRunning(projectRoot: string, config: RalphConfig): boolean {
+  const lockFile = path.join(projectRoot, config.process.lockPath);
   try {
     if (fs.existsSync(lockFile)) {
       const pid = fs.readFileSync(lockFile, 'utf-8').trim();
@@ -62,13 +63,12 @@ function isRalphRunning(projectRoot: string): boolean {
 const program = new Command();
 
 program
-  .name('ralph-tui')
-  .description('Terminal UI for monitoring Ralph autonomous agent system')
+  .name('ralph')
+  .description('Terminal UI for monitoring and controlling autonomous AI coding agent sessions')
   .version('1.0.0')
   .option(
     '-f, --file <path>',
-    'Path to JSONL file to monitor',
-    '.ralph/claude_output.jsonl'
+    'Path to JSONL file to monitor (overrides config)'
   )
   .option(
     '-i, --issue <id>',
@@ -76,7 +76,15 @@ program
   )
   .option(
     '-s, --sidebar',
-    'Show the sidebar (hidden by default)'
+    'Show the sidebar on startup'
+  )
+  .option(
+    '-S, --no-sidebar',
+    'Hide the sidebar on startup'
+  )
+  .option(
+    '-a, --agent <type>',
+    'Agent type to use (claude-code, codex, opencode, kiro, custom)'
   )
   .option(
     '-w, --watch',
@@ -87,8 +95,29 @@ program
     // Find project root
     const projectRoot = findProjectRoot();
 
-    // Resolve the JSONL file path
-    let jsonlPath = options.file;
+    // Build CLI options for config system
+    const cliOptions: CLIOptions = {
+      file: options.file,
+      issue: options.issue,
+      agent: options.agent,
+    };
+
+    // Handle sidebar option (Commander handles --no-sidebar as sidebar: false)
+    if (options.sidebar !== undefined) {
+      cliOptions.sidebar = options.sidebar;
+    }
+
+    // Load configuration from all sources
+    let config: RalphConfig;
+    try {
+      config = loadConfig(projectRoot, cliOptions);
+    } catch (err) {
+      process.stderr.write(`Error: ${err instanceof Error ? err.message : String(err)}\n`);
+      process.exit(1);
+    }
+
+    // Resolve the JSONL file path from config
+    let jsonlPath = config.process.jsonlPath;
 
     // If relative path, resolve from project root (not cwd)
     if (!path.isAbsolute(jsonlPath)) {
@@ -97,11 +126,11 @@ program
 
     // Check if Ralph is already running - if so, DON'T archive or truncate!
     // We want to reconnect to the running session with all historical messages intact.
-    const ralphAlreadyRunning = isRalphRunning(projectRoot);
+    const ralphAlreadyRunning = isRalphRunning(projectRoot, config);
 
     if (!ralphAlreadyRunning) {
       // Archive previous session if file exists with content
-      const archiveDir = path.join(projectRoot, '.ralph', 'archive');
+      const archiveDir = path.resolve(projectRoot, config.paths.archiveDir);
       const archiveResult = await archiveCurrentSession(jsonlPath, archiveDir);
 
       if (archiveResult.archived) {
@@ -135,12 +164,13 @@ program
       }
     }
 
-    // Render the app
+    // Render the app with configuration
     const { waitUntilExit } = render(
       <App
         jsonlPath={jsonlPath}
         issueId={options.issue}
-        showSidebar={options.sidebar}
+        showSidebar={config.display.showSidebar}
+        config={config}
       />
     );
 
