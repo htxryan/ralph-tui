@@ -1,0 +1,110 @@
+# AGENTS.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Project Overview
+
+Ralph TUI is a terminal user interface for monitoring and controlling autonomous AI coding agent sessions. It provides real-time visibility into long-running AI agent workflows, enabling developers to observe, interrupt, and guide autonomous coding sessions. Built with Ink (React for CLIs) and TypeScript.
+
+## Repository Structure
+
+- `.ralph/tui/` - The main TUI application (Ink + React)
+- `.ralph/` - Ralph runtime files (scripts, logs, archives)
+- `.ai-docs/` - AI-native documentation
+  - `design/` - Product brief, tech stack
+  - `adr/` - Architecture Decision Records
+  - `prompts/` - Prompt templates
+
+## Development Commands
+
+All commands run from `.ralph/tui/`:
+
+```bash
+# Development
+pnpm install          # Install dependencies
+pnpm dev:tsx          # Run with tsx (hot reload)
+pnpm dev              # Watch mode TypeScript compilation
+
+# Build & Run
+pnpm build            # Compile TypeScript
+pnpm start            # Run compiled version
+pnpm run              # Install + build + start
+
+# Testing
+pnpm test             # Run tests in watch mode
+pnpm test:run         # Single test run
+pnpm test:ci          # Verbose output for CI
+pnpm test:coverage    # With coverage report
+pnpm typecheck        # TypeScript type checking only
+```
+
+## Tech Stack
+
+- **Runtime**: Node.js >= 18, ES Modules
+- **Language**: TypeScript ^5.7
+- **UI**: Ink ^5.2 (React renderer for CLIs), React ^18.3
+- **CLI**: Commander ^12.1
+- **File watching**: chokidar ^3.6
+- **Process management**: execa ^9.5
+- **Testing**: Vitest, ink-testing-library
+
+## Architecture
+
+### Key Patterns
+
+1. **Stream Processing**: JSONL file → chokidar watch → parse → React state (`useJSONLStream` hook)
+2. **Subagent Tracking**: Messages with `parent_tool_use_id` are collected into parent ToolCall's `subagentMessages` array
+3. **Process Management**: Lock file + PID tracking for Start/Stop/Resume (`useRalphProcess` hook)
+
+### Component Structure
+
+```
+src/
+├── cli.tsx              # Entry point, argument parsing
+├── app.tsx              # Main React app, keyboard handling, state
+├── components/          # React components by feature
+│   ├── common/          # Reusable (ProgressBar, Spinner, ScrollableList)
+│   ├── messages/        # Message stream display
+│   ├── errors/          # Error aggregation views
+│   ├── subagent/        # Nested agent conversation views
+│   └── ...
+├── hooks/               # React hooks
+│   ├── use-jsonl-stream.ts    # Real-time JSONL file tailing
+│   ├── use-ralph-process.ts   # Process lifecycle management
+│   ├── use-keyboard.ts        # Keyboard input handling
+│   └── ...
+└── lib/                 # Utilities
+    ├── types.ts         # All TypeScript interfaces
+    ├── parser.ts        # JSONL parsing, stats calculation
+    └── ...
+```
+
+### Core Types (lib/types.ts)
+
+- `ClaudeEvent` - Raw JSONL event from Claude Code
+- `ProcessedMessage` - Normalized message for display
+- `ToolCall` - Tool invocation with status, result, subagent data
+- `SessionStats` - Token counts, timing, error counts
+- `TabName` - 'messages' | 'bdissue' | 'todos' | 'errors' | 'stats'
+
+## Testing Patterns
+
+Tests use `ink-testing-library` for component testing:
+
+```tsx
+import { render } from 'ink-testing-library';
+import { MyComponent } from './my-component.js';
+
+describe('MyComponent', () => {
+  it('renders correctly', () => {
+    const { lastFrame } = render(<MyComponent prop="value" />);
+    expect(lastFrame()).toContain('expected text');
+  });
+});
+```
+
+Test files are co-located with components (`*.test.tsx`) or in `src/test/` for integration tests.
+
+## Work Tracking
+
+This project uses Beads (`bd`) for issue tracking instead of markdown TODOs. See the quickstart in the session hook for commands like `bd ready`, `bd create`, `bd close`.

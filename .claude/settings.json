@@ -2,6 +2,7 @@
   "permissions": {
     "deny": ["Read(.ai-docs/archive/**)"]
   },
+  "model": "opus",
   "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": ["context7", "chrome-devtools", "serena", "mermaid-validator"],
   "hooks": {

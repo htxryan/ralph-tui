@@ -1,11 +1,49 @@
 {
-  "name": "ralph-tui",
+  "name": "ralph",
   "version": "1.0.0",
-  "description": "Terminal UI for monitoring Ralph autonomous agent system",
+  "description": "Terminal UI for monitoring and controlling autonomous AI coding agent sessions",
   "type": "module",
-  "bin": {
-    "ralph-tui": "./dist/cli.js"
+  "license": "MIT",
+  "author": {
+    "name": "Ryan Henderson",
+    "url": "https://github.com/htxryan"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/htxryan/ralph-tui.git"
+  },
+  "homepage": "https://github.com/htxryan/ralph-tui#readme",
+  "bugs": {
+    "url": "https://github.com/htxryan/ralph-tui/issues"
+  },
+  "keywords": [
+    "cli",
+    "tui",
+    "terminal",
+    "ai",
+    "agent",
+    "autonomous",
+    "coding",
+    "claude",
+    "llm",
+    "ink",
+    "react"
+  ],
+  "bin": {
+    "ralph": "./dist/cli.js"
+  },
+  "main": "./dist/cli.js",
+  "exports": {
+    ".": {
+      "import": "./dist/cli.js",
+      "types": "./dist/cli.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
@@ -18,7 +56,8 @@
     "test:run": "vitest run",
     "test:ci": "vitest run --reporter=verbose",
     "test:coverage": "vitest run --coverage",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "pnpm run build && pnpm run typecheck && pnpm run test:run"
   },
   "dependencies": {
     "@inkjs/ui": "^2.0.0",
