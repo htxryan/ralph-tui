@@ -106,7 +106,17 @@ export function useRalphProcess(
 
   // Start Ralph process
   const start = useCallback(() => {
-    if (isStarting || isRunning) return;
+    // Debug logging
+    console.error('[useRalphProcess] start() called');
+    console.error('[useRalphProcess] isStarting:', isStarting, 'isRunning:', isRunning);
+    console.error('[useRalphProcess] ralphScript:', ralphScript);
+    console.error('[useRalphProcess] userDataDir:', userDataDir);
+    console.error('[useRalphProcess] basePath:', basePath);
+
+    if (isStarting || isRunning) {
+      console.error('[useRalphProcess] Bailing: already starting or running');
+      return;
+    }
 
     setIsStarting(true);
     setError(null);
