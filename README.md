@@ -2,6 +2,27 @@
 
 Run an agent in a long-running loop, with a rich TUI.
 
+## Quick Start
+
+```bash
+# Install dependencies and link globally (for development)
+pnpm install && pnpm link
+
+# Now 'ralph' command is available globally and reflects local code changes
+ralph --help
+```
+
+## Development
+
+```bash
+pnpm install    # Install dependencies
+pnpm link       # Create global symlink for 'ralph' command
+pnpm dev        # Run with hot reload (tsx)
+pnpm build      # Compile TypeScript
+pnpm test       # Run tests
+pnpm typecheck  # Type check only
+```
+
 ## Repo Organization
 
 - `.ai-docs/`: AI-native documentation for the project

@@ -1,3 +1,29 @@
+---
+name: New Work
+condition: |
+  You are on the develop branch AND all of the following are true:
+  - There are NO unmerged PRs with failing pipelines
+  - The CD pipeline for develop is passing (app is deployed successfully)
+  - There are NO tasks with status "in_progress" (no existing work to resume)
+
+  This is the "clean slate" workflow - all blockers are resolved and you're ready to
+  start fresh work.
+
+  Decision tree path: START → On develop branch? YES → Unmerged PRs with failing pipelines? NO →
+  CD pipeline status? PASSING → Any tasks in_progress? NO
+description: |
+  Plan and implement the next feature, change, or fix from scratch.
+
+  Review the product brief and relevant documentation, pick the next most important feature
+  or fix to implement, create an implementation plan, update the task status to "in_progress",
+  implement with tests and manual browser testing, create a Pull Request, verify CI pipelines
+  pass for your specific PR, merge the PR, validate CD pipelines succeed and the app deploys
+  to the dev environment, close the task with status "finished", then checkout develop and
+  pull latest changes.
+priority: 6
+goal: Start new feature/fix
+---
+
 # New Work
 
 **Trigger**: You are on the develop branch with no in_progress issues and all pipelines passing
