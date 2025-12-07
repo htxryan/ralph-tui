@@ -1,0 +1,1 @@
+BUG: Filter dialog box is showing background content (its background is not filled in as expected)
