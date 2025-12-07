@@ -2,7 +2,7 @@ import React from 'react';
 import { Box, Text } from 'ink';
 import { colors, icons } from '../../lib/colors.js';
 import { ProcessedMessage } from '../../lib/types.js';
-import { formatTime, formatMessageDuration, truncate } from '../../lib/parser.js';
+import { formatTime, formatMessageDuration, truncate, formatTokens, calculateSubagentTokens } from '../../lib/parser.js';
 import { formatToolCall } from '../../lib/tool-formatting.js';
 
 export interface MessageItemProps {
@@ -39,6 +39,21 @@ export function MessageItem({
 
   // Check if this message contains a subagent (Task) tool call
   const hasSubagent = message.toolCalls.some(tc => tc.isSubagent);
+
+  // Calculate subagent token totals if this message has subagents
+  const subagentTokens = hasSubagent
+    ? message.toolCalls
+        .filter(tc => tc.isSubagent && tc.subagentMessages)
+        .reduce(
+          (acc, tc) => {
+            const tokens = calculateSubagentTokens(tc.subagentMessages || []);
+            return {
+              total: acc.total + tokens.total,
+            };
+          },
+          { total: 0 }
+        )
+    : null;
 
   // Check if this message has any incomplete tool calls (pending or running)
   const hasIncompleteToolCalls = message.toolCalls.some(
@@ -131,6 +146,14 @@ export function MessageItem({
         <Text color={colors.dimmed}>#{index} </Text>
         <Text color={dotColor}>{typeIcon}</Text>
         <Text color={headerLabelColor}> {typeLabel}</Text>
+        {/* Add token count for subagents */}
+        {hasSubagent && subagentTokens && subagentTokens.total > 0 && (
+          <>
+            <Text color={colors.dimmed}> (</Text>
+            <Text color={colors.subagent}>{formatTokens(subagentTokens.total)}</Text>
+            <Text color={colors.dimmed}>)</Text>
+          </>
+        )}
         <Text color={colors.dimmed}>  {formatTime(message.timestamp)}</Text>
         {durationMs !== undefined && durationMs >= 0 && (
           <Text color={colors.dimmed}> ({formatMessageDuration(durationMs)})</Text>

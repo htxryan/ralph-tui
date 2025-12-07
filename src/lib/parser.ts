@@ -229,6 +229,31 @@ export function formatTokens(count: number): string {
 }
 
 /**
+ * Calculate total tokens from an array of messages
+ */
+export function calculateSubagentTokens(messages: ProcessedMessage[]): {
+  input: number;
+  output: number;
+  total: number;
+} {
+  let input = 0;
+  let output = 0;
+
+  for (const message of messages) {
+    if (message.usage) {
+      input += message.usage.input_tokens || 0;
+      output += message.usage.output_tokens || 0;
+    }
+  }
+
+  return {
+    input,
+    output,
+    total: input + output,
+  };
+}
+
+/**
  * Format duration for display
  */
 export function formatDuration(startTime: Date | null): string {
