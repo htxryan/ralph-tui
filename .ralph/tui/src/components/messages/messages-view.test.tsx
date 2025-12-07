@@ -2,15 +2,19 @@ import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render } from 'ink-testing-library';
 import { MessagesView } from './messages-view.js';
-import { ProcessedMessage, ToolCall } from '../../lib/types.js';
+import { ProcessedMessage, ToolCall, MessageFilterType, ALL_MESSAGE_FILTER_TYPES } from '../../lib/types.js';
 
 describe('MessagesView', () => {
   let mockOnSelectMessage: ReturnType<typeof vi.fn>;
   let mockOnSelectSubagent: ReturnType<typeof vi.fn>;
+  let mockOnFiltersChange: ReturnType<typeof vi.fn>;
+  let defaultEnabledFilters: Set<MessageFilterType>;
 
   beforeEach(() => {
     mockOnSelectMessage = vi.fn();
     mockOnSelectSubagent = vi.fn();
+    mockOnFiltersChange = vi.fn();
+    defaultEnabledFilters = new Set(ALL_MESSAGE_FILTER_TYPES);
   });
 
   const createMockMessage = (id: string, type: 'user' | 'assistant' | 'system' | 'result', text: string, toolCalls: ToolCall[] = []): ProcessedMessage => ({
@@ -39,6 +43,8 @@ describe('MessagesView', () => {
           height={20}
           onSelectMessage={mockOnSelectMessage}
           onSelectSubagent={mockOnSelectSubagent}
+          enabledFilters={defaultEnabledFilters}
+          onFiltersChange={mockOnFiltersChange}
         />
       );
 
@@ -61,6 +67,8 @@ describe('MessagesView', () => {
           height={30}
           onSelectMessage={mockOnSelectMessage}
           onSelectSubagent={mockOnSelectSubagent}
+          enabledFilters={defaultEnabledFilters}
+          onFiltersChange={mockOnFiltersChange}
         />
       );
 
@@ -79,6 +87,8 @@ describe('MessagesView', () => {
           height={20}
           onSelectMessage={mockOnSelectMessage}
           onSelectSubagent={mockOnSelectSubagent}
+          enabledFilters={defaultEnabledFilters}
+          onFiltersChange={mockOnFiltersChange}
         />
       );
 
@@ -100,6 +110,8 @@ describe('MessagesView', () => {
           height={20}
           onSelectMessage={mockOnSelectMessage}
           onSelectSubagent={mockOnSelectSubagent}
+          enabledFilters={defaultEnabledFilters}
+          onFiltersChange={mockOnFiltersChange}
         />
       );
 
@@ -121,6 +133,8 @@ describe('MessagesView', () => {
           height={30}
           onSelectMessage={mockOnSelectMessage}
           onSelectSubagent={mockOnSelectSubagent}
+          enabledFilters={defaultEnabledFilters}
+          onFiltersChange={mockOnFiltersChange}
         />
       );
 
@@ -143,6 +157,8 @@ describe('MessagesView', () => {
           height={30}
           onSelectMessage={mockOnSelectMessage}
           onSelectSubagent={mockOnSelectSubagent}
+          enabledFilters={defaultEnabledFilters}
+          onFiltersChange={mockOnFiltersChange}
         />
       );
 
@@ -164,6 +180,8 @@ describe('MessagesView', () => {
           height={30}
           onSelectMessage={mockOnSelectMessage}
           onSelectSubagent={mockOnSelectSubagent}
+          enabledFilters={defaultEnabledFilters}
+          onFiltersChange={mockOnFiltersChange}
         />
       );
 
@@ -188,6 +206,8 @@ describe('MessagesView', () => {
           height={30}
           onSelectMessage={mockOnSelectMessage}
           onSelectSubagent={mockOnSelectSubagent}
+          enabledFilters={defaultEnabledFilters}
+          onFiltersChange={mockOnFiltersChange}
         />
       );
 
@@ -206,6 +226,8 @@ describe('MessagesView', () => {
           height={20}
           onSelectMessage={mockOnSelectMessage}
           onSelectSubagent={mockOnSelectSubagent}
+          enabledFilters={defaultEnabledFilters}
+          onFiltersChange={mockOnFiltersChange}
         />
       );
 
@@ -229,6 +251,8 @@ describe('MessagesView', () => {
           height={30}
           onSelectMessage={mockOnSelectMessage}
           onSelectSubagent={mockOnSelectSubagent}
+          enabledFilters={defaultEnabledFilters}
+          onFiltersChange={mockOnFiltersChange}
         />
       );
 
@@ -253,6 +277,8 @@ describe('MessagesView', () => {
           onSelectSubagent={mockOnSelectSubagent}
           sessionStartIndex={2}
           isRalphRunning={false}
+          enabledFilters={defaultEnabledFilters}
+          onFiltersChange={mockOnFiltersChange}
         />
       );
 
@@ -273,6 +299,8 @@ describe('MessagesView', () => {
           onSelectSubagent={mockOnSelectSubagent}
           sessionStartIndex={2}
           isRalphRunning={true}
+          enabledFilters={defaultEnabledFilters}
+          onFiltersChange={mockOnFiltersChange}
         />
       );
 
@@ -290,6 +318,8 @@ describe('MessagesView', () => {
           onSelectMessage={mockOnSelectMessage}
           onSelectSubagent={mockOnSelectSubagent}
           isRalphRunning={false}
+          enabledFilters={defaultEnabledFilters}
+          onFiltersChange={mockOnFiltersChange}
         />
       );
 
@@ -310,6 +340,8 @@ describe('MessagesView', () => {
           onSelectMessage={mockOnSelectMessage}
           onSelectSubagent={mockOnSelectSubagent}
           initialSelectedIndex={0}
+          enabledFilters={defaultEnabledFilters}
+          onFiltersChange={mockOnFiltersChange}
         />
       );
 
@@ -333,6 +365,8 @@ describe('MessagesView', () => {
           isInterruptMode={true}
           onInterruptSubmit={mockOnInterruptSubmit}
           onInterruptCancel={mockOnInterruptCancel}
+          enabledFilters={defaultEnabledFilters}
+          onFiltersChange={mockOnFiltersChange}
         />
       );
 
@@ -342,26 +376,28 @@ describe('MessagesView', () => {
   });
 
   describe('filtering indicator', () => {
-    it('shows filter status when filters are active', () => {
+    it('shows filter status when some filters are disabled', () => {
       const messages = [
         createMockMessage('1', 'user', 'User message'),
         createMockMessage('2', 'assistant', 'Assistant message'),
       ];
 
-      const { stdin, lastFrame } = render(
+      // Create a filter set with fewer filters than the full set
+      const partialFilters = new Set<MessageFilterType>(['user', 'assistant']);
+
+      const { lastFrame } = render(
         <MessagesView
           messages={messages}
           height={30}
           onSelectMessage={mockOnSelectMessage}
           onSelectSubagent={mockOnSelectSubagent}
+          enabledFilters={partialFilters}
+          onFiltersChange={mockOnFiltersChange}
         />
       );
 
-      // Open filter dialog and toggle a filter
-      stdin.write('f');
-
-      // After opening filter dialog, content should change
-      expect(lastFrame()).toContain('Filter');
+      // Filter status indicator should show when not all filters are enabled
+      expect(lastFrame()).toContain('Filtering');
     });
   });
 
@@ -379,6 +415,8 @@ describe('MessagesView', () => {
           onSelectMessage={mockOnSelectMessage}
           onSelectSubagent={mockOnSelectSubagent}
           sessionStartIndex={0}
+          enabledFilters={defaultEnabledFilters}
+          onFiltersChange={mockOnFiltersChange}
         />
       );
 
@@ -397,6 +435,8 @@ describe('MessagesView', () => {
           onSelectMessage={mockOnSelectMessage}
           onSelectSubagent={mockOnSelectSubagent}
           isSessionPickerOpen={true}
+          enabledFilters={defaultEnabledFilters}
+          onFiltersChange={mockOnFiltersChange}
         />
       );
 
