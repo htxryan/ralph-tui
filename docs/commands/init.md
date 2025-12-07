@@ -18,12 +18,15 @@ This is typically the first command you run when setting up Ralph in a new proje
 
 ```
 .ralph/
-├── settings.json           # Configuration file (empty by default)
-└── prompts/
-    ├── plan.md             # Your custom planning prompt (blank)
-    ├── plan.example.md     # Example planning prompt template
-    ├── execute.md          # Your custom execution prompt (blank)
-    └── execute.example.md  # Example execution prompt template
+├── settings.json                              # Configuration file (empty by default)
+├── orchestrate.example.md                     # Example orchestration prompt
+└── workflows/
+    ├── 01-feature-branch-incomplete.example.md
+    ├── 02-feature-branch-pr-ready.example.md
+    ├── 03-pr-pipeline-fix.example.md
+    ├── 04-cd-pipeline-fix.example.md
+    ├── 05-resume-in-progress.example.md
+    └── 06-new-work.example.md
 ```
 
 ### settings.json
@@ -37,12 +40,20 @@ The main configuration file for Ralph. Created as an empty JSON object `{}` by d
 
 See [Configuration](../configuration.md) for details.
 
-### Prompt Files
+### Orchestration & Workflow Files
 
-Ralph uses a two-phase approach: **planning** and **execution**. Each phase has its own prompt template.
+Ralph uses an orchestration-based approach with multiple workflow paths:
 
-- **plan.md** / **execute.md**: Your custom prompts. These are blank by default. When non-empty, they override the built-in defaults.
-- **plan.example.md** / **execute.example.md**: Reference templates showing the recommended structure and available variables. These are never used by Ralph directly.
+- **orchestrate.example.md**: Example orchestration prompt that determines which workflow to execute based on project state (branch, PRs, pipelines, tasks).
+- **workflows/*.example.md**: Example workflow files for different scenarios:
+  - Feature branch with incomplete work
+  - Feature branch ready to merge
+  - PR pipeline fixes
+  - CD pipeline fixes
+  - Resuming in-progress work
+  - Starting new work
+
+To customize, copy the `.example.md` files and remove the `.example` suffix (e.g., `orchestrate.example.md` → `orchestrate.md`). Your custom files will override the examples.
 
 ## Options
 
@@ -92,10 +103,13 @@ Initializing Ralph in /path/to/project
 
 Would create:
   .ralph/settings.json
-  .ralph/prompts/plan.md
-  .ralph/prompts/plan.example.md
-  .ralph/prompts/execute.md
-  .ralph/prompts/execute.example.md
+  .ralph/orchestrate.example.md
+  .ralph/workflows/01-feature-branch-incomplete.example.md
+  .ralph/workflows/02-feature-branch-pr-ready.example.md
+  .ralph/workflows/03-pr-pipeline-fix.example.md
+  .ralph/workflows/04-cd-pipeline-fix.example.md
+  .ralph/workflows/05-resume-in-progress.example.md
+  .ralph/workflows/06-new-work.example.md
 
 Suggested .gitignore additions:
   # Ralph - Local settings (user-specific overrides)
@@ -106,9 +120,10 @@ Suggested .gitignore additions:
   .ralph/claude.lock
 
 Next steps:
-  1. Review and customize .ralph/prompts/*.md
-  2. Add the suggested entries to your .gitignore
-  3. Run `ralph` to start monitoring
+  1. Review the example files in .ralph/*.example.md and .ralph/workflows/
+  2. Copy and customize: orchestrate.example.md -> orchestrate.md
+  3. Add the suggested entries to your .gitignore
+  4. Run `ralph` to start monitoring
 
 Ralph initialized successfully!
 ```
@@ -190,13 +205,13 @@ ralph init --agent codex --dry-run
 
 After running `ralph init`:
 
-1. **Review the example prompts** in `.ralph/prompts/*.example.md`
-2. **Customize your prompts** by editing `.ralph/prompts/plan.md` and `execute.md`
-3. **Update .gitignore** with the suggested entries
-4. **Start Ralph** by running `ralph` in your project directory
+1. **Review the example files** in `.ralph/*.example.md` and `.ralph/workflows/`
+2. **Customize orchestration** by copying `orchestrate.example.md` to `orchestrate.md` and editing
+3. **Customize workflows** by copying workflow files and removing the `.example` suffix
+4. **Update .gitignore** with the suggested entries
+5. **Start Ralph** by running `ralph` in your project directory
 
 ## See Also
 
 - [Configuration](../configuration.md) - Detailed configuration options
-- [Prompts](../prompts.md) - How to customize prompts
 - [Getting Started](../getting-started.md) - Quick start guide

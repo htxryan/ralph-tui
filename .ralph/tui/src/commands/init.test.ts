@@ -42,7 +42,7 @@ describe('init command', () => {
 
       expect(result.success).toBe(true);
       expect(fs.existsSync(path.join(tempDir, '.ralph'))).toBe(true);
-      expect(fs.existsSync(path.join(tempDir, '.ralph/prompts'))).toBe(true);
+      expect(fs.existsSync(path.join(tempDir, '.ralph/workflows'))).toBe(true);
     });
 
     it('creates settings.json with empty object', () => {
@@ -55,62 +55,47 @@ describe('init command', () => {
       expect(JSON.parse(content)).toEqual({});
     });
 
-    it('creates prompts directory', () => {
+    it('creates workflows directory', () => {
       runInit(tempDir);
 
-      expect(fs.existsSync(path.join(tempDir, '.ralph/prompts'))).toBe(true);
+      expect(fs.existsSync(path.join(tempDir, '.ralph/workflows'))).toBe(true);
     });
 
-    it('creates plan.md as empty file', () => {
+    it('creates orchestrate.md with content', () => {
       runInit(tempDir);
 
-      const filePath = path.join(tempDir, '.ralph/prompts/plan.md');
+      const filePath = path.join(tempDir, '.ralph/orchestrate.md');
       expect(fs.existsSync(filePath)).toBe(true);
 
       const content = fs.readFileSync(filePath, 'utf-8');
-      expect(content).toBe('');
+      expect(content).toContain('Workflow Selection');
     });
 
-    it('creates plan.example.md with content', () => {
+    it('creates workflow files', () => {
       runInit(tempDir);
 
-      const filePath = path.join(tempDir, '.ralph/prompts/plan.example.md');
-      expect(fs.existsSync(filePath)).toBe(true);
+      const workflowFiles = [
+        '01-feature-branch-incomplete.md',
+        '02-feature-branch-pr-ready.md',
+        '03-pr-pipeline-fix.md',
+        '04-cd-pipeline-fix.md',
+        '05-resume-in-progress.md',
+        '06-new-work.md',
+      ];
 
-      const content = fs.readFileSync(filePath, 'utf-8');
-      expect(content).toContain('Planning Prompt Template');
-      expect(content).toContain('{{task}}');
-    });
-
-    it('creates execute.md as empty file', () => {
-      runInit(tempDir);
-
-      const filePath = path.join(tempDir, '.ralph/prompts/execute.md');
-      expect(fs.existsSync(filePath)).toBe(true);
-
-      const content = fs.readFileSync(filePath, 'utf-8');
-      expect(content).toBe('');
-    });
-
-    it('creates execute.example.md with content', () => {
-      runInit(tempDir);
-
-      const filePath = path.join(tempDir, '.ralph/prompts/execute.example.md');
-      expect(fs.existsSync(filePath)).toBe(true);
-
-      const content = fs.readFileSync(filePath, 'utf-8');
-      expect(content).toContain('Execution Prompt Template');
-      expect(content).toContain('{{context}}');
+      for (const file of workflowFiles) {
+        const filePath = path.join(tempDir, '.ralph/workflows', file);
+        expect(fs.existsSync(filePath)).toBe(true);
+      }
     });
 
     it('returns list of created files', () => {
       const result = runInit(tempDir);
 
       expect(result.created).toContain('.ralph/settings.json');
-      expect(result.created).toContain('.ralph/prompts/plan.md');
-      expect(result.created).toContain('.ralph/prompts/plan.example.md');
-      expect(result.created).toContain('.ralph/prompts/execute.md');
-      expect(result.created).toContain('.ralph/prompts/execute.example.md');
+      expect(result.created).toContain('.ralph/orchestrate.md');
+      expect(result.created).toContain('.ralph/workflows/01-feature-branch-incomplete.md');
+      expect(result.created).toContain('.ralph/workflows/06-new-work.md');
     });
 
     it('returns gitignore suggestions', () => {
@@ -148,18 +133,18 @@ describe('init command', () => {
       expect(JSON.parse(content)).toEqual({ custom: true });
     });
 
-    it('does not overwrite existing prompt files', () => {
-      const planPath = path.join(tempDir, '.ralph/prompts/plan.md');
-      fs.mkdirSync(path.dirname(planPath), { recursive: true });
-      fs.writeFileSync(planPath, 'My custom plan prompt', 'utf-8');
+    it('does not overwrite existing workflow files', () => {
+      const workflowPath = path.join(tempDir, '.ralph/workflows/01-feature-branch-incomplete.md');
+      fs.mkdirSync(path.dirname(workflowPath), { recursive: true });
+      fs.writeFileSync(workflowPath, 'My custom workflow', 'utf-8');
 
       const result = runInit(tempDir);
 
       expect(result.success).toBe(true);
-      expect(result.skipped).toContain('.ralph/prompts/plan.md');
+      expect(result.skipped).toContain('.ralph/workflows/01-feature-branch-incomplete.md');
 
-      const content = fs.readFileSync(planPath, 'utf-8');
-      expect(content).toBe('My custom plan prompt');
+      const content = fs.readFileSync(workflowPath, 'utf-8');
+      expect(content).toBe('My custom workflow');
     });
 
     it('creates missing files even when some exist', () => {
@@ -172,8 +157,8 @@ describe('init command', () => {
       // settings.json skipped
       expect(result.skipped).toContain('.ralph/settings.json');
       // Other files created
-      expect(result.created).toContain('.ralph/prompts/plan.md');
-      expect(result.created).toContain('.ralph/prompts/execute.md');
+      expect(result.created).toContain('.ralph/orchestrate.md');
+      expect(result.created).toContain('.ralph/workflows/01-feature-branch-incomplete.md');
     });
 
     it('running init twice is idempotent', () => {
@@ -183,9 +168,9 @@ describe('init command', () => {
       expect(result1.success).toBe(true);
       expect(result2.success).toBe(true);
 
-      // Second run should skip all files
+      // Second run should skip all files (8 files total)
       expect(result2.created.length).toBe(0);
-      expect(result2.skipped.length).toBe(5);
+      expect(result2.skipped.length).toBe(8);
     });
   });
 
@@ -276,7 +261,7 @@ describe('init command', () => {
       const result = runInit(tempDir, { dryRun: true });
 
       expect(result.success).toBe(true);
-      expect(result.created.length).toBe(5);
+      expect(result.created.length).toBe(8);
       expect(fs.existsSync(path.join(tempDir, '.ralph'))).toBe(false);
     });
 
@@ -284,8 +269,8 @@ describe('init command', () => {
       const result = runInit(tempDir, { dryRun: true });
 
       expect(result.created).toContain('.ralph/settings.json');
-      expect(result.created).toContain('.ralph/prompts/plan.md');
-      expect(result.created).toContain('.ralph/prompts/execute.md');
+      expect(result.created).toContain('.ralph/orchestrate.md');
+      expect(result.created).toContain('.ralph/workflows/01-feature-branch-incomplete.md');
     });
 
     it('still returns gitignore suggestions', () => {
@@ -315,17 +300,17 @@ describe('init command', () => {
       expect(JSON.parse(content)).toEqual({});
     });
 
-    it('overwrites existing prompt files', () => {
-      const planPath = path.join(tempDir, '.ralph/prompts/plan.md');
-      fs.mkdirSync(path.dirname(planPath), { recursive: true });
-      fs.writeFileSync(planPath, 'Old content', 'utf-8');
+    it('overwrites existing workflow files', () => {
+      const workflowPath = path.join(tempDir, '.ralph/workflows/01-feature-branch-incomplete.md');
+      fs.mkdirSync(path.dirname(workflowPath), { recursive: true });
+      fs.writeFileSync(workflowPath, 'Old content', 'utf-8');
 
       const result = runInit(tempDir, { force: true });
 
-      expect(result.created).toContain('.ralph/prompts/plan.md');
+      expect(result.created).toContain('.ralph/workflows/01-feature-branch-incomplete.md');
 
-      const content = fs.readFileSync(planPath, 'utf-8');
-      expect(content).toBe('');
+      const content = fs.readFileSync(workflowPath, 'utf-8');
+      expect(content).toContain('Feature Branch');
     });
 
     it('works with --agent option', () => {
@@ -374,7 +359,7 @@ describe('init command', () => {
       const result: InitResult = {
         success: true,
         projectRoot: tempDir,
-        created: ['.ralph/settings.json', '.ralph/prompts/plan.md'],
+        created: ['.ralph/settings.json', '.ralph/orchestrate.md'],
         skipped: [],
         gitignoreSuggestions: [],
       };
@@ -383,7 +368,7 @@ describe('init command', () => {
 
       expect(output).toContain('Created:');
       expect(output).toContain('.ralph/settings.json');
-      expect(output).toContain('.ralph/prompts/plan.md');
+      expect(output).toContain('.ralph/orchestrate.md');
     });
 
     it('includes skipped files in output', () => {
