@@ -14,12 +14,15 @@ set -euo pipefail
 
 # Export these so they're available in subshells
 export SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 
-# File paths
-export ORCHESTRATE_PROMPT="$SCRIPT_DIR/orchestrate.md"
-export ASSIGNMENT_FILE="$SCRIPT_DIR/planning/assignment.json"
-export LOG_FILE="$SCRIPT_DIR/claude_output.jsonl"
+# User's project directory (where .ralph/ lives) - can be set via environment
+PROJECT_DIR="${RALPH_PROJECT_DIR:-$(pwd)}"
+RALPH_DIR="$PROJECT_DIR/.ralph"
+
+# File paths - user data in .ralph/, scripts from package
+export ORCHESTRATE_PROMPT="$RALPH_DIR/orchestrate.md"
+export ASSIGNMENT_FILE="$RALPH_DIR/planning/assignment.json"
+export LOG_FILE="$RALPH_DIR/claude_output.jsonl"
 
 # Optional timeout (in seconds). Set to 0 for no timeout.
 # Default: 2 hours (7200 seconds)
@@ -225,7 +228,7 @@ log "Max orchestration attempts: $MAX_ORCHESTRATION_ATTEMPTS"
 log_phase "Phase 0: Cleanup"
 
 # Ensure planning directory exists
-mkdir -p "$SCRIPT_DIR/planning"
+mkdir -p "$RALPH_DIR/planning"
 
 # Delete existing assignment file if present
 if [ -f "$ASSIGNMENT_FILE" ]; then

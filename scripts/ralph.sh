@@ -11,9 +11,16 @@
 
 set -euo pipefail
 
+# Directory where this script lives (for finding other scripts)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-LOCKFILE="$SCRIPT_DIR/claude.lock"
-LOG_FILE="$SCRIPT_DIR/claude_output.jsonl"
+
+# User's project directory (where .ralph/ lives) - can be set via environment
+PROJECT_DIR="${RALPH_PROJECT_DIR:-$(pwd)}"
+RALPH_DIR="$PROJECT_DIR/.ralph"
+
+# User data paths (in user's project .ralph/)
+LOCKFILE="$RALPH_DIR/claude.lock"
+LOG_FILE="$RALPH_DIR/claude_output.jsonl"
 MAX_LOG_SIZE_MB=50  # Rotate when log exceeds this size
 MAX_LOG_AGE_DAYS=7  # Delete rotated logs older than this
 
@@ -74,7 +81,7 @@ rotate_logs_if_needed() {
         return
     fi
 
-    local archive_dir="$SCRIPT_DIR/archive"
+    local archive_dir="$RALPH_DIR/archive"
     local size_bytes
     # macOS uses -f%z, Linux uses -c%s
     size_bytes=$(stat -f%z "$LOG_FILE" 2>/dev/null || stat -c%s "$LOG_FILE" 2>/dev/null || echo "0")
@@ -124,7 +131,7 @@ rotate_logs_if_needed() {
 }
 
 cleanup_old_logs() {
-    local archive_dir="$SCRIPT_DIR/archive"
+    local archive_dir="$RALPH_DIR/archive"
 
     if [[ ! -d "$archive_dir" ]]; then
         return
@@ -181,15 +188,13 @@ cleanup_test_processes() {
 
     # Kill orphaned node processes running from this project's node_modules
     # Be careful to only kill processes from THIS project
-    local project_dir
-    project_dir="$(dirname "$SCRIPT_DIR")"
     while IFS= read -r line; do
         local pid
         pid=$(echo "$line" | awk '{print $1}')
         if [ -n "$pid" ]; then
             kill -TERM "$pid" 2>/dev/null && killed=$((killed + 1))
         fi
-    done < <(ps -eo pid,command | grep -E "node.*(vitest|jest|test)" | grep "$project_dir" | grep -v grep 2>/dev/null || true)
+    done < <(ps -eo pid,command | grep -E "node.*(vitest|jest|test)" | grep "$PROJECT_DIR" | grep -v grep 2>/dev/null || true)
 
     if [ "$killed" -gt 0 ]; then
         log "Killed $killed orphaned test process(es)"
@@ -225,6 +230,7 @@ run_iteration() {
 
 main() {
     log "Ralph Wiggum Method starting..."
+    log "Project dir: $PROJECT_DIR"
     log "Lock file: $LOCKFILE"
     log "Log file: $LOG_FILE"
     log "Max log size: ${MAX_LOG_SIZE_MB}MB"
