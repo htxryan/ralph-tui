@@ -177,24 +177,38 @@ export function App({
 
   // Wrapper for starting Ralph that archives the current session and starts fresh
   const handleStartRalph = useCallback(async () => {
-    // Archive current session if it has content, then create fresh file
-    // This ensures each Ralph run starts with a clean slate (no "previous session" box)
-    const defaultPath = path.join(sessionDir, 'claude_output.jsonl');
-    await archiveCurrentSession(defaultPath, archiveDir);
+    console.error('[handleStartRalph] called');
+    console.error('[handleStartRalph] sessionDir:', sessionDir);
+    console.error('[handleStartRalph] archiveDir:', archiveDir);
 
-    // Create fresh empty file
-    const dir = path.dirname(defaultPath);
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
+    try {
+      // Archive current session if it has content, then create fresh file
+      // This ensures each Ralph run starts with a clean slate (no "previous session" box)
+      const defaultPath = path.join(sessionDir, 'claude_output.jsonl');
+      console.error('[handleStartRalph] defaultPath:', defaultPath);
+
+      await archiveCurrentSession(defaultPath, archiveDir);
+      console.error('[handleStartRalph] archived');
+
+      // Create fresh empty file
+      const dir = path.dirname(defaultPath);
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
+      fs.writeFileSync(defaultPath, '', 'utf-8');
+      console.error('[handleStartRalph] created fresh file');
+
+      // Update the path (this will trigger useJSONLStream to reset)
+      setCurrentJsonlPath(defaultPath);
+      setSessionStartIndex(undefined);
+
+      // Start Ralph
+      console.error('[handleStartRalph] calling startRalph()');
+      startRalph();
+      console.error('[handleStartRalph] startRalph() returned');
+    } catch (err) {
+      console.error('[handleStartRalph] ERROR:', err);
     }
-    fs.writeFileSync(defaultPath, '', 'utf-8');
-
-    // Update the path (this will trigger useJSONLStream to reset)
-    setCurrentJsonlPath(defaultPath);
-    setSessionStartIndex(undefined);
-
-    // Start Ralph
-    startRalph();
   }, [sessionDir, archiveDir, startRalph]);
 
   // Interrupt mode handlers
