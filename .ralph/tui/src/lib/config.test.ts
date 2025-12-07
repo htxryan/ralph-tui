@@ -456,6 +456,10 @@ describe('config', () => {
           promptsDir: 'custom/prompts',
           planningDir: 'custom/planning',
         },
+        taskManagement: {
+          provider: 'vibe-kanban',
+          autoInstall: true,
+        },
       };
 
       expect(() => validateConfig(config)).not.toThrow();

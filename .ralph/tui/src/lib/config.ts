@@ -12,6 +12,11 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
+import {
+  TaskManagementConfig,
+  TaskProvider,
+  DEFAULT_TASK_MANAGEMENT_CONFIG,
+} from './task-adapters/types.js';
 
 // ============================================================================
 // Type Definitions
@@ -88,6 +93,8 @@ export interface RalphConfig {
   process: ProcessConfig;
   /** Directory paths */
   paths: PathsConfig;
+  /** Task management configuration */
+  taskManagement: TaskManagementConfig;
 }
 
 /**
@@ -98,6 +105,7 @@ export type PartialRalphConfig = {
   display?: Partial<DisplayConfig>;
   process?: Partial<ProcessConfig>;
   paths?: Partial<PathsConfig>;
+  taskManagement?: Partial<TaskManagementConfig>;
 };
 
 /**
@@ -163,6 +171,7 @@ export const DEFAULT_CONFIG: RalphConfig = {
     promptsDir: '.ralph/prompts',
     planningDir: '.ralph/planning',
   },
+  taskManagement: DEFAULT_TASK_MANAGEMENT_CONFIG,
 };
 
 // ============================================================================
@@ -333,6 +342,13 @@ export function loadConfigFile(configPath: string): ConfigLoadResult {
 const VALID_AGENT_TYPES: AgentType[] = ['claude-code', 'codex', 'opencode', 'kiro', 'custom'];
 const VALID_TABS = ['messages', 'task', 'todos', 'errors', 'stats'];
 const VALID_THEMES = ['default', 'minimal', 'colorblind'];
+const VALID_TASK_PROVIDERS: TaskProvider[] = [
+  'vibe-kanban',
+  'jira',
+  'linear',
+  'beads',
+  'github-issues',
+];
 
 /**
  * Validate a complete configuration object
@@ -425,6 +441,23 @@ export function validateConfig(config: RalphConfig): void {
       'paths.promptsDir',
       config.paths.promptsDir,
       'must be a non-empty string path'
+    );
+  }
+
+  // Validate taskManagement config
+  if (!VALID_TASK_PROVIDERS.includes(config.taskManagement.provider)) {
+    throw new ConfigValidationError(
+      'taskManagement.provider',
+      config.taskManagement.provider,
+      `must be one of: ${VALID_TASK_PROVIDERS.join(', ')}`
+    );
+  }
+
+  if (typeof config.taskManagement.autoInstall !== 'boolean') {
+    throw new ConfigValidationError(
+      'taskManagement.autoInstall',
+      config.taskManagement.autoInstall,
+      'must be a boolean'
     );
   }
 }

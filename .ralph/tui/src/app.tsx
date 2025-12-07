@@ -96,7 +96,10 @@ export function App({
     isLoading: isLoadingTask,
     error: taskError,
     refresh: refreshTask,
-  } = useTask({ taskId: effectiveTaskId });
+  } = useTask({
+    taskId: effectiveTaskId,
+    taskConfig: config?.taskManagement,
+  });
 
   const {
     todos,
