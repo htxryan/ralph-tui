@@ -1,3 +1,25 @@
+---
+name: PR Pipeline Fix
+condition: |
+  You are on the develop branch AND all of the following are true:
+  - There are unmerged Pull Requests targeting the develop branch
+  - One or more of these PRs have failing CI/CD pipelines
+
+  This workflow takes priority over CD pipeline issues, in-progress tasks, or new work
+  because failing PR pipelines block the merge process.
+
+  Decision tree path: START → On develop branch? YES → Unmerged PRs with failing pipelines? YES
+description: |
+  PRIME DIRECTIVE: Fix the failing CI/CD pipeline(s) so that the PR can be merged.
+
+  Identify the specific PR with failing pipelines, diagnose and fix the pipeline failures,
+  wait for the new CI run to complete and verify it passed, perform mandatory PR validation
+  to confirm the passing CI results belong to YOUR specific PR (not a different PR from the
+  same branch), then merge the PR.
+priority: 3
+goal: Fix CI/CD to unblock merge
+---
+
 # PR Pipeline Fix
 
 **Trigger**: You are on the develop branch and there are unmerged PRs with failing CI/CD pipelines
