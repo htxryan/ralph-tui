@@ -43,6 +43,8 @@ export interface HeaderProps {
   error?: Error | null;
   isRalphRunning?: boolean;
   assignment?: Assignment | null;
+  /** Error from Ralph process (start/stop/resume failures) */
+  ralphError?: Error | null;
 }
 
 export function Header({
@@ -52,9 +54,12 @@ export function Header({
   error = null,
   isRalphRunning = false,
   assignment = null,
+  ralphError = null,
 }: HeaderProps): React.ReactElement {
+  // Combine errors - ralphError takes precedence for display
+  const displayError = ralphError || error;
   // Status: Error (red), Running (green), Idle (dimmed)
-  const statusColor = error ? colors.error : isRalphRunning ? colors.running : colors.dimmed;
+  const statusColor = displayError ? colors.error : isRalphRunning ? colors.running : colors.dimmed;
 
   // Compute dynamic status text:
   // - Error: Show "Error"
@@ -62,7 +67,7 @@ export function Header({
   // - Running + workflow: "Running - <workflow name>"
   // - Idle: "Idle"
   let statusText = 'Idle';
-  if (error) {
+  if (displayError) {
     statusText = 'Error';
   } else if (isRalphRunning) {
     const workflowName = extractWorkflowName(assignment?.workflow);
@@ -152,6 +157,15 @@ export function Header({
           )}
         </Box>
       </Box>
+
+      {/* Error message row - only shown when there's an error */}
+      {displayError && (
+        <Box flexDirection="row" marginTop={0}>
+          <Text color={colors.error} bold>
+            {icons.error || '✗'} {displayError.message.split('\n')[0]}
+          </Text>
+        </Box>
+      )}
     </Box>
   );
 }
