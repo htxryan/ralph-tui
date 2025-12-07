@@ -533,6 +533,7 @@ export function App({
             <StartScreen
               height={contentHeight}
               width={terminalColumns}
+              taskConfig={config?.taskManagement}
             />
           );
         }
