@@ -403,8 +403,14 @@ export function App({
     }
 
     // Start Ralph (when not running)
-    if (input === 's' && !isRalphRunning && !isRalphStarting) {
-      handleStartRalph();
+    if (input === 's') {
+      console.error('[app.tsx] s key pressed, isRalphRunning:', isRalphRunning, 'isRalphStarting:', isRalphStarting);
+      if (!isRalphRunning && !isRalphStarting) {
+        console.error('[app.tsx] Calling handleStartRalph()');
+        handleStartRalph();
+      } else {
+        console.error('[app.tsx] NOT calling handleStartRalph - conditions not met');
+      }
       return;
     }
 
