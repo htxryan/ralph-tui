@@ -9,6 +9,10 @@ export interface ClaudeEvent {
     usage?: {
       input_tokens: number;
       output_tokens: number;
+      /** Tokens read from prompt cache (cost savings) */
+      cache_read_input_tokens?: number;
+      /** Tokens being written to prompt cache */
+      cache_creation_input_tokens?: number;
     };
   };
   result?: string;
@@ -40,6 +44,10 @@ export interface ProcessedMessage {
   usage?: {
     input_tokens: number;
     output_tokens: number;
+    /** Tokens read from prompt cache (cost savings) */
+    cache_read_input_tokens?: number;
+    /** Tokens being written to prompt cache */
+    cache_creation_input_tokens?: number;
   };
 }
 
@@ -165,6 +173,10 @@ export interface SessionStats {
   totalTokens: {
     input: number;
     output: number;
+    /** Tokens read from prompt cache (included in input total) */
+    cacheRead: number;
+    /** Tokens written to prompt cache (included in input total) */
+    cacheCreation: number;
   };
   toolCallCount: number;
   messageCount: number;

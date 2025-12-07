@@ -110,10 +110,14 @@ export function Header({
         {/* Token counter */}
         <Box flexDirection="row">
           <Text color={colors.dimmed}>Tokens: </Text>
-          <Text color={colors.user}>
-            {formatTokens(stats.totalTokens.input + stats.totalTokens.output)}
-          </Text>
-          <Text color={colors.dimmed}> ({formatTokens(stats.totalTokens.input)}in/{formatTokens(stats.totalTokens.output)}out)</Text>
+          <Text color={colors.user}>{formatTokens(stats.totalTokens.input)}</Text>
+          <Text color={colors.dimmed}> in</Text>
+          {stats.totalTokens.cacheRead > 0 && (
+            <Text color={colors.dimmed}> ({formatTokens(stats.totalTokens.cacheRead)} cached)</Text>
+          )}
+          <Text color={colors.dimmed}> / </Text>
+          <Text color={colors.user}>{formatTokens(stats.totalTokens.output)}</Text>
+          <Text color={colors.dimmed}> out</Text>
         </Box>
       </Box>
 

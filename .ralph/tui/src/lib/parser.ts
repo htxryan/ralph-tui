@@ -138,7 +138,7 @@ export function matchToolResults(
  */
 export function calculateStats(messages: ProcessedMessage[]): SessionStats {
   const stats: SessionStats = {
-    totalTokens: { input: 0, output: 0 },
+    totalTokens: { input: 0, output: 0, cacheRead: 0, cacheCreation: 0 },
     toolCallCount: 0,
     messageCount: messages.length,
     errorCount: 0,
@@ -149,8 +149,13 @@ export function calculateStats(messages: ProcessedMessage[]): SessionStats {
 
   for (const msg of messages) {
     if (msg.usage) {
-      stats.totalTokens.input += msg.usage.input_tokens;
+      // Include all input token types in the total
+      const cacheRead = msg.usage.cache_read_input_tokens || 0;
+      const cacheCreation = msg.usage.cache_creation_input_tokens || 0;
+      stats.totalTokens.input += msg.usage.input_tokens + cacheRead + cacheCreation;
       stats.totalTokens.output += msg.usage.output_tokens;
+      stats.totalTokens.cacheRead += cacheRead;
+      stats.totalTokens.cacheCreation += cacheCreation;
     }
     stats.toolCallCount += msg.toolCalls.length;
     stats.errorCount += msg.toolCalls.filter(tc => tc.isError).length;
@@ -173,7 +178,7 @@ export function calculateSessionStats(
 ): SessionStats {
   if (messages.length === 0) {
     return {
-      totalTokens: { input: 0, output: 0 },
+      totalTokens: { input: 0, output: 0, cacheRead: 0, cacheCreation: 0 },
       toolCallCount: 0,
       messageCount: 0,
       errorCount: 0,
