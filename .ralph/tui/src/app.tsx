@@ -177,18 +177,19 @@ export function App({
 
   // Wrapper for starting Ralph that archives the current session and starts fresh
   const handleStartRalph = useCallback(async () => {
-    console.error('[handleStartRalph] called');
-    console.error('[handleStartRalph] sessionDir:', sessionDir);
-    console.error('[handleStartRalph] archiveDir:', archiveDir);
+    const log = (msg: string) => fs.appendFileSync('/tmp/ralph-debug.log', `${msg}\n`);
+    log('[handleStartRalph] called');
+    log(`[handleStartRalph] sessionDir: ${sessionDir}`);
+    log(`[handleStartRalph] archiveDir: ${archiveDir}`);
 
     try {
       // Archive current session if it has content, then create fresh file
       // This ensures each Ralph run starts with a clean slate (no "previous session" box)
       const defaultPath = path.join(sessionDir, 'claude_output.jsonl');
-      console.error('[handleStartRalph] defaultPath:', defaultPath);
+      log(`[handleStartRalph] defaultPath: ${defaultPath}`);
 
       await archiveCurrentSession(defaultPath, archiveDir);
-      console.error('[handleStartRalph] archived');
+      log('[handleStartRalph] archived');
 
       // Create fresh empty file
       const dir = path.dirname(defaultPath);
@@ -196,18 +197,18 @@ export function App({
         fs.mkdirSync(dir, { recursive: true });
       }
       fs.writeFileSync(defaultPath, '', 'utf-8');
-      console.error('[handleStartRalph] created fresh file');
+      log('[handleStartRalph] created fresh file');
 
       // Update the path (this will trigger useJSONLStream to reset)
       setCurrentJsonlPath(defaultPath);
       setSessionStartIndex(undefined);
 
       // Start Ralph
-      console.error('[handleStartRalph] calling startRalph()');
+      log('[handleStartRalph] calling startRalph()');
       startRalph();
-      console.error('[handleStartRalph] startRalph() returned');
+      log('[handleStartRalph] startRalph() returned');
     } catch (err) {
-      console.error('[handleStartRalph] ERROR:', err);
+      log(`[handleStartRalph] ERROR: ${err}`);
     }
   }, [sessionDir, archiveDir, startRalph]);
 
@@ -404,12 +405,12 @@ export function App({
 
     // Start Ralph (when not running)
     if (input === 's') {
-      console.error('[app.tsx] s key pressed, isRalphRunning:', isRalphRunning, 'isRalphStarting:', isRalphStarting);
+      fs.appendFileSync('/tmp/ralph-debug.log', `[app.tsx] s key pressed, isRalphRunning: ${isRalphRunning}, isRalphStarting: ${isRalphStarting}\n`);
       if (!isRalphRunning && !isRalphStarting) {
-        console.error('[app.tsx] Calling handleStartRalph()');
+        fs.appendFileSync('/tmp/ralph-debug.log', '[app.tsx] Calling handleStartRalph()\n');
         handleStartRalph();
       } else {
-        console.error('[app.tsx] NOT calling handleStartRalph - conditions not met');
+        fs.appendFileSync('/tmp/ralph-debug.log', '[app.tsx] NOT calling handleStartRalph - conditions not met\n');
       }
       return;
     }

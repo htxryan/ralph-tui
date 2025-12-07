@@ -106,15 +106,16 @@ export function useRalphProcess(
 
   // Start Ralph process
   const start = useCallback(() => {
-    // Debug logging
-    console.error('[useRalphProcess] start() called');
-    console.error('[useRalphProcess] isStarting:', isStarting, 'isRunning:', isRunning);
-    console.error('[useRalphProcess] ralphScript:', ralphScript);
-    console.error('[useRalphProcess] userDataDir:', userDataDir);
-    console.error('[useRalphProcess] basePath:', basePath);
+    // Debug logging to file (TUI consumes stdout/stderr)
+    const log = (msg: string) => fs.appendFileSync('/tmp/ralph-debug.log', `${msg}\n`);
+    log('[useRalphProcess] start() called');
+    log(`[useRalphProcess] isStarting: ${isStarting}, isRunning: ${isRunning}`);
+    log(`[useRalphProcess] ralphScript: ${ralphScript}`);
+    log(`[useRalphProcess] userDataDir: ${userDataDir}`);
+    log(`[useRalphProcess] basePath: ${basePath}`);
 
     if (isStarting || isRunning) {
-      console.error('[useRalphProcess] Bailing: already starting or running');
+      log('[useRalphProcess] Bailing: already starting or running');
       return;
     }
 
@@ -123,17 +124,21 @@ export function useRalphProcess(
 
     // Check if script exists (bundled with package)
     if (!fs.existsSync(ralphScript)) {
+      log(`[useRalphProcess] ERROR: script not found: ${ralphScript}`);
       setError(new Error(`Ralph script not found: ${ralphScript}\n\nThis may indicate the package was not installed correctly.`));
       setIsStarting(false);
       return;
     }
+    log('[useRalphProcess] script exists');
 
     // Check if user has initialized their .ralph directory
     if (!fs.existsSync(userDataDir)) {
+      log(`[useRalphProcess] ERROR: userDataDir not found: ${userDataDir}`);
       setError(new Error(`Ralph data directory not found: ${userDataDir}\n\nRun 'ralph init' to set up your project.`));
       setIsStarting(false);
       return;
     }
+    log('[useRalphProcess] userDataDir exists');
 
     // Check if orchestrate.md exists (required for the loop)
     const orchestratePath = path.join(userDataDir, 'orchestrate.md');
