@@ -957,15 +957,17 @@ export function SubagentDetailView({
       {/* Breadcrumb */}
       <Breadcrumb path={breadcrumbPath} />
 
-      {/* Token counter */}
+      {/* Token counter - detailed format with input/output/cache */}
       <Box paddingLeft={1}>
         <Text color={colors.dimmed}>Tokens: </Text>
-        <Text color={colors.subagent}>
-          {formatTokens(tokenStats.total)}
-        </Text>
-        {tokenStats.total > 0 && (
-          <Text color={colors.dimmed}> ({formatTokens(tokenStats.input)}in/{formatTokens(tokenStats.output)}out)</Text>
+        <Text color={colors.subagent}>{formatTokens(tokenStats.input)}</Text>
+        <Text color={colors.dimmed}> in</Text>
+        {tokenStats.cacheRead > 0 && (
+          <Text color={colors.dimmed}> ({formatTokens(tokenStats.cacheRead)} from cache)</Text>
         )}
+        <Text color={colors.dimmed}>, </Text>
+        <Text color={colors.subagent}>{formatTokens(tokenStats.output)}</Text>
+        <Text color={colors.dimmed}> out</Text>
       </Box>
 
       {/* Tab bar */}

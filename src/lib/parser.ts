@@ -234,21 +234,25 @@ export function formatTokens(count: number): string {
 export function calculateSubagentTokens(messages: ProcessedMessage[]): {
   input: number;
   output: number;
+  cacheRead: number;
   total: number;
 } {
   let input = 0;
   let output = 0;
+  let cacheRead = 0;
 
   for (const message of messages) {
     if (message.usage) {
       input += message.usage.input_tokens || 0;
       output += message.usage.output_tokens || 0;
+      cacheRead += message.usage.cache_read_input_tokens || 0;
     }
   }
 
   return {
     input,
     output,
+    cacheRead,
     total: input + output,
   };
 }

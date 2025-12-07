@@ -48,10 +48,13 @@ export function MessageItem({
           (acc, tc) => {
             const tokens = calculateSubagentTokens(tc.subagentMessages || []);
             return {
+              input: acc.input + tokens.input,
+              output: acc.output + tokens.output,
+              cacheRead: acc.cacheRead + tokens.cacheRead,
               total: acc.total + tokens.total,
             };
           },
-          { total: 0 }
+          { input: 0, output: 0, cacheRead: 0, total: 0 }
         )
     : null;
 
@@ -146,12 +149,18 @@ export function MessageItem({
         <Text color={colors.dimmed}>#{index} </Text>
         <Text color={dotColor}>{typeIcon}</Text>
         <Text color={headerLabelColor}> {typeLabel}</Text>
-        {/* Add token count for subagents */}
+        {/* Add token count for subagents - detailed format with input/output/cache */}
         {hasSubagent && subagentTokens && subagentTokens.total > 0 && (
           <>
-            <Text color={colors.dimmed}> (</Text>
-            <Text color={colors.subagent}>{formatTokens(subagentTokens.total)}</Text>
-            <Text color={colors.dimmed}>)</Text>
+            <Text color={colors.dimmed}> | Tokens: </Text>
+            <Text color={colors.subagent}>{formatTokens(subagentTokens.input)}</Text>
+            <Text color={colors.dimmed}> in</Text>
+            {subagentTokens.cacheRead > 0 && (
+              <Text color={colors.dimmed}> ({formatTokens(subagentTokens.cacheRead)} from cache)</Text>
+            )}
+            <Text color={colors.dimmed}>, </Text>
+            <Text color={colors.subagent}>{formatTokens(subagentTokens.output)}</Text>
+            <Text color={colors.dimmed}> out</Text>
           </>
         )}
         <Text color={colors.dimmed}>  {formatTime(message.timestamp)}</Text>
