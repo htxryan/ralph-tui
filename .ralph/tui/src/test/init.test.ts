@@ -65,33 +65,32 @@ describe('init integration', () => {
       expect(fs.existsSync(settingsPath)).toBe(true);
     });
 
-    it('creates prompts/ directory', () => {
+    it('creates workflows/ directory', () => {
       runInit(tempDir);
-      expect(fs.existsSync(path.join(tempDir, '.ralph/prompts'))).toBe(true);
+      expect(fs.existsSync(path.join(tempDir, '.ralph/workflows'))).toBe(true);
     });
 
-    it('creates plan.md file', () => {
+    it('creates orchestrate.example.md file', () => {
       runInit(tempDir);
-      const planPath = path.join(tempDir, '.ralph/prompts/plan.md');
-      expect(fs.existsSync(planPath)).toBe(true);
+      const orchestratePath = path.join(tempDir, '.ralph/orchestrate.example.md');
+      expect(fs.existsSync(orchestratePath)).toBe(true);
     });
 
-    it('creates execute.md file', () => {
+    it('creates workflow example files', () => {
       runInit(tempDir);
-      const executePath = path.join(tempDir, '.ralph/prompts/execute.md');
-      expect(fs.existsSync(executePath)).toBe(true);
+      const workflowPath = path.join(tempDir, '.ralph/workflows/01-feature-branch-incomplete.example.md');
+      expect(fs.existsSync(workflowPath)).toBe(true);
     });
 
     it('creates all expected files', () => {
       const result = runInit(tempDir);
 
       expect(result.success).toBe(true);
-      expect(result.created).toHaveLength(5);
+      expect(result.created).toHaveLength(8);
       expect(result.created).toContain('.ralph/settings.json');
-      expect(result.created).toContain('.ralph/prompts/plan.md');
-      expect(result.created).toContain('.ralph/prompts/plan.example.md');
-      expect(result.created).toContain('.ralph/prompts/execute.md');
-      expect(result.created).toContain('.ralph/prompts/execute.example.md');
+      expect(result.created).toContain('.ralph/orchestrate.example.md');
+      expect(result.created).toContain('.ralph/workflows/01-feature-branch-incomplete.example.md');
+      expect(result.created).toContain('.ralph/workflows/06-new-work.example.md');
     });
   });
 
@@ -118,20 +117,20 @@ describe('init integration', () => {
       expect(content).toEqual(customSettings);
     });
 
-    it('preserves existing plan.md content', () => {
-      // Pre-create plan.md with custom content
-      const promptsDir = path.join(tempDir, '.ralph/prompts');
-      fs.mkdirSync(promptsDir, { recursive: true });
-      const planPath = path.join(promptsDir, 'plan.md');
-      const customContent = '# My Custom Planning Prompt\n\nThis should be preserved.';
-      fs.writeFileSync(planPath, customContent, 'utf-8');
+    it('preserves existing orchestrate.example.md content', () => {
+      // Pre-create orchestrate.example.md with custom content
+      const ralphDir = path.join(tempDir, '.ralph');
+      fs.mkdirSync(ralphDir, { recursive: true });
+      const orchestratePath = path.join(ralphDir, 'orchestrate.example.md');
+      const customContent = '# My Custom Orchestration\n\nThis should be preserved.';
+      fs.writeFileSync(orchestratePath, customContent, 'utf-8');
 
       // Run init
       const result = runInit(tempDir);
 
       // Verify original content preserved
-      expect(result.skipped).toContain('.ralph/prompts/plan.md');
-      expect(fs.readFileSync(planPath, 'utf-8')).toBe(customContent);
+      expect(result.skipped).toContain('.ralph/orchestrate.example.md');
+      expect(fs.readFileSync(orchestratePath, 'utf-8')).toBe(customContent);
     });
 
     it('creates missing files when some already exist', () => {
@@ -145,8 +144,8 @@ describe('init integration', () => {
 
       // settings.json skipped, others created
       expect(result.skipped).toContain('.ralph/settings.json');
-      expect(result.created).toContain('.ralph/prompts/plan.md');
-      expect(result.created).toContain('.ralph/prompts/execute.md');
+      expect(result.created).toContain('.ralph/orchestrate.example.md');
+      expect(result.created).toContain('.ralph/workflows/01-feature-branch-incomplete.example.md');
     });
   });
 
@@ -217,9 +216,9 @@ describe('init integration', () => {
     it('reports what would be created', () => {
       const result = runInit(tempDir, { dryRun: true });
 
-      expect(result.created).toHaveLength(5);
+      expect(result.created).toHaveLength(8);
       expect(result.created).toContain('.ralph/settings.json');
-      expect(result.created).toContain('.ralph/prompts/plan.md');
+      expect(result.created).toContain('.ralph/orchestrate.example.md');
     });
 
     it('output indicates dry run mode', () => {
@@ -258,7 +257,7 @@ describe('init integration', () => {
       const result2 = runInit(tempDir);
 
       expect(result2.created).toHaveLength(0);
-      expect(result2.skipped).toHaveLength(5);
+      expect(result2.skipped).toHaveLength(8);
     });
 
     it('files are identical after second init', () => {
@@ -266,10 +265,10 @@ describe('init integration', () => {
 
       // Read file contents after first init
       const settingsPath = path.join(tempDir, '.ralph/settings.json');
-      const planPath = path.join(tempDir, '.ralph/prompts/plan.md');
+      const orchestratePath = path.join(tempDir, '.ralph/orchestrate.example.md');
       const content1 = {
         settings: fs.readFileSync(settingsPath, 'utf-8'),
-        plan: fs.readFileSync(planPath, 'utf-8'),
+        orchestrate: fs.readFileSync(orchestratePath, 'utf-8'),
       };
 
       // Run init again
@@ -278,7 +277,7 @@ describe('init integration', () => {
       // Verify contents unchanged
       const content2 = {
         settings: fs.readFileSync(settingsPath, 'utf-8'),
-        plan: fs.readFileSync(planPath, 'utf-8'),
+        orchestrate: fs.readFileSync(orchestratePath, 'utf-8'),
       };
 
       expect(content1).toEqual(content2);
@@ -430,7 +429,7 @@ describe('init integration', () => {
       const result = runInit(tempDir, { dryRun: true, force: true });
 
       // All files should be in "created" (would be created)
-      expect(result.created).toHaveLength(5);
+      expect(result.created).toHaveLength(8);
       expect(result.skipped).toHaveLength(0);
     });
 

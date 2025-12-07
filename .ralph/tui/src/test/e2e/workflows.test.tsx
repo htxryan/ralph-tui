@@ -309,7 +309,8 @@ describe('E2E Workflows', () => {
         const pathStr = normalizePath(p.toString());
         // For init tests, pretend the .ralph files don't exist
         if (pathStr.includes('.ralph/settings.json')) return false;
-        if (pathStr.includes('.ralph/prompts/')) return false;
+        if (pathStr.includes('.ralph/orchestrate')) return false;
+        if (pathStr.includes('.ralph/workflows/')) return false;
         return true;
       });
 
@@ -318,15 +319,16 @@ describe('E2E Workflows', () => {
 
       expect(result.success).toBe(true);
       expect(result.created).toContain('.ralph/settings.json');
-      expect(result.created).toContain('.ralph/prompts/plan.md');
-      expect(result.created).toContain('.ralph/prompts/execute.md');
+      expect(result.created).toContain('.ralph/orchestrate.example.md');
+      expect(result.created).toContain('.ralph/workflows/01-feature-branch-incomplete.example.md');
     });
 
     it('completes init with agent pre-configuration', () => {
       vi.mocked(fs.existsSync).mockImplementation((p: fs.PathLike) => {
         const pathStr = normalizePath(p.toString());
         if (pathStr.includes('.ralph/settings.json')) return false;
-        if (pathStr.includes('.ralph/prompts/')) return false;
+        if (pathStr.includes('.ralph/orchestrate')) return false;
+        if (pathStr.includes('.ralph/workflows/')) return false;
         return true;
       });
 
