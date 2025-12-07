@@ -290,6 +290,80 @@ describe('calculateSessionStats', () => {
     expect(result.messageCount).toBe(0);
     expect(result.startTime).toBeNull();
   });
+
+  // Regression tests for bug-summary-stats-zero-blank
+  // Bug: Summary stats showed 0 when Ralph was running with sessionStartIndex = undefined
+  describe('session boundary regression tests', () => {
+    it('BUG REGRESSION: should return empty stats when Ralph running with undefined sessionStartIndex', () => {
+      // This test documents the EXPECTED behavior:
+      // When Ralph is running but sessionStartIndex is undefined, it means we have
+      // an invalid state (should have been set when Ralph started). The system
+      // returns empty stats in this case as a safety measure.
+      const messages = [
+        createMessage('1', new Date(), { input_tokens: 100, output_tokens: 50 }),
+        createMessage('2', new Date(), { input_tokens: 200, output_tokens: 100 }),
+      ];
+      const stats = calculateSessionStats(messages, undefined, true);
+
+      // When Ralph is running but sessionStartIndex is undefined, we get empty stats
+      // This is the "bug" scenario - the fix is to ensure sessionStartIndex is always
+      // set when starting Ralph (to 0 for fresh sessions, or messages.length for resumes)
+      expect(stats.messageCount).toBe(0);
+      expect(stats.totalTokens.input).toBe(0);
+      expect(stats.totalTokens.output).toBe(0);
+    });
+
+    it('should calculate stats correctly when sessionStartIndex is 0 (fresh session)', () => {
+      // This is the FIXED scenario: Ralph starts with sessionStartIndex = 0
+      const messages = [
+        createMessage('1', new Date(), { input_tokens: 100, output_tokens: 50 }),
+        createMessage('2', new Date(), { input_tokens: 200, output_tokens: 100 }),
+      ];
+      const stats = calculateSessionStats(messages, 0, true);
+
+      // Should count all messages from index 0
+      expect(stats.messageCount).toBe(2);
+      expect(stats.totalTokens.input).toBe(300);
+      expect(stats.totalTokens.output).toBe(150);
+    });
+
+    it('should calculate stats from resume point (sessionStartIndex = messages.length before resume)', () => {
+      // Resume scenario: sessionStartIndex is set to the message count at resume time
+      const oldMessages = [
+        createMessage('1', new Date('2024-01-01T10:00:00Z'), { input_tokens: 100, output_tokens: 50 }),
+        createMessage('2', new Date('2024-01-01T10:10:00Z'), { input_tokens: 200, output_tokens: 100 }),
+      ];
+      const newMessages = [
+        createMessage('3', new Date('2024-01-01T11:00:00Z'), { input_tokens: 300, output_tokens: 150 }),
+        createMessage('4', new Date('2024-01-01T11:10:00Z'), { input_tokens: 400, output_tokens: 200 }),
+      ];
+      const allMessages = [...oldMessages, ...newMessages];
+
+      // Resume at index 2 (old messages count)
+      const stats = calculateSessionStats(allMessages, 2, true);
+
+      // Should only count new messages (indices 2 and 3)
+      expect(stats.messageCount).toBe(2);
+      expect(stats.totalTokens.input).toBe(700); // 300 + 400
+      expect(stats.totalTokens.output).toBe(350); // 150 + 200
+    });
+
+    it('should handle sessionStartIndex at exact boundary (no new messages yet)', () => {
+      // Edge case: Ralph just started, no new messages yet
+      const messages = [
+        createMessage('1', new Date(), { input_tokens: 100, output_tokens: 50 }),
+        createMessage('2', new Date(), { input_tokens: 200, output_tokens: 100 }),
+      ];
+
+      // Session started at index 2 (messages.length), no new messages yet
+      const stats = calculateSessionStats(messages, 2, true);
+
+      // Should show zeros since no new messages in current session
+      expect(stats.messageCount).toBe(0);
+      expect(stats.totalTokens.input).toBe(0);
+      expect(stats.totalTokens.output).toBe(0);
+    });
+  });
 });
 
 describe('extractWorkflowName', () => {

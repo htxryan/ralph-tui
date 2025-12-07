@@ -191,7 +191,9 @@ export function App({
 
     // Update the path (this will trigger useJSONLStream to reset)
     setCurrentJsonlPath(defaultPath);
-    setSessionStartIndex(undefined);
+    // Set session start index to 0 since we're starting with a fresh file
+    // This ensures stats are calculated from the beginning of the session
+    setSessionStartIndex(0);
 
     // Start Ralph
     startRalph();
@@ -254,7 +256,8 @@ export function App({
         fs.writeFileSync(defaultPath, '', 'utf-8');
 
         setCurrentJsonlPath(defaultPath);
-        setSessionStartIndex(undefined);
+        // Set to 0 for new session (fresh file)
+        setSessionStartIndex(0);
       } else {
         // Load the selected session (current or archived)
         setCurrentJsonlPath(session.filePath);
