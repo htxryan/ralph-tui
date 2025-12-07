@@ -1,3 +1,21 @@
+---
+name: Feature Branch - Incomplete Work
+condition: |
+  You are on a feature or bugfix branch (NOT the develop branch) AND one of the following is true:
+  - Work is incomplete (implementation not finished)
+  - No Pull Request exists yet for this branch
+  - A PR exists but additional work is needed before it can be merged
+
+  Decision tree path: START → On feature/bugfix branch? YES → Work status? Incomplete/No PR
+description: |
+  Complete the implementation on this feature branch, create a Pull Request, verify CI pipelines pass
+  for your specific PR, merge the PR to develop, validate that CD pipelines succeed and the app
+  deploys successfully, close the associated task with status "finished", then checkout develop
+  and pull latest changes.
+priority: 1
+goal: Continue implementation to completion
+---
+
 # Feature Branch - Incomplete Work
 
 **Trigger**: You are on a feature/bugfix branch with incomplete work (no PR yet or work not finished)

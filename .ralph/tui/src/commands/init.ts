@@ -118,6 +118,18 @@ const GITIGNORE_SUGGESTIONS = [
 // ============================================================================
 
 /**
+ * Workflow files to create as examples
+ */
+const WORKFLOW_FILES = [
+  '01-feature-branch-incomplete',
+  '02-feature-branch-pr-ready',
+  '03-pr-pipeline-fix',
+  '04-cd-pipeline-fix',
+  '05-resume-in-progress',
+  '06-new-work',
+];
+
+/**
  * Get the list of files to create during init
  */
 function getFilesToCreate(projectRoot: string, options: InitOptions): FileToCreate[] {
@@ -143,33 +155,21 @@ function getFilesToCreate(projectRoot: string, options: InitOptions): FileToCrea
     description: 'Configuration file',
   });
 
-  // prompts/plan.md - blank file for user customization
+  // orchestrate.md - orchestration prompt template
   files.push({
-    relativePath: '.ralph/prompts/plan.md',
-    content: '',
-    description: 'Custom planning prompt (blank - edit to customize)',
+    relativePath: '.ralph/orchestrate.md',
+    content: loadTemplate('orchestrate.md'),
+    description: 'Orchestration prompt template',
   });
 
-  // prompts/plan.example.md - example template
-  files.push({
-    relativePath: '.ralph/prompts/plan.example.md',
-    content: loadTemplate('plan.example.md'),
-    description: 'Example planning prompt template',
-  });
-
-  // prompts/execute.md - blank file for user customization
-  files.push({
-    relativePath: '.ralph/prompts/execute.md',
-    content: '',
-    description: 'Custom execution prompt (blank - edit to customize)',
-  });
-
-  // prompts/execute.example.md - example template
-  files.push({
-    relativePath: '.ralph/prompts/execute.example.md',
-    content: loadTemplate('execute.example.md'),
-    description: 'Example execution prompt template',
-  });
+  // workflows/*.md - workflow files
+  for (const workflow of WORKFLOW_FILES) {
+    files.push({
+      relativePath: `.ralph/workflows/${workflow}.md`,
+      content: loadTemplate(`workflows/${workflow}.md`),
+      description: `Workflow: ${workflow}`,
+    });
+  }
 
   return files;
 }
@@ -280,7 +280,7 @@ export function formatInitOutput(result: InitResult, options: InitOptions = {}):
 
     // Next steps
     lines.push('Next steps:');
-    lines.push('  1. Review and customize .ralph/prompts/*.md');
+    lines.push('  1. Review and customize the files in .ralph/orchestrate.md and .ralph/workflows/');
     lines.push('  2. Add the suggested entries to your .gitignore');
     lines.push('  3. Run `ralph` to start monitoring');
     lines.push('');
