@@ -3,6 +3,7 @@ import { Box, Text, useInput } from 'ink';
 import { colors } from '../../lib/colors.js';
 import { ProcessedMessage, ErrorInfo } from '../../lib/types.js';
 import { ErrorItem, ERROR_ITEM_HEIGHT } from './error-item.js';
+import { AutoscrollIndicator } from '../common/autoscroll-indicator.js';
 
 export interface ErrorsViewProps {
   messages: ProcessedMessage[];
@@ -51,7 +52,9 @@ export function ErrorsView({
   const errors = useMemo(() => extractErrors(messages), [messages]);
 
   // Calculate exact window size based on available height
-  const fixedOverhead = SCROLL_INDICATOR_HEIGHT * 2;
+  // Reserve 1 line for autoscroll indicator when content is scrollable
+  const autoscrollOverhead = 1; // Always reserve space for consistency
+  const fixedOverhead = SCROLL_INDICATOR_HEIGHT * 2 + autoscrollOverhead;
   const windowSize = Math.max(1, Math.floor((height - fixedOverhead) / ERROR_ITEM_HEIGHT));
 
   // Track whether we've done initial positioning
@@ -198,6 +201,12 @@ export function ErrorsView({
           {'\u2193'} {errors.length - windowStart - windowSize} errors below
         </Text>
       )}
+
+      {/* Autoscroll status indicator */}
+      <AutoscrollIndicator
+        isFollowing={isFollowing}
+        isScrollable={errors.length > windowSize}
+      />
     </Box>
   );
 }
