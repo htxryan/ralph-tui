@@ -324,6 +324,9 @@ export function App({
   const tabs: TabName[] = ['messages', 'task', 'todos', 'errors', 'stats'];
 
   useInput((input, key) => {
+    // Debug: Log every keypress to file
+    fs.appendFileSync('/tmp/ralph-debug.log', `[useInput] input: "${input}", key: ${JSON.stringify(key)}\n`);
+
     // Close shortcuts dialog on ANY key, but continue processing the key
     // This allows the key action to execute while dismissing the dialog
     if (isShortcutsDialogOpen) {
