@@ -6,6 +6,7 @@ import { getMessageFilterType } from '../../lib/parser.js';
 import { MessageItem, MESSAGE_ITEM_HEIGHT } from './message-item.js';
 import { SessionSeparator } from './session-separator.js';
 import { InterruptInput } from './interrupt-input.js';
+import { AutoscrollIndicator } from '../common/autoscroll-indicator.js';
 
 export interface MessagesViewProps {
   messages: ProcessedMessage[];
@@ -152,8 +153,10 @@ export function MessagesView({
   // Calculate exact window size based on available height
   // All items have same height (MESSAGE_ITEM_HEIGHT = 4), plus scroll indicators (2 lines)
   // In interrupt mode, reserve space for the interrupt input at the bottom
+  // Reserve 1 line for autoscroll indicator when content is scrollable
   const interruptOverhead = isInterruptMode ? INTERRUPT_INPUT_HEIGHT : 0;
-  const fixedOverhead = SCROLL_INDICATOR_HEIGHT * 2 + interruptOverhead;
+  const autoscrollOverhead = 1; // Always reserve space for consistency
+  const fixedOverhead = SCROLL_INDICATOR_HEIGHT * 2 + interruptOverhead + autoscrollOverhead;
   const windowSize = Math.max(1, Math.floor((height - fixedOverhead) / MESSAGE_ITEM_HEIGHT));
 
   // Helper to find the last message index in listItems
@@ -485,6 +488,12 @@ export function MessagesView({
           {'\u2193'} {listItems.length - windowStart - windowSize} items below
         </Text>
       )}
+
+      {/* Autoscroll status indicator */}
+      <AutoscrollIndicator
+        isFollowing={isFollowing}
+        isScrollable={listItems.length > windowSize}
+      />
 
       {/* Interrupt input at the bottom when active */}
       {isInterruptMode && onInterruptSubmit && onInterruptCancel && (
