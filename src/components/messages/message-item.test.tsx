@@ -199,9 +199,9 @@ describe('MessageItem', () => {
       );
 
       expect(lastFrame()).toContain('Task Subagent');
-      // Input tokens: 1000 + 200 = 1200 = 1.2k
+      // Input tokens include cache: (1000 + 800) + (200 + 150) = 2150 = 2.1k
       // Cache read tokens: 800 + 150 = 950
-      expect(lastFrame()).toContain('1.2k');
+      expect(lastFrame()).toContain('2.1k');
       expect(lastFrame()).toContain('in');
       expect(lastFrame()).toContain('950');
       expect(lastFrame()).toContain('from cache');

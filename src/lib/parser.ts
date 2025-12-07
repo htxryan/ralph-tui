@@ -229,7 +229,8 @@ export function formatTokens(count: number): string {
 }
 
 /**
- * Calculate total tokens from an array of messages
+ * Calculate total tokens from an array of messages.
+ * Input tokens include cache_read and cache_creation tokens (matching calculateStats behavior).
  */
 export function calculateSubagentTokens(messages: ProcessedMessage[]): {
   input: number;
@@ -243,9 +244,12 @@ export function calculateSubagentTokens(messages: ProcessedMessage[]): {
 
   for (const message of messages) {
     if (message.usage) {
-      input += message.usage.input_tokens || 0;
+      const msgCacheRead = message.usage.cache_read_input_tokens || 0;
+      const msgCacheCreation = message.usage.cache_creation_input_tokens || 0;
+      // Include cache tokens in input total (matching calculateStats behavior)
+      input += (message.usage.input_tokens || 0) + msgCacheRead + msgCacheCreation;
       output += message.usage.output_tokens || 0;
-      cacheRead += message.usage.cache_read_input_tokens || 0;
+      cacheRead += msgCacheRead;
     }
   }
 
