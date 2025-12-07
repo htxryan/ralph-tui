@@ -118,6 +118,116 @@ describe('MessageItem', () => {
 
       expect(lastFrame()).toContain('Task Subagent');
     });
+
+    it('renders token count for subagent with messages', () => {
+      const subagentMessages: ProcessedMessage[] = [
+        {
+          id: 'sub-1',
+          type: 'assistant',
+          timestamp: baseTimestamp,
+          text: 'Working...',
+          toolCalls: [],
+          usage: { input_tokens: 1000, output_tokens: 500 },
+        },
+        {
+          id: 'sub-2',
+          type: 'assistant',
+          timestamp: baseTimestamp,
+          text: 'Done.',
+          toolCalls: [],
+          usage: { input_tokens: 200, output_tokens: 100 },
+        },
+      ];
+      const subagentToolCall = createMockToolCall({
+        name: 'Task',
+        isSubagent: true,
+        subagentType: 'Explore',
+        subagentDescription: 'Search for files',
+        subagentMessages,
+      });
+      const message = createMockMessage({
+        type: 'assistant',
+        text: '',
+        toolCalls: [subagentToolCall],
+      });
+      const { lastFrame } = render(
+        <MessageItem message={message} isSelected={false} width={80} index={1} />
+      );
+
+      expect(lastFrame()).toContain('Task Subagent');
+      // Input tokens: 1000 + 200 = 1200 = 1.2k
+      // Output tokens: 500 + 100 = 600
+      expect(lastFrame()).toContain('1.2k');
+      expect(lastFrame()).toContain('in');
+      expect(lastFrame()).toContain('600');
+      expect(lastFrame()).toContain('out');
+    });
+
+    it('renders cache token count for subagent with cached messages', () => {
+      const subagentMessages: ProcessedMessage[] = [
+        {
+          id: 'sub-1',
+          type: 'assistant',
+          timestamp: baseTimestamp,
+          text: 'Working...',
+          toolCalls: [],
+          usage: { input_tokens: 1000, output_tokens: 500, cache_read_input_tokens: 800 },
+        },
+        {
+          id: 'sub-2',
+          type: 'assistant',
+          timestamp: baseTimestamp,
+          text: 'Done.',
+          toolCalls: [],
+          usage: { input_tokens: 200, output_tokens: 100, cache_read_input_tokens: 150 },
+        },
+      ];
+      const subagentToolCall = createMockToolCall({
+        name: 'Task',
+        isSubagent: true,
+        subagentType: 'Explore',
+        subagentDescription: 'Search for files',
+        subagentMessages,
+      });
+      const message = createMockMessage({
+        type: 'assistant',
+        text: '',
+        toolCalls: [subagentToolCall],
+      });
+      const { lastFrame } = render(
+        <MessageItem message={message} isSelected={false} width={100} index={1} />
+      );
+
+      expect(lastFrame()).toContain('Task Subagent');
+      // Input tokens include cache: (1000 + 800) + (200 + 150) = 2150 = 2.1k
+      // Cache read tokens: 800 + 150 = 950
+      expect(lastFrame()).toContain('2.1k');
+      expect(lastFrame()).toContain('in');
+      expect(lastFrame()).toContain('950');
+      expect(lastFrame()).toContain('from cache');
+    });
+
+    it('does not render token count for subagent without messages', () => {
+      const subagentToolCall = createMockToolCall({
+        name: 'Task',
+        isSubagent: true,
+        subagentType: 'Explore',
+        subagentDescription: 'Search for files',
+        subagentMessages: [],
+      });
+      const message = createMockMessage({
+        type: 'assistant',
+        text: '',
+        toolCalls: [subagentToolCall],
+      });
+      const { lastFrame } = render(
+        <MessageItem message={message} isSelected={false} width={80} index={1} />
+      );
+
+      expect(lastFrame()).toContain('Task Subagent');
+      // Should not have token count since no messages
+      expect(lastFrame()).not.toMatch(/\(\d/);
+    });
   });
 
   describe('selection state', () => {

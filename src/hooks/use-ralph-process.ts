@@ -298,6 +298,28 @@ export function useRalphProcess(
         });
       }
 
+      // Handle process exit (both normal and via kill)
+      // This prevents unhandled promise rejection when process is terminated
+      child.catch((err: unknown) => {
+        const execaErr = err as { exitCode?: number; signal?: string; isTerminated?: boolean };
+        // Exit code 143 = SIGTERM (killed by user), which is expected
+        // Exit code 130 = SIGINT (Ctrl+C), also expected
+        // isTerminated = true when process was killed by a signal
+        const isNormalTermination =
+          execaErr.exitCode === 143 ||
+          execaErr.exitCode === 130 ||
+          execaErr.isTerminated === true ||
+          execaErr.signal === 'SIGTERM' ||
+          execaErr.signal === 'SIGINT';
+
+        if (!isNormalTermination && execaErr.exitCode !== 0) {
+          // Actual error - set error state
+          setError(err instanceof Error ? err : new Error(String(err)));
+        }
+        // Always update running state
+        setIsRunning(false);
+      });
+
       // Unref so the TUI can exit independently
       child.unref();
 
