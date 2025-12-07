@@ -37,15 +37,9 @@ ralph-tui/
 │   │   ├── install.sh
 │   │   └── ...
 │   │
-│   ├── workflows/               # Workflow definitions (6 workflows)
-│   │   ├── 01-feature-branch-incomplete.md
-│   │   ├── 02-feature-branch-pr-ready.md
-│   │   ├── 03-pr-pipeline-fix.md
-│   │   ├── 04-cd-pipeline-fix.md
-│   │   ├── 05-resume-in-progress.md
-│   │   ├── 06-new-work.md
-│   │   ├── index.md
-│   │   └── README.md
+│   ├── workflows/               # REMOVED - moved to templates/workflows/
+│   │   # Previously contained workflow definitions
+│   │   # index.md and README.md deleted (info now in frontmatter)
 │   │
 │   ├── archive/                 # Archived logs (gitignored)
 │   ├── planning/                # Assignment files (gitignored)
@@ -77,14 +71,16 @@ ralph-tui/
 | Category | Files | Purpose |
 |----------|-------|---------|
 | **TUI Source** | `.ralph/tui/*` | The npm package source code |
-| **Default Workflows** | `.ralph/workflows/*.md` | Templates copied to user projects |
-| **Default Prompts** | `orchestrate.md`, `resume.md` | Templates for autonomous execution |
-| **Unused Prompts** | `.ralph/tui/defaults/prompts/*` | **DEPRECATED** - plan.md, execute.md never used |
+| **Default Templates** | `.ralph/tui/templates/*` | Templates copied to user projects during `ralph init` |
+| **Default Workflows** | `.ralph/tui/templates/workflows/*.md` | Workflow templates with YAML frontmatter |
+| **Default Prompts** | `.ralph/tui/templates/orchestrate.md` | Orchestration prompt template |
 | **Runtime Scripts** | `ralph.sh`, `sync2.sh`, `kill.sh` | Scripts for running autonomous loops |
 | **Utilities** | `visualize.py` | Development/debugging tools |
 | **Runtime Artifacts** | `claude_output.jsonl`, `archive/`, `planning/` | Gitignored runtime files |
 
-> **Note**: `prompt.md` has been removed and is no longer used.
+> **Note**: `prompt.md`, `plan.md`, and `execute.md` have been removed and are no longer used.
+>
+> **Note**: Workflow files now include YAML frontmatter with `name`, `condition`, `description`, `priority`, and `goal` fields. The `index.md` and `README.md` files have been removed as the metadata is captured in the frontmatter. See `docs/workflows.md` for the schema.
 
 ---
 
@@ -105,23 +101,22 @@ ralph-tui/
 ├── dist/                        # Compiled output (gitignored)
 ├── node_modules/                # Dependencies (gitignored)
 │
-├── templates/                   # Example templates for reference
-│   ├── execute.example.md
-│   └── plan.example.md
+├── templates/                   # DEFAULT TEMPLATES - AUTHORITATIVE SOURCE
+│   ├── orchestrate.md           # Orchestration prompt template
+│   └── workflows/               # Workflow templates with YAML frontmatter
+│       ├── 01-feature-branch-incomplete.md
+│       ├── 02-feature-branch-pr-ready.md
+│       ├── 03-pr-pipeline-fix.md
+│       ├── 04-cd-pipeline-fix.md
+│       ├── 05-resume-in-progress.md
+│       └── 06-new-work.md
 │
-├── workflows/                   # DEFAULT WORKFLOWS - AUTHORITATIVE SOURCE
-│   ├── 01-feature-branch-incomplete.md
-│   ├── 02-feature-branch-pr-ready.md
-│   ├── 03-pr-pipeline-fix.md
-│   ├── 04-cd-pipeline-fix.md
-│   ├── 05-resume-in-progress.md
-│   ├── 06-new-work.md
-│   ├── index.md
-│   └── README.md
-│
-├── prompts/                     # DEFAULT PROMPTS - AUTHORITATIVE SOURCE
-│   ├── orchestrate.md           # Orchestration prompt (can be overridden by user)
-│   └── resume.md                # Resume prompt (can be overridden by user)
+├── docs/                        # User documentation
+│   ├── configuration.md         # Configuration reference
+│   ├── task-adapters.md         # Task adapter documentation
+│   ├── workflows.md             # Workflow frontmatter schema (NEW)
+│   └── commands/
+│       └── init.md              # Init command documentation
 │
 ├── scripts/                     # RUNTIME SCRIPTS
 │   ├── ralph.sh                 # Main autonomous loop
@@ -172,14 +167,27 @@ ralph-tui/
 
 ### Default File Hierarchy
 
-The root-level directories are the **authoritative default sources**:
+The `templates/` directory is the **authoritative default source** for files copied during `ralph init`:
 
 | Directory | Purpose | User Override |
 |-----------|---------|---------------|
-| `workflows/` | Default workflow definitions | Users can create custom workflows in their project |
-| `prompts/` | Orchestration and resume prompts | Users can override by placing files in their `.ralph/prompts/` |
+| `templates/workflows/` | Default workflow definitions (with YAML frontmatter) | Users can customize workflows in their project's `.ralph/workflows/` |
+| `templates/orchestrate.md` | Orchestration prompt | Users can override by modifying their `.ralph/orchestrate.md` |
 
-**Key principle**: End users can optionally override any default by placing their own version in the appropriate location in their project.
+**Key principle**: End users can customize any default by modifying the files in their project's `.ralph/` directory.
+
+**Workflow Frontmatter Schema** (see `docs/workflows.md` for full details):
+```yaml
+---
+name: Human-readable workflow name
+condition: |
+  Full description of when this workflow applies
+description: |
+  Detailed explanation of what the workflow does
+priority: 1-6
+goal: Concise one-liner objective
+---
+```
 
 ### IMPORTANT: Runtime vs Source Path References
 
@@ -255,16 +263,25 @@ These paths are **correct** - they define the runtime structure for end users, n
 
 6. **Update README.md** - update development instructions
 
-### Phase 2: Move Workflows
+### Phase 2: Move Workflows ✅ COMPLETED
 
-1. **Move workflows directory**
+1. **Workflows moved to templates directory** (not root)
    ```bash
-   git mv .ralph/workflows workflows
+   git mv .ralph/workflows .ralph/tui/templates/workflows
    ```
 
-2. **Update TUI init command** to copy from new location (if applicable)
+2. **Added YAML frontmatter** to all workflow files with:
+   - `name`: Human-readable workflow name
+   - `condition`: When this workflow applies (includes decision tree path)
+   - `description`: Detailed explanation of workflow steps
+   - `priority`: 1-6 numeric priority for workflow selection
+   - `goal`: Concise one-liner objective
 
-3. **Update any scripts** that reference `.ralph/workflows/`
+3. **Removed index.md and README.md** from workflows (info captured in frontmatter)
+
+4. **Created `docs/workflows.md`** documenting the frontmatter schema
+
+5. **Updated `init.ts`** to copy workflows without `.example` suffix
 
 ### Phase 3: Move Prompts
 
@@ -524,25 +541,25 @@ include: ['src/components/**/*.test.{ts,tsx}', ...]
 
 **`vitest.config.ts`** - verify no path changes needed
 
-### Phase 12: Deprecate Unused Prompts (plan.md, execute.md)
+### Phase 12: Deprecate Unused Prompts (plan.md, execute.md) ✅ COMPLETED
 
-These files are **vestigial** - created by `ralph init` but never actually used at runtime.
+These files were **vestigial** - created by `ralph init` but never actually used at runtime.
 
-1. **Update `src/commands/init.ts`** - remove creation of:
+1. **Updated `src/commands/init.ts`** - removed creation of:
    - `.ralph/prompts/plan.md`
    - `.ralph/prompts/plan.example.md`
    - `.ralph/prompts/execute.md`
    - `.ralph/prompts/execute.example.md`
 
-2. **Delete template files**:
+2. **Deleted template files**:
    ```bash
    rm templates/plan.example.md
    rm templates/execute.example.md
    ```
 
-3. **Update documentation**:
-   - `docs/commands/init.md` - remove references
-   - `.ai-docs/design/product-brief.md` - remove plan/execute prompt sections
+3. **Updated documentation**:
+   - `docs/commands/init.md` - removed references
+   - Updated tests in `init.test.ts` and `init.test.ts` (integration)
 
 ---
 
@@ -694,12 +711,18 @@ git checkout <pre-migration-commit> -- .ralph/
 
 ## Resolved Decisions
 
-1. **Root directories are authoritative**: `workflows/` and `prompts/` at root are the authoritative default sources, not copies. They ship with the npm package and are copied to user projects during `ralph init`.
+1. **Templates directory is authoritative**: `templates/` contains the authoritative default sources. They ship with the npm package and are copied to user projects during `ralph init`.
 
 2. **`prompt.md` removed**: This file is no longer used and should not be migrated.
 
-3. **Only two prompts needed**: `orchestrate.md` and `resume.md`. The `plan.md` and `execute.md` files are vestigial (created by init but never used) and should be deprecated.
+3. **Only orchestrate.md needed**: The `plan.md` and `execute.md` files were vestigial (created by init but never used) and have been removed.
 
-4. **Flattened structure**: No nested `tui/` folder. The repo IS the npm package. This eliminates duplicate `package.json`, `LICENSE`, and `README.md` files.
+4. **Flattened structure** (pending): No nested `tui/` folder. The repo IS the npm package. This eliminates duplicate `package.json`, `LICENSE`, and `README.md` files.
 
-5. **No defaults/ directory**: All prompts live in `prompts/`. The `defaults/` folder is eliminated entirely.
+5. **No defaults/ directory**: All templates live in `templates/`. The `defaults/` folder has been eliminated.
+
+6. **Workflow files include YAML frontmatter**: Each workflow file now includes frontmatter with `name`, `condition`, `description`, `priority`, and `goal` fields. This replaces the need for `index.md` and `README.md` in the workflows directory.
+
+7. **No `.example` suffix**: Template files are copied as-is without renaming. Files like `orchestrate.md` and `01-feature-branch-incomplete.md` are copied directly to the user's project.
+
+8. **Frontmatter schema documented**: The workflow frontmatter schema is documented in `docs/workflows.md`.
