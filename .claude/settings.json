@@ -1,6 +1,12 @@
 {
   "permissions": {
-    "deny": ["Read(.ai-docs/archive/**)"]
+    "deny": [
+      "Read(.ai-docs/.archive/**)", 
+      "Read(.ai-docs/**/.archive/**)", 
+      "Read(.claude/.archive/**)", 
+      "Read(.claude/**/.archive/**)"
+    ],
+    "defaultMode": "bypassPermissions"
   },
   "model": "opus",
   "enableAllProjectMcpServers": true,
