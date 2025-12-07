@@ -1,3 +1,21 @@
+---
+name: Feature Branch - PR Ready to Merge
+condition: |
+  You are on a feature or bugfix branch (NOT the develop branch) AND all of the following are true:
+  - Work is complete (implementation is finished)
+  - A Pull Request already exists for this branch
+  - The PR has not yet been merged to develop
+
+  Decision tree path: START → On feature/bugfix branch? YES → Work status? Complete with unmerged PR
+description: |
+  Verify CI pipelines have passed for your specific PR (not a different PR from the same branch),
+  merge the PR to develop, validate that CD pipelines succeed and the app deploys successfully
+  to the dev environment, close the associated task with status "finished", then checkout develop
+  and pull latest changes.
+priority: 2
+goal: Merge the existing PR
+---
+
 # Feature Branch - PR Ready to Merge
 
 **Trigger**: You are on a feature/bugfix branch with complete work and an existing unmerged Pull Request

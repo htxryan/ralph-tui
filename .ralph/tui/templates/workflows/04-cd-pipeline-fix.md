@@ -1,3 +1,26 @@
+---
+name: CD Pipeline Fix
+condition: |
+  You are on the develop branch AND all of the following are true:
+  - There are NO unmerged PRs with failing pipelines (or no unmerged PRs at all)
+  - The CD (Continuous Deployment) pipeline for the develop branch has failed
+  - The application is not successfully deployed to the dev environment
+
+  This workflow takes priority over in-progress tasks or new work because a failing
+  deployment blocks validation of any completed work.
+
+  Decision tree path: START → On develop branch? YES → Unmerged PRs with failing pipelines? NO →
+  CD pipeline status? FAILED
+description: |
+  PRIME DIRECTIVE: Fix the CD pipeline so that the application will be deployed.
+
+  Diagnose why the CD pipeline failed, implement the necessary fixes, wait for the pipeline
+  to re-run, and verify that the dev environment is successfully deployed. Only proceed to
+  other work after deployment is confirmed working.
+priority: 4
+goal: Fix deployment pipeline
+---
+
 # CD Pipeline Fix
 
 **Trigger**: You are on the develop branch and the CD pipeline for develop has failed

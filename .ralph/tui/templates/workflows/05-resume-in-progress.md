@@ -1,3 +1,28 @@
+---
+name: Resume In-Progress Work
+condition: |
+  You are on the develop branch AND all of the following are true:
+  - There are NO unmerged PRs with failing pipelines
+  - The CD pipeline for develop is passing (app is deployed successfully)
+  - There ARE tasks with status "in_progress" in the task tracking system
+
+  This workflow takes priority over starting new work because in-progress work should
+  be completed before beginning new tasks.
+
+  Decision tree path: START → On develop branch? YES → Unmerged PRs with failing pipelines? NO →
+  CD pipeline status? PASSING → Any tasks in_progress? YES
+description: |
+  Continue working on the highest priority in_progress task through to completion.
+
+  Pick the first highest priority task with status "in_progress", implement the remaining work
+  with tests and manual browser testing, create a Pull Request, verify CI pipelines pass for
+  your specific PR, merge the PR, validate CD pipelines succeed and the app deploys to the
+  dev environment, close the task with status "finished", then checkout develop and pull
+  latest changes.
+priority: 5
+goal: Continue existing work
+---
+
 # Resume In-Progress Work
 
 **Trigger**: You are on the develop branch and there are tasks with status "in_progress"

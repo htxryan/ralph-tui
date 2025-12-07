@@ -192,24 +192,29 @@ export function App({
 
   // Wrapper for starting Ralph that archives the current session and starts fresh
   const handleStartRalph = useCallback(async () => {
-    // Archive current session if it has content, then create fresh file
-    // This ensures each Ralph run starts with a clean slate (no "previous session" box)
-    const defaultPath = path.join(sessionDir, 'claude_output.jsonl');
-    await archiveCurrentSession(defaultPath, archiveDir);
+    try {
+      // Archive current session if it has content, then create fresh file
+      // This ensures each Ralph run starts with a clean slate (no "previous session" box)
+      const defaultPath = path.join(sessionDir, 'claude_output.jsonl');
 
-    // Create fresh empty file
-    const dir = path.dirname(defaultPath);
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
+      await archiveCurrentSession(defaultPath, archiveDir);
+
+      // Create fresh empty file
+      const dir = path.dirname(defaultPath);
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
+      fs.writeFileSync(defaultPath, '', 'utf-8');
+
+      // Update the path (this will trigger useJSONLStream to reset)
+      setCurrentJsonlPath(defaultPath);
+      setSessionStartIndex(undefined);
+
+      // Start Ralph
+      startRalph();
+    } catch {
+      // Error handling is done in useRalphProcess
     }
-    fs.writeFileSync(defaultPath, '', 'utf-8');
-
-    // Update the path (this will trigger useJSONLStream to reset)
-    setCurrentJsonlPath(defaultPath);
-    setSessionStartIndex(undefined);
-
-    // Start Ralph
-    startRalph();
   }, [sessionDir, archiveDir, startRalph]);
 
   // Interrupt mode handlers
@@ -420,8 +425,8 @@ export function App({
     }
 
     // Tab cycling
-    // Note: Don't handle in subagent-detail view - it has its own tab switching
-    if (key.tab && currentView !== 'subagent-detail') {
+    // Note: Only handle in main view - detail views either have their own tabs or none at all
+    if (key.tab && currentView === 'main') {
       const currentIndex = tabs.indexOf(currentTab);
       if (key.shift) {
         const newIndex = (currentIndex - 1 + 5) % 5;
@@ -603,6 +608,7 @@ export function App({
         error={streamError}
         isRalphRunning={isRalphRunning}
         assignment={assignment}
+        ralphError={ralphError}
       />
 
       {/* Tab Bar - hide when in detail views */}
