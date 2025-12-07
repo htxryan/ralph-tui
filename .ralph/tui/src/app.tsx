@@ -2,9 +2,17 @@ import React, { useState, useCallback, useMemo } from 'react';
 import { Box, useApp, useInput } from 'ink';
 import * as path from 'path';
 import * as fs from 'fs';
-import { TabName, ViewMode, ToolCall, ProcessedMessage, ErrorInfo } from './lib/types.js';
+import {
+  TabName,
+  ViewMode,
+  ToolCall,
+  ProcessedMessage,
+  ErrorInfo,
+  MessageFilterType,
+  ALL_MESSAGE_FILTER_TYPES,
+} from './lib/types.js';
 import { type RalphConfig } from './lib/config.js';
-import { calculateSessionStats } from './lib/parser.js';
+import { calculateSessionStats, getMessageFilterType } from './lib/parser.js';
 import { archiveCurrentSession } from './lib/archive.js';
 import { getContextualShortcuts, getAllShortcutsForDialog } from './lib/shortcuts.js';
 import { useJSONLStream } from './hooks/use-jsonl-stream.js';
@@ -27,6 +35,7 @@ import { StatsView } from './components/stats/stats-view.js';
 import { SessionPicker, SessionInfo } from './components/session-picker.js';
 import { ShortcutsDialog } from './components/shortcuts-dialog.js';
 import { StartScreen } from './components/start-screen.js';
+import { FilterDialog } from './components/messages/filter-dialog.js';
 
 export interface AppProps {
   jsonlPath: string;
@@ -125,6 +134,12 @@ export function App({
 
   // Shortcuts dialog state (for narrow terminals)
   const [isShortcutsDialogOpen, setIsShortcutsDialogOpen] = useState(false);
+
+  // Filter dialog state
+  const [isFilterDialogOpen, setIsFilterDialogOpen] = useState(false);
+  const [enabledFilters, setEnabledFilters] = useState<Set<MessageFilterType>>(
+    () => new Set(ALL_MESSAGE_FILTER_TYPES)
+  );
 
   // Handlers
   const handleTabChange = useCallback((tab: TabName) => {
@@ -244,6 +259,15 @@ export function App({
     setIsSessionPickerOpen(false);
   }, []);
 
+  // Filter dialog handlers
+  const handleOpenFilterDialog = useCallback(() => {
+    setIsFilterDialogOpen(true);
+  }, []);
+
+  const handleCloseFilterDialog = useCallback(() => {
+    setIsFilterDialogOpen(false);
+  }, []);
+
   const handleSelectSession = useCallback(
     async (session: SessionInfo) => {
       setIsSessionPickerOpen(false);
@@ -282,6 +306,39 @@ export function App({
   const sessionStats = useMemo(() => {
     return calculateSessionStats(messages, sessionStartIndex, isRalphRunning);
   }, [messages, sessionStartIndex, isRalphRunning]);
+
+  // Compute message counts per filter type (for filter dialog display)
+  const messageCounts = useMemo(() => {
+    const counts: Record<MessageFilterType, number> = {
+      'initial-prompt': 0,
+      'user': 0,
+      'thinking': 0,
+      'tool': 0,
+      'assistant': 0,
+      'subagent': 0,
+      'system': 0,
+      'result': 0,
+    };
+
+    // Find the initial prompt index
+    const startFrom = sessionStartIndex ?? 0;
+    let initialPromptIndex = -1;
+    for (let i = startFrom; i < messages.length; i++) {
+      if (messages[i].type === 'user' && messages[i].text.trim()) {
+        initialPromptIndex = i;
+        break;
+      }
+    }
+
+    // Count messages by type
+    for (let i = 0; i < messages.length; i++) {
+      const isInitialPrompt = initialPromptIndex >= 0 && i === initialPromptIndex;
+      const filterType = getMessageFilterType(messages[i], isInitialPrompt);
+      counts[filterType]++;
+    }
+
+    return counts;
+  }, [messages, sessionStartIndex]);
 
   // Compute contextual shortcuts for footer (state-aware)
   const shortcuts = useMemo(
@@ -328,9 +385,9 @@ export function App({
       // For other keys, continue processing below
     }
 
-    // When in interrupt mode or session picker is open, don't handle any global shortcuts
+    // When in interrupt mode, session picker, or filter dialog is open, don't handle any global shortcuts
     // Those components handle their own input
-    if (isInterruptMode || isSessionPickerOpen) {
+    if (isInterruptMode || isSessionPickerOpen || isFilterDialogOpen) {
       return;
     }
 
@@ -419,6 +476,12 @@ export function App({
       handleOpenSessionPicker();
       return;
     }
+
+    // Open filter dialog (only on messages tab in main view)
+    if (input === 'f' && currentTab === 'messages' && currentView === 'main') {
+      handleOpenFilterDialog();
+      return;
+    }
   });
 
   // Fixed overhead: Header (~4 lines with border) + TabBar (~1 line, only in main view) + Footer (~2 lines)
@@ -489,6 +552,9 @@ export function App({
             onInterruptCancel={handleInterruptCancel}
             onInterruptKillSession={isRalphRunning ? handleInterruptKillSession : undefined}
             isSessionPickerOpen={isSessionPickerOpen}
+            enabledFilters={enabledFilters}
+            onFiltersChange={setEnabledFilters}
+            isFilterDialogOpen={isFilterDialogOpen}
           />
         );
       case 'task':
@@ -612,6 +678,25 @@ export function App({
           <ShortcutsDialog
             shortcuts={dialogShortcuts}
             width={Math.min(45, terminalColumns - 4)}
+          />
+        </Box>
+      )}
+
+      {/* Filter Dialog Overlay */}
+      {isFilterDialogOpen && (
+        <Box
+          position="absolute"
+          width="100%"
+          height="100%"
+          justifyContent="center"
+          alignItems="center"
+        >
+          <FilterDialog
+            enabledFilters={enabledFilters}
+            onFiltersChange={setEnabledFilters}
+            onClose={handleCloseFilterDialog}
+            width={Math.min(60, terminalColumns - 4)}
+            messageCounts={messageCounts}
           />
         </Box>
       )}

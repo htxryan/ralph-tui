@@ -4,6 +4,7 @@ import {
   extractTextContent,
   extractToolCalls,
   processEvent,
+  matchToolResults,
   truncate,
   formatTokens,
   formatDuration,
@@ -12,7 +13,7 @@ import {
   calculateSessionStats,
   extractWorkflowName,
 } from '../lib/parser.js';
-import { ClaudeEvent, ContentBlock, ProcessedMessage } from '../lib/types.js';
+import { ClaudeEvent, ContentBlock, ProcessedMessage, ToolCall } from '../lib/types.js';
 
 describe('parseJSONLLine', () => {
   it('parses valid JSON line', () => {
@@ -105,6 +106,152 @@ describe('processEvent', () => {
   it('skips tool_use and tool_result events', () => {
     expect(processEvent({ type: 'tool_use' })).toBeNull();
     expect(processEvent({ type: 'tool_result' })).toBeNull();
+  });
+});
+
+describe('matchToolResults', () => {
+  const createToolCall = (id: string, name: string): ToolCall => ({
+    id,
+    name,
+    input: {},
+    status: 'pending',
+    isSubagent: false,
+    timestamp: new Date(),
+  });
+
+  it('matches tool result to tool call by tool_use_id', () => {
+    const toolCall = createToolCall('toolu_01XYZ', 'Read');
+    const toolCalls = new Map<string, ToolCall>();
+    toolCalls.set('toolu_01XYZ', toolCall);
+
+    const content: ContentBlock[] = [
+      {
+        type: 'tool_result',
+        tool_use_id: 'toolu_01XYZ',
+        content: 'File contents here',
+        is_error: false,
+      },
+    ];
+
+    matchToolResults(toolCalls, content);
+
+    expect(toolCall.status).toBe('completed');
+    expect(toolCall.result).toBe('File contents here');
+    expect(toolCall.isError).toBe(false);
+  });
+
+  it('handles error tool results', () => {
+    const toolCall = createToolCall('toolu_error', 'Bash');
+    const toolCalls = new Map<string, ToolCall>();
+    toolCalls.set('toolu_error', toolCall);
+
+    const content: ContentBlock[] = [
+      {
+        type: 'tool_result',
+        tool_use_id: 'toolu_error',
+        content: 'Command failed with exit code 1',
+        is_error: true,
+      },
+    ];
+
+    matchToolResults(toolCalls, content);
+
+    expect(toolCall.status).toBe('error');
+    expect(toolCall.result).toBe('Command failed with exit code 1');
+    expect(toolCall.isError).toBe(true);
+  });
+
+  it('handles null content in tool result', () => {
+    const toolCall = createToolCall('toolu_null', 'Write');
+    const toolCalls = new Map<string, ToolCall>();
+    toolCalls.set('toolu_null', toolCall);
+
+    const content: ContentBlock[] = [
+      {
+        type: 'tool_result',
+        tool_use_id: 'toolu_null',
+        content: undefined,
+        is_error: false,
+      },
+    ];
+
+    matchToolResults(toolCalls, content);
+
+    expect(toolCall.status).toBe('completed');
+    expect(toolCall.result).toBe('');
+  });
+
+  it('ignores tool results with no matching tool call', () => {
+    const toolCall = createToolCall('toolu_different', 'Read');
+    const toolCalls = new Map<string, ToolCall>();
+    toolCalls.set('toolu_different', toolCall);
+
+    const content: ContentBlock[] = [
+      {
+        type: 'tool_result',
+        tool_use_id: 'toolu_unknown',
+        content: 'Some result',
+        is_error: false,
+      },
+    ];
+
+    matchToolResults(toolCalls, content);
+
+    // Original tool call should be unchanged
+    expect(toolCall.status).toBe('pending');
+    expect(toolCall.result).toBeUndefined();
+  });
+
+  it('handles multiple tool results at once', () => {
+    const toolCall1 = createToolCall('toolu_1', 'Read');
+    const toolCall2 = createToolCall('toolu_2', 'Bash');
+    const toolCalls = new Map<string, ToolCall>();
+    toolCalls.set('toolu_1', toolCall1);
+    toolCalls.set('toolu_2', toolCall2);
+
+    const content: ContentBlock[] = [
+      {
+        type: 'tool_result',
+        tool_use_id: 'toolu_1',
+        content: 'First result',
+        is_error: false,
+      },
+      {
+        type: 'tool_result',
+        tool_use_id: 'toolu_2',
+        content: 'Second result',
+        is_error: false,
+      },
+    ];
+
+    matchToolResults(toolCalls, content);
+
+    expect(toolCall1.status).toBe('completed');
+    expect(toolCall1.result).toBe('First result');
+    expect(toolCall2.status).toBe('completed');
+    expect(toolCall2.result).toBe('Second result');
+  });
+
+  it('filters out non-tool_result content blocks', () => {
+    const toolCall = createToolCall('toolu_filter', 'Read');
+    const toolCalls = new Map<string, ToolCall>();
+    toolCalls.set('toolu_filter', toolCall);
+
+    const content: ContentBlock[] = [
+      { type: 'text', text: 'Some text' },
+      {
+        type: 'tool_result',
+        tool_use_id: 'toolu_filter',
+        content: 'The result',
+        is_error: false,
+      },
+      { type: 'tool_use', id: 'other', name: 'Write', input: {} },
+    ];
+
+    matchToolResults(toolCalls, content);
+
+    expect(toolCall.status).toBe('completed');
+    expect(toolCall.result).toBe('The result');
   });
 });
 

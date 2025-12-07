@@ -70,7 +70,26 @@ export function useJSONLStream(options: UseJSONLStreamOptions): UseJSONLStreamRe
 
       // Handle tool results - match them to existing tool calls
       if (event.type === 'tool_result' || (event.message?.content ?? []).some(b => b.type === 'tool_result')) {
-        const content = event.message?.content ?? [];
+        // For standalone tool_result events, the tool_use_id and content are at the event level
+        // For tool_result within message content, they're in content blocks
+        let content = event.message?.content ?? [];
+
+        // Handle standalone tool_result events (no message.content)
+        if (event.type === 'tool_result' && content.length === 0) {
+          // Cast event to access top-level tool_result fields
+          const toolResultEvent = event as unknown as {
+            tool_use_id?: string;
+            content?: string;
+            is_error?: boolean;
+          };
+          content = [{
+            type: 'tool_result' as const,
+            tool_use_id: toolResultEvent.tool_use_id,
+            content: toolResultEvent.content,
+            is_error: toolResultEvent.is_error,
+          }];
+        }
+
         matchToolResults(toolCallMap.current, content);
 
         // Also match tool results for subagent tool calls

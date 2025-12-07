@@ -6,7 +6,6 @@ import { getMessageFilterType } from '../../lib/parser.js';
 import { MessageItem, MESSAGE_ITEM_HEIGHT } from './message-item.js';
 import { SessionSeparator } from './session-separator.js';
 import { InterruptInput } from './interrupt-input.js';
-import { FilterDialog } from './filter-dialog.js';
 
 export interface MessagesViewProps {
   messages: ProcessedMessage[];
@@ -34,6 +33,12 @@ export interface MessagesViewProps {
   onInterruptKillSession?: () => void;
   /** Whether session picker dialog is open (disables input handling) */
   isSessionPickerOpen?: boolean;
+  /** Currently enabled message filters */
+  enabledFilters: Set<MessageFilterType>;
+  /** Callback to update filters */
+  onFiltersChange: (filters: Set<MessageFilterType>) => void;
+  /** Whether filter dialog is open */
+  isFilterDialogOpen?: boolean;
 }
 
 // Scroll indicators take 1 line each (only shown when needed)
@@ -46,9 +51,6 @@ type ListItem =
 
 // Height of the interrupt input component in rows
 const INTERRUPT_INPUT_HEIGHT = 6;
-
-// Height of the filter dialog overlay (8 filters + header + footer + borders)
-const FILTER_DIALOG_HEIGHT = 12;
 
 export function MessagesView({
   messages,
@@ -65,12 +67,10 @@ export function MessagesView({
   onInterruptCancel,
   onInterruptKillSession,
   isSessionPickerOpen = false,
+  enabledFilters,
+  onFiltersChange,
+  isFilterDialogOpen = false,
 }: MessagesViewProps): React.ReactElement {
-  // Filter state - which message types to show
-  const [enabledFilters, setEnabledFilters] = useState<Set<MessageFilterType>>(
-    () => new Set(ALL_MESSAGE_FILTER_TYPES)
-  );
-  const [showFilterDialog, setShowFilterDialog] = useState(false);
 
   // Find the initial prompt - first user message at or after sessionStartIndex
   // This marks the start of the current session
@@ -89,29 +89,6 @@ export function MessagesView({
     }
     return -1; // No user message with text found
   }, [messages, sessionStartIndex]);
-
-  // Compute message counts per filter type (for filter dialog display)
-  // This is O(n) and only recomputes when messages or initialPromptIndex changes
-  const messageCounts = useMemo(() => {
-    const counts: Record<MessageFilterType, number> = {
-      'initial-prompt': 0,
-      'user': 0,
-      'thinking': 0,
-      'tool': 0,
-      'assistant': 0,
-      'subagent': 0,
-      'system': 0,
-      'result': 0,
-    };
-
-    for (let i = 0; i < messages.length; i++) {
-      const isInitialPrompt = initialPromptIndex >= 0 && i === initialPromptIndex;
-      const filterType = getMessageFilterType(messages[i], isInitialPrompt);
-      counts[filterType]++;
-    }
-
-    return counts;
-  }, [messages, initialPromptIndex]);
 
   // Build list items array with separator at session boundary
   // Filters messages based on enabledFilters
@@ -378,15 +355,9 @@ export function MessagesView({
     // Don't handle input when in interrupt mode - InterruptInput handles its own
     if (isInterruptMode) return;
     // Don't handle input when filter dialog is open - FilterDialog handles its own
-    if (showFilterDialog) return;
+    if (isFilterDialogOpen) return;
     // Don't handle input when session picker is open - SessionPicker handles its own
     if (isSessionPickerOpen) return;
-
-    // Toggle filter dialog with 'f'
-    if (input === 'f') {
-      setShowFilterDialog(true);
-      return;
-    }
 
     if (listItems.length === 0) return;
 
@@ -446,11 +417,6 @@ export function MessagesView({
     }
   });
 
-  // Handler for closing the filter dialog
-  const handleCloseFilterDialog = useCallback(() => {
-    setShowFilterDialog(false);
-  }, []);
-
   if (messages.length === 0) {
     return (
       <Box flexDirection="column" padding={1} height={height} flexGrow={1}>
@@ -471,27 +437,8 @@ export function MessagesView({
 
   return (
     <Box flexDirection="column" height={height} flexGrow={1}>
-      {/* Filter dialog overlay */}
-      {showFilterDialog && (
-        <Box
-          position="absolute"
-          width="100%"
-          height="100%"
-          justifyContent="center"
-          alignItems="center"
-        >
-          <FilterDialog
-            enabledFilters={enabledFilters}
-            onFiltersChange={setEnabledFilters}
-            onClose={handleCloseFilterDialog}
-            width={Math.min(60, width - 4)}
-            messageCounts={messageCounts}
-          />
-        </Box>
-      )}
-
       {/* Filter status indicator */}
-      {!showFilterDialog && isFiltering && (
+      {!isFilterDialogOpen && isFiltering && (
         <Box>
           <Text color={colors.warning}>
             {'\u26A0'} Filtering: {visibleMessages} of {totalMessages} messages shown ({filteredCount} hidden)

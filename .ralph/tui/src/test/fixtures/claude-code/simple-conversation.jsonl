@@ -4,5 +4,9 @@
 {"type":"assistant","message":{"content":[{"type":"tool_use","id":"toolu_01XYZ","name":"Read","input":{"file_path":"/project/README.md"}}],"usage":{"input_tokens":175,"output_tokens":50}},"timestamp":"2024-12-06T10:00:03.000Z"}
 {"type":"tool_result","tool_use_id":"toolu_01XYZ","content":"# Project README\n\nThis is a sample project for testing.","timestamp":"2024-12-06T10:00:04.000Z"}
 {"type":"assistant","message":{"content":[{"type":"text","text":"Based on the README, this appears to be a testing project. The codebase is organized with clear documentation and follows standard practices."}],"usage":{"input_tokens":200,"output_tokens":30}},"timestamp":"2024-12-06T10:00:05.000Z"}
-{"type":"user","message":{"content":[{"type":"text","text":"Thanks! That's helpful."}]},"timestamp":"2024-12-06T10:00:06.000Z"}
-{"type":"assistant","message":{"content":[{"type":"text","text":"You're welcome! Feel free to ask if you have any more questions about the codebase."}],"usage":{"input_tokens":230,"output_tokens":20}},"timestamp":"2024-12-06T10:00:07.000Z"}
+{"type":"user","message":{"content":[{"type":"text","text":"Can you run the tests?"}]},"timestamp":"2024-12-06T10:00:06.000Z"}
+{"type":"assistant","message":{"content":[{"type":"tool_use","id":"toolu_02ABC","name":"Bash","input":{"command":"npm test"}}],"usage":{"input_tokens":240,"output_tokens":30}},"timestamp":"2024-12-06T10:00:07.000Z"}
+{"type":"tool_result","tool_use_id":"toolu_02ABC","content":"PASS tests/example.test.js\n  ✓ should pass (5 ms)\n\nTests: 1 passed, 1 total\nTime: 0.5 s","is_error":false,"timestamp":"2024-12-06T10:00:08.000Z"}
+{"type":"assistant","message":{"content":[{"type":"text","text":"All tests pass! The test suite ran successfully."}],"usage":{"input_tokens":280,"output_tokens":15}},"timestamp":"2024-12-06T10:00:09.000Z"}
+{"type":"user","message":{"content":[{"type":"text","text":"Thanks! That's helpful."}]},"timestamp":"2024-12-06T10:00:10.000Z"}
+{"type":"assistant","message":{"content":[{"type":"text","text":"You're welcome! Feel free to ask if you have any more questions about the codebase."}],"usage":{"input_tokens":300,"output_tokens":20}},"timestamp":"2024-12-06T10:00:11.000Z"}
