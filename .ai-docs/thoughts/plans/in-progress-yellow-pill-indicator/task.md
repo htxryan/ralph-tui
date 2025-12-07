@@ -1,0 +1,1 @@
+In-progress messages in the message list should have an "in progress" pill to the right of the timestamp, rather than a red-colored outline; "in progress" pill's background should be yellow, maybe with yellow/black bars panels on either side, like a construction sign

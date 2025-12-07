@@ -1,11 +1,18 @@
----
-description: Capture research and plan to Vibe Kanban issue with full detail
-model: sonnet
----
-
 # Capture to Vibe Kanban
 
 You are tasked with capturing the task definition, research, and implementation plan from a task's directory and creating a comprehensive Vibe Kanban issue with ALL the detail preserved.
+
+## CRITICAL: AUTONOMOUS EXECUTION - NEVER ASK QUESTIONS
+
+**You MUST complete this command autonomously without asking clarifying questions.**
+
+- **NEVER** ask the user questions during execution
+- **NEVER** pause and wait for user input or confirmation
+- **ALWAYS** make your best judgment when decisions arise
+- **ALWAYS** produce a valid Vibe Kanban issue as output
+- If something is ambiguous about formatting or structure, make a reasonable choice
+- The user will critique your output AFTER you produce it - do not pre-emptively ask for guidance
+- Getting stuck waiting for user input is UNACCEPTABLE - always move forward
 
 ## Arguments
 
@@ -25,9 +32,9 @@ Usage: /refine/capture <task-id>
 Example: /refine/capture my-feature
 
 This will:
-1. Read: .ai-docs/plans/<task-id>/task.md (required - the task definition)
-2. Read: .ai-docs/plans/<task-id>/research.md (optional - codebase research)
-3. Read: .ai-docs/plans/<task-id>/plan.md (required - implementation plan)
+1. Read: .ai-docs/thoughts/plans/<task-id>/task.md (required - the task definition)
+2. Read: .ai-docs/thoughts/plans/<task-id>/research.md (optional - codebase research)
+3. Read: .ai-docs/thoughts/plans/<task-id>/plan.md (required - implementation plan)
 4. Create a Vibe Kanban issue with full content
 ```
 Then stop and wait for correct input.
@@ -37,17 +44,17 @@ Then stop and wait for correct input.
 ### Step 1: Validate Input Files Exist
 
 Check that the required files exist:
-- `.ai-docs/plans/<task_id>/task.md` (REQUIRED)
-- `.ai-docs/plans/<task_id>/plan.md` (REQUIRED)
-- `.ai-docs/plans/<task_id>/research.md` (OPTIONAL)
+- `.ai-docs/thoughts/plans/<task_id>/task.md` (REQUIRED)
+- `.ai-docs/thoughts/plans/<task_id>/plan.md` (REQUIRED)
+- `.ai-docs/thoughts/plans/<task_id>/research.md` (OPTIONAL)
 
 If required files are missing, report which files are missing and suggest running the appropriate commands first:
 ```
 Error: Missing required files for task: <task_id>
 
 Missing files:
-- .ai-docs/plans/<task_id>/task.md (create this file with your task definition)
-- .ai-docs/plans/<task_id>/plan.md (run /refine/create_plan <task_id>)
+- .ai-docs/thoughts/plans/<task_id>/task.md (create this file with your task definition)
+- .ai-docs/thoughts/plans/<task_id>/plan.md (run /refine/create_plan <task_id>)
 
 Please create/run the missing items first.
 ```
@@ -55,16 +62,16 @@ Please create/run the missing items first.
 ### Step 2: Read the Documents FULLY
 
 1. **Read task.md completely** (REQUIRED):
-   - Read `.ai-docs/plans/<task_id>/task.md` without any limit/offset
+   - Read `.ai-docs/thoughts/plans/<task_id>/task.md` without any limit/offset
    - Capture the ENTIRE content - do not truncate
 
 2. **Read research.md completely** (if exists):
-   - Read `.ai-docs/plans/<task_id>/research.md` without any limit/offset
+   - Read `.ai-docs/thoughts/plans/<task_id>/research.md` without any limit/offset
    - Capture the ENTIRE content - do not truncate
    - If it doesn't exist, note this but continue
 
 3. **Read plan.md completely** (REQUIRED):
-   - Read `.ai-docs/plans/<task_id>/plan.md` without any limit/offset
+   - Read `.ai-docs/thoughts/plans/<task_id>/plan.md` without any limit/offset
    - Capture the ENTIRE content - do not truncate
 
 ### Step 3: Extract Metadata
@@ -104,7 +111,7 @@ Use this exact structure when creating the Vibe Kanban issue:
 # <topic>
 
 **Task ID**: <task_id>
-**Source**: `.ai-docs/plans/<task_id>/`
+**Source**: `.ai-docs/thoughts/plans/<task_id>/`
 **Date**: <date>
 **Tags**: <tags>
 
@@ -131,9 +138,9 @@ Use this exact structure when creating the Vibe Kanban issue:
 
 ## References
 
-- Task: `.ai-docs/plans/<task_id>/task.md`
-- Research: `.ai-docs/plans/<task_id>/research.md`
-- Plan: `.ai-docs/plans/<task_id>/plan.md`
+- Task: `.ai-docs/thoughts/plans/<task_id>/task.md`
+- Research: `.ai-docs/thoughts/plans/<task_id>/research.md`
+- Plan: `.ai-docs/thoughts/plans/<task_id>/plan.md`
 ```
 
 ---
@@ -207,9 +214,9 @@ Successfully captured task to Vibe Kanban!
 Issue: <task_id>
 Topic: <topic>
 Source files:
-- .ai-docs/plans/<task_id>/task.md
-- .ai-docs/plans/<task_id>/research.md (if present)
-- .ai-docs/plans/<task_id>/plan.md
+- .ai-docs/thoughts/plans/<task_id>/task.md
+- .ai-docs/thoughts/plans/<task_id>/research.md (if present)
+- .ai-docs/thoughts/plans/<task_id>/plan.md
 
 The full task definition, research, and plan content has been preserved in the Vibe Kanban issue.
 ```
@@ -269,9 +276,9 @@ The capture step is the final step that takes all the detailed work from task de
 User: /refine/capture my-feature
 Assistant: Reading task, research, and plan files for task my-feature...
 
-[Reads .ai-docs/plans/my-feature/task.md]
-[Reads .ai-docs/plans/my-feature/research.md]
-[Reads .ai-docs/plans/my-feature/plan.md]
+[Reads .ai-docs/thoughts/plans/my-feature/task.md]
+[Reads .ai-docs/thoughts/plans/my-feature/research.md]
+[Reads .ai-docs/thoughts/plans/my-feature/plan.md]
 
 Creating Vibe Kanban issue with full content...
 
@@ -284,9 +291,9 @@ Successfully captured task to Vibe Kanban!
 Issue: my-feature
 Topic: Add dark mode support
 Source files:
-- .ai-docs/plans/my-feature/task.md
-- .ai-docs/plans/my-feature/research.md
-- .ai-docs/plans/my-feature/plan.md
+- .ai-docs/thoughts/plans/my-feature/task.md
+- .ai-docs/thoughts/plans/my-feature/research.md
+- .ai-docs/thoughts/plans/my-feature/plan.md
 
 The full task definition, research, and plan content has been preserved in the Vibe Kanban issue.
 ```
