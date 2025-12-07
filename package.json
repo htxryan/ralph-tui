@@ -48,6 +48,7 @@
     "LICENSE"
   ],
   "scripts": {
+    "setup": "pnpm install && pnpm build && pnpm link --global",
     "build": "tsc",
     "dev": "tsc --watch",
     "dev:tsx": "tsx src/cli.tsx",
