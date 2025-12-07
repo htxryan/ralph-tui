@@ -15,7 +15,7 @@ export function getSubagentColor(subagentType: string | undefined): string {
     'github-operator': colors.subagentGithubOperator,
     'vercel-operator': colors.subagentVercelOperator,
     'neon-operator': colors.subagentNeonOperator,
-    'web-researcher': colors.subagentWebResearcher,
+    'web-search-researcher': colors.subagentWebSearchResearcher,
     'product-architect': colors.subagentProductArchitect,
     'claude-code-guide': colors.subagentClaudeCodeGuide,
     'general-purpose': colors.subagentGeneralPurpose,
