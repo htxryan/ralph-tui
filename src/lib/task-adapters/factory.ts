@@ -13,6 +13,7 @@ import {
   DEFAULT_TASK_MANAGEMENT_CONFIG,
 } from './types.js';
 import { VibeKanbanAdapter } from './vibe-kanban-adapter.js';
+import { GitHubIssuesAdapter } from './github-issues-adapter.js';
 
 // ============================================================================
 // Stub Adapters (Placeholders for Future Implementation)
@@ -126,7 +127,7 @@ function instantiateAdapter(config: TaskManagementConfig): TaskAdapter {
       return new StubAdapter('beads');
 
     case 'github-issues':
-      return new StubAdapter('github-issues');
+      return new GitHubIssuesAdapter(config);
 
     default:
       throw new Error(`Unknown task provider: ${config.provider}`);
@@ -178,7 +179,7 @@ export function getSupportedProviders(): TaskProvider[] {
  * Check if a provider is currently implemented (not a stub)
  */
 export function isProviderImplemented(provider: TaskProvider): boolean {
-  return provider === 'vibe-kanban';
+  return provider === 'vibe-kanban' || provider === 'github-issues';
 }
 
 /**

@@ -196,6 +196,8 @@ export interface ProviderConfig {
   // GitHub Issues
   githubRepo?: string;
   githubToken?: string;
+  /** Filter issues by label. Defaults to 'ralph'. Set to null or '' to disable filtering. */
+  labelFilter?: string | null;
 
   // Beads (bd CLI)
   beadsBinaryPath?: string;
