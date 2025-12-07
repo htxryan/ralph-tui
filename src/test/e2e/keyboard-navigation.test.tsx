@@ -42,6 +42,10 @@ vi.mock('child_process', () => ({
     on: vi.fn(),
     kill: vi.fn(),
   })),
+  execFile: vi.fn((cmd, args, callback) => {
+    if (callback) callback(new Error('Mock: command not available'), '', '');
+    return { pid: 12346, on: vi.fn(), kill: vi.fn() };
+  }),
 }));
 
 // Mock execa
