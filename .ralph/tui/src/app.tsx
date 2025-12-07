@@ -363,8 +363,8 @@ export function App({
     }
 
     // Tab cycling
-    // Note: Don't handle in subagent-detail view - it has its own tab switching
-    if (key.tab && currentView !== 'subagent-detail') {
+    // Note: Only handle in main view - detail views either have their own tabs or none at all
+    if (key.tab && currentView === 'main') {
       const currentIndex = tabs.indexOf(currentTab);
       if (key.shift) {
         const newIndex = (currentIndex - 1 + 5) % 5;
