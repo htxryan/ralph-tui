@@ -1,10 +1,17 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { execa } from 'execa';
 import { KanbanTask } from '../lib/types.js';
+import {
+  TaskAdapter,
+  TaskManagementConfig,
+  createTaskAdapter,
+  DEFAULT_TASK_MANAGEMENT_CONFIG,
+} from '../lib/task-adapters/index.js';
 
 export interface UseTaskOptions {
   taskId: string | null;
   refreshInterval?: number;
+  /** Optional task management config (defaults to vibe-kanban) */
+  taskConfig?: TaskManagementConfig;
 }
 
 export interface UseTaskResult {
@@ -12,16 +19,64 @@ export interface UseTaskResult {
   isLoading: boolean;
   error: Error | null;
   refresh: () => void;
+  /** The active adapter (null if initialization failed) */
+  adapter: TaskAdapter | null;
+  /** Whether the adapter is ready */
+  adapterReady: boolean;
 }
 
 export function useTask(options: UseTaskOptions): UseTaskResult {
-  const { taskId, refreshInterval = 30000 } = options;
+  const {
+    taskId,
+    refreshInterval = 30000,
+    taskConfig = DEFAULT_TASK_MANAGEMENT_CONFIG,
+  } = options;
 
   const [task, setTask] = useState<KanbanTask | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const [adapter, setAdapter] = useState<TaskAdapter | null>(null);
+  const [adapterReady, setAdapterReady] = useState(false);
 
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const adapterRef = useRef<TaskAdapter | null>(null);
+
+  // Initialize the adapter
+  useEffect(() => {
+    let cancelled = false;
+
+    async function initAdapter() {
+      try {
+        const result = await createTaskAdapter(taskConfig);
+
+        if (cancelled) return;
+
+        if (result.adapter) {
+          adapterRef.current = result.adapter;
+          setAdapter(result.adapter);
+          setAdapterReady(true);
+          setError(null);
+        } else {
+          setAdapter(null);
+          setAdapterReady(false);
+          setError(new Error(result.error || 'Failed to create task adapter'));
+        }
+      } catch (err) {
+        if (cancelled) return;
+        setAdapter(null);
+        setAdapterReady(false);
+        setError(err instanceof Error ? err : new Error('Failed to initialize adapter'));
+      }
+    }
+
+    initAdapter();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [taskConfig]);
+
+  // Fetch task using the adapter
   const fetchTask = useCallback(async () => {
     if (!taskId) {
       setTask(null);
@@ -29,20 +84,26 @@ export function useTask(options: UseTaskOptions): UseTaskResult {
       return;
     }
 
+    const currentAdapter = adapterRef.current;
+    if (!currentAdapter) {
+      setTask(null);
+      setIsLoading(false);
+      return;
+    }
+
     try {
       setIsLoading(true);
-      const { stdout } = await execa('bd', ['show', taskId, '--json']);
-      const parsed = JSON.parse(stdout) as KanbanTask;
+      const fetchedTask = await currentAdapter.getTask(taskId);
+
       // Validate that we got a real task with required fields
-      if (!parsed || !parsed.id || !parsed.title) {
+      if (!fetchedTask || !fetchedTask.id || !fetchedTask.title) {
         setTask(null);
         setError(null);
       } else {
-        setTask(parsed);
+        setTask(fetchedTask);
         setError(null);
       }
     } catch (err) {
-      // Try to extract error message
       if (err instanceof Error) {
         setError(err);
       } else {
@@ -58,7 +119,10 @@ export function useTask(options: UseTaskOptions): UseTaskResult {
     fetchTask();
   }, [fetchTask]);
 
+  // Fetch task when adapter becomes ready or taskId changes
   useEffect(() => {
+    if (!adapterReady) return;
+
     fetchTask();
 
     if (refreshInterval > 0) {
@@ -70,12 +134,14 @@ export function useTask(options: UseTaskOptions): UseTaskResult {
         clearInterval(intervalRef.current);
       }
     };
-  }, [fetchTask, refreshInterval]);
+  }, [fetchTask, refreshInterval, adapterReady]);
 
   return {
     task,
     isLoading,
     error,
     refresh,
+    adapter,
+    adapterReady,
   };
 }
