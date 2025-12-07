@@ -299,11 +299,14 @@ describe('E2E Workflows', () => {
   // ============================================================================
 
   describe('Fresh Start Workflow (ralph init → ralph → exit)', () => {
+    // Helper to normalize paths for cross-platform compatibility
+    const normalizePath = (p: string) => p.replace(/\\/g, '/');
+
     it('completes full init workflow with default options', () => {
       // Init tests use real fs operations via runInit
       // Set up mock to indicate files don't exist yet
       vi.mocked(fs.existsSync).mockImplementation((p: fs.PathLike) => {
-        const pathStr = p.toString();
+        const pathStr = normalizePath(p.toString());
         // For init tests, pretend the .ralph files don't exist
         if (pathStr.includes('.ralph/settings.json')) return false;
         if (pathStr.includes('.ralph/prompts/')) return false;
@@ -321,7 +324,7 @@ describe('E2E Workflows', () => {
 
     it('completes init with agent pre-configuration', () => {
       vi.mocked(fs.existsSync).mockImplementation((p: fs.PathLike) => {
-        const pathStr = p.toString();
+        const pathStr = normalizePath(p.toString());
         if (pathStr.includes('.ralph/settings.json')) return false;
         if (pathStr.includes('.ralph/prompts/')) return false;
         return true;
@@ -335,7 +338,7 @@ describe('E2E Workflows', () => {
 
     it('shows proper dry-run output', () => {
       vi.mocked(fs.existsSync).mockImplementation((p: fs.PathLike) => {
-        const pathStr = p.toString();
+        const pathStr = normalizePath(p.toString());
         if (pathStr.includes('.ralph/settings.json')) return false;
         if (pathStr.includes('.ralph/prompts/')) return false;
         return true;
