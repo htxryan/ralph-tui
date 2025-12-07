@@ -4,6 +4,7 @@ import { colors } from '../../lib/colors.js';
 import { ProcessedMessage, ToolCall } from '../../lib/types.js';
 import { MessageItem, MESSAGE_ITEM_HEIGHT } from '../messages/message-item.js';
 import { SessionSeparator } from '../messages/session-separator.js';
+import { AutoscrollIndicator } from '../common/autoscroll-indicator.js';
 
 export interface SubagentsViewProps {
   messages: ProcessedMessage[];
@@ -107,7 +108,9 @@ export function SubagentsView({
 
   // Calculate exact window size based on available height
   // All items have same height (MESSAGE_ITEM_HEIGHT = 4), plus scroll indicators (2 lines)
-  const fixedOverhead = SCROLL_INDICATOR_HEIGHT * 2;
+  // Reserve 1 line for autoscroll indicator when content is scrollable
+  const autoscrollOverhead = 1; // Always reserve space for consistency
+  const fixedOverhead = SCROLL_INDICATOR_HEIGHT * 2 + autoscrollOverhead;
   const windowSize = Math.max(1, Math.floor((height - fixedOverhead) / MESSAGE_ITEM_HEIGHT));
 
   // Helper to find the last subagent index in listItems
@@ -342,6 +345,12 @@ export function SubagentsView({
           {'\u2193'} {listItems.length - windowStart - windowSize} items below
         </Text>
       )}
+
+      {/* Autoscroll status indicator */}
+      <AutoscrollIndicator
+        isFollowing={isFollowing}
+        isScrollable={listItems.length > windowSize}
+      />
     </Box>
   );
 }
