@@ -15,6 +15,7 @@ import {
   getConfig,
   loadConfig,
   writeConfigFile,
+  ensureGlobalConfigDir,
   ConfigValidationError,
   type RalphConfig,
   type PartialRalphConfig,
@@ -188,6 +189,46 @@ describe('config', () => {
         },
       });
     });
+
+    it('replaces Date objects instead of merging', () => {
+      const date1 = new Date('2024-01-01');
+      const date2 = new Date('2024-12-31');
+      const target = { date: date1 };
+      const source = { date: date2 };
+
+      const result = deepMerge(target, source);
+
+      expect(result.date).toBe(date2);
+    });
+
+    it('replaces RegExp objects instead of merging', () => {
+      const regex1 = /abc/;
+      const regex2 = /xyz/gi;
+      const target = { pattern: regex1 };
+      const source = { pattern: regex2 };
+
+      const result = deepMerge(target, source);
+
+      expect(result.pattern).toBe(regex2);
+    });
+
+    it('handles source with object and target with primitive', () => {
+      const target = { value: 'string' };
+      const source = { value: { nested: true } };
+
+      const result = deepMerge(target, source);
+
+      expect(result.value).toEqual({ nested: true });
+    });
+
+    it('handles source with primitive and target with object', () => {
+      const target = { value: { nested: true } };
+      const source = { value: 'string' };
+
+      const result = deepMerge(target, source);
+
+      expect(result.value).toBe('string');
+    });
   });
 
   // ==========================================================================
@@ -236,6 +277,30 @@ describe('config', () => {
       expect(result.loaded).toBe(false);
       expect(result.config).toEqual({});
       expect(result.error).toBeDefined();
+    });
+
+    it('handles non-Error exceptions', () => {
+      vi.mocked(fs.existsSync).mockReturnValue(true);
+      vi.mocked(fs.readFileSync).mockImplementation(() => {
+        throw 'string error';
+      });
+
+      const result = loadConfigFile('/path/to/settings.json');
+
+      expect(result.loaded).toBe(false);
+      expect(result.error).toBe('string error');
+    });
+
+    it('handles read errors', () => {
+      vi.mocked(fs.existsSync).mockReturnValue(true);
+      vi.mocked(fs.readFileSync).mockImplementation(() => {
+        throw new Error('Permission denied');
+      });
+
+      const result = loadConfigFile('/path/to/settings.json');
+
+      expect(result.loaded).toBe(false);
+      expect(result.error).toBe('Permission denied');
     });
 
     it('includes path in result', () => {
@@ -306,7 +371,7 @@ describe('config', () => {
       expect(() => validateConfig(config)).toThrow(/process\.jsonlPath/);
     });
 
-    it('rejects negative timeout', () => {
+    it('rejects negative startupTimeout', () => {
       const config = {
         ...DEFAULT_CONFIG,
         process: { ...DEFAULT_CONFIG.process, startupTimeout: -1 },
@@ -314,6 +379,56 @@ describe('config', () => {
 
       expect(() => validateConfig(config)).toThrow(ConfigValidationError);
       expect(() => validateConfig(config)).toThrow(/process\.startupTimeout/);
+    });
+
+    it('rejects negative shutdownTimeout', () => {
+      const config = {
+        ...DEFAULT_CONFIG,
+        process: { ...DEFAULT_CONFIG.process, shutdownTimeout: -100 },
+      };
+
+      expect(() => validateConfig(config)).toThrow(ConfigValidationError);
+      expect(() => validateConfig(config)).toThrow(/process\.shutdownTimeout/);
+    });
+
+    it('rejects non-string binaryPath', () => {
+      const config = {
+        ...DEFAULT_CONFIG,
+        agent: { ...DEFAULT_CONFIG.agent, binaryPath: 123 as any },
+      };
+
+      expect(() => validateConfig(config)).toThrow(ConfigValidationError);
+      expect(() => validateConfig(config)).toThrow(/agent\.binaryPath/);
+    });
+
+    it('rejects non-array args', () => {
+      const config = {
+        ...DEFAULT_CONFIG,
+        agent: { ...DEFAULT_CONFIG.agent, args: 'not-an-array' as any },
+      };
+
+      expect(() => validateConfig(config)).toThrow(ConfigValidationError);
+      expect(() => validateConfig(config)).toThrow(/agent\.args/);
+    });
+
+    it('rejects empty archiveDir', () => {
+      const config = {
+        ...DEFAULT_CONFIG,
+        paths: { ...DEFAULT_CONFIG.paths, archiveDir: '' },
+      };
+
+      expect(() => validateConfig(config)).toThrow(ConfigValidationError);
+      expect(() => validateConfig(config)).toThrow(/paths\.archiveDir/);
+    });
+
+    it('rejects empty promptsDir', () => {
+      const config = {
+        ...DEFAULT_CONFIG,
+        paths: { ...DEFAULT_CONFIG.paths, promptsDir: '' },
+      };
+
+      expect(() => validateConfig(config)).toThrow(ConfigValidationError);
+      expect(() => validateConfig(config)).toThrow(/paths\.promptsDir/);
     });
 
     it('accepts valid custom config', () => {
@@ -344,6 +459,52 @@ describe('config', () => {
       };
 
       expect(() => validateConfig(config)).not.toThrow();
+    });
+
+    it('accepts zero timeouts', () => {
+      const config = {
+        ...DEFAULT_CONFIG,
+        process: { ...DEFAULT_CONFIG.process, startupTimeout: 0, shutdownTimeout: 0 },
+      };
+
+      expect(() => validateConfig(config)).not.toThrow();
+    });
+
+    it('accepts undefined optional fields', () => {
+      const config = {
+        ...DEFAULT_CONFIG,
+        agent: { type: 'claude-code' as const },
+        display: { ...DEFAULT_CONFIG.display, theme: undefined },
+      };
+
+      expect(() => validateConfig(config)).not.toThrow();
+    });
+  });
+
+  describe('ConfigValidationError', () => {
+    it('includes field name in message', () => {
+      const error = new ConfigValidationError('test.field', 'bad-value', 'must be valid');
+
+      expect(error.message).toContain('test.field');
+      expect(error.field).toBe('test.field');
+    });
+
+    it('includes the invalid value', () => {
+      const error = new ConfigValidationError('agent.type', 'invalid', 'must be valid type');
+
+      expect(error.value).toBe('invalid');
+    });
+
+    it('includes the reason', () => {
+      const error = new ConfigValidationError('display.theme', 'neon', 'must be one of: default, minimal');
+
+      expect(error.reason).toBe('must be one of: default, minimal');
+    });
+
+    it('has correct error name', () => {
+      const error = new ConfigValidationError('field', 'value', 'reason');
+
+      expect(error.name).toBe('ConfigValidationError');
     });
   });
 
@@ -503,6 +664,54 @@ describe('config', () => {
 
       expect(() => getConfig('/project')).toThrow(/Configuration validation failed/);
     });
+
+    it('collects warnings for project config parse errors', () => {
+      vi.mocked(fs.existsSync).mockImplementation((p) => p === getProjectConfigPath('/project'));
+      vi.mocked(fs.readFileSync).mockReturnValue('{ bad project json }');
+
+      const result = getConfig('/project');
+
+      expect(result.warnings).toHaveLength(1);
+      expect(result.warnings[0]).toContain('project config');
+    });
+
+    it('collects warnings for local config parse errors', () => {
+      vi.mocked(fs.existsSync).mockImplementation((p) => p === getLocalConfigPath('/project'));
+      vi.mocked(fs.readFileSync).mockReturnValue('{ bad local json }');
+
+      const result = getConfig('/project');
+
+      expect(result.warnings).toHaveLength(1);
+      expect(result.warnings[0]).toContain('local config');
+    });
+
+    it('collects multiple warnings when multiple configs have parse errors', () => {
+      vi.mocked(fs.existsSync).mockImplementation(
+        (p) =>
+          p === getGlobalConfigPath() ||
+          p === getProjectConfigPath('/project') ||
+          p === getLocalConfigPath('/project')
+      );
+      vi.mocked(fs.readFileSync).mockReturnValue('{ invalid }');
+
+      const result = getConfig('/project');
+
+      expect(result.warnings).toHaveLength(3);
+      expect(result.warnings.some((w) => w.includes('global'))).toBe(true);
+      expect(result.warnings.some((w) => w.includes('project'))).toBe(true);
+      expect(result.warnings.some((w) => w.includes('local'))).toBe(true);
+    });
+
+    it('includes source paths in result even when files do not exist', () => {
+      vi.mocked(fs.existsSync).mockReturnValue(false);
+
+      const result = getConfig('/project');
+
+      expect(result.sources.global.path).toContain('settings.json');
+      expect(result.sources.project.path).toBe('/project/.ralph/settings.json');
+      expect(result.sources.local.path).toBe('/project/.ralph/settings.local.json');
+    });
+
   });
 
   describe('loadConfig', () => {
@@ -568,6 +777,45 @@ describe('config', () => {
       expect(writtenContent).toMatch(/^\{/);
       expect(writtenContent).toMatch(/\}\n$/);
       expect(writtenContent).toContain('  '); // Indentation
+    });
+  });
+
+  // ==========================================================================
+  // Global config directory utilities
+  // ==========================================================================
+
+  describe('ensureGlobalConfigDir', () => {
+    it('creates directory if it does not exist', () => {
+      vi.mocked(fs.existsSync).mockReturnValue(false);
+      const mkdirSpy = vi.mocked(fs.mkdirSync);
+
+      const result = ensureGlobalConfigDir();
+
+      expect(mkdirSpy).toHaveBeenCalledWith(
+        expect.stringContaining('ralph'),
+        { recursive: true }
+      );
+      expect(result).toContain('ralph');
+    });
+
+    it('skips mkdir if directory already exists', () => {
+      vi.mocked(fs.existsSync).mockReturnValue(true);
+      const mkdirSpy = vi.mocked(fs.mkdirSync);
+
+      const result = ensureGlobalConfigDir();
+
+      expect(mkdirSpy).not.toHaveBeenCalled();
+      expect(result).toContain('ralph');
+    });
+
+    it('returns the global config directory path', () => {
+      vi.mocked(fs.existsSync).mockReturnValue(true);
+      vi.mocked(os.platform).mockReturnValue('darwin');
+      vi.mocked(os.homedir).mockReturnValue('/Users/testuser');
+
+      const result = ensureGlobalConfigDir();
+
+      expect(result).toBe('/Users/testuser/Library/Application Support/ralph');
     });
   });
 
