@@ -42,6 +42,7 @@
   "files": [
     "dist",
     "defaults",
+    "scripts",
     "templates",
     "README.md",
     "LICENSE"

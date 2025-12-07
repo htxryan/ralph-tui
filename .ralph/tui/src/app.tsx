@@ -537,6 +537,7 @@ export function App({
         error={streamError}
         isRalphRunning={isRalphRunning}
         assignment={assignment}
+        ralphError={ralphError}
       />
 
       {/* Tab Bar - hide when in detail views */}

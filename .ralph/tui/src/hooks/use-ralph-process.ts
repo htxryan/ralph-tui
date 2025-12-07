@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { execa, type ResultPromise } from 'execa';
 import * as path from 'path';
 import * as fs from 'fs';
+import { fileURLToPath } from 'url';
 
 export interface UseRalphProcessOptions {
   basePath?: string;
@@ -18,7 +19,17 @@ export interface UseRalphProcessResult {
   resume: (sessionId: string, userFeedback: string) => void;
 }
 
-// Find the project root by looking for .ralph directory
+// Get the directory where this module (and the package) is installed
+function getPackageDir(): string {
+  const __filename = fileURLToPath(import.meta.url);
+  const __dirname = path.dirname(__filename);
+  // This file is in src/hooks/ or dist/hooks/, so go up to package root
+  // In dev: .ralph/tui/src/hooks -> .ralph/tui
+  // In dist: node_modules/ralph/dist/hooks -> node_modules/ralph
+  return path.resolve(__dirname, '..', '..');
+}
+
+// Find the project root by looking for .ralph directory (user's data)
 function findProjectRoot(): string {
   let dir = process.cwd();
 
@@ -35,10 +46,10 @@ function findProjectRoot(): string {
     return dir;
   }
 
-  // Walk up looking for .ralph directory
+  // Walk up looking for .ralph directory (user data, not scripts)
   let current = process.cwd();
   while (current !== path.dirname(current)) {
-    if (fs.existsSync(path.join(current, '.ralph', 'ralph.sh'))) {
+    if (fs.existsSync(path.join(current, '.ralph'))) {
       return current;
     }
     current = path.dirname(current);
@@ -51,11 +62,17 @@ export function useRalphProcess(
   options: UseRalphProcessOptions = {}
 ): UseRalphProcessResult {
   const { basePath = findProjectRoot() } = options;
-  const ralphScript = path.join(basePath, '.ralph', 'ralph.sh');
-  const lockFile = path.join(basePath, '.ralph', 'claude.lock');
-  const resumeTemplate = path.join(basePath, '.ralph', 'resume.md');
-  const logFile = path.join(basePath, '.ralph', 'claude_output.jsonl');
-  const visualizeScript = path.join(basePath, '.ralph', 'visualize.py');
+
+  // Package scripts directory (bundled with the npm package)
+  const packageDir = getPackageDir();
+  const scriptsDir = path.join(packageDir, 'scripts');
+  const ralphScript = path.join(scriptsDir, 'ralph.sh');
+
+  // User data paths (in user's project)
+  const userDataDir = path.join(basePath, '.ralph');
+  const lockFile = path.join(userDataDir, 'claude.lock');
+  const resumeTemplate = path.join(userDataDir, 'resume.md');
+  const logFile = path.join(userDataDir, 'claude_output.jsonl');
 
   const [isStarting, setIsStarting] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
@@ -94,19 +111,39 @@ export function useRalphProcess(
     setIsStarting(true);
     setError(null);
 
-    // Check if script exists
+    // Check if script exists (bundled with package)
     if (!fs.existsSync(ralphScript)) {
-      setError(new Error(`Ralph script not found: ${ralphScript}`));
+      setError(new Error(`Ralph script not found: ${ralphScript}\n\nThis may indicate the package was not installed correctly.`));
+      setIsStarting(false);
+      return;
+    }
+
+    // Check if user has initialized their .ralph directory
+    if (!fs.existsSync(userDataDir)) {
+      setError(new Error(`Ralph data directory not found: ${userDataDir}\n\nRun 'ralph init' to set up your project.`));
+      setIsStarting(false);
+      return;
+    }
+
+    // Check if orchestrate.md exists (required for the loop)
+    const orchestratePath = path.join(userDataDir, 'orchestrate.md');
+    if (!fs.existsSync(orchestratePath)) {
+      setError(new Error(`Orchestration prompt not found: ${orchestratePath}\n\nRun 'ralph init' to set up your project.`));
       setIsStarting(false);
       return;
     }
 
     try {
       // Spawn Ralph in detached mode so it keeps running after TUI exits
+      // Pass RALPH_PROJECT_DIR so scripts know where user data lives
       const child = execa(ralphScript, [], {
-        cwd: path.dirname(ralphScript),
+        cwd: basePath,  // Run from user's project directory
         detached: true,
         stdio: 'ignore',
+        env: {
+          ...process.env,
+          RALPH_PROJECT_DIR: basePath,
+        },
       });
 
       // Unref so the TUI can exit independently
@@ -128,7 +165,7 @@ export function useRalphProcess(
       setError(err instanceof Error ? err : new Error(String(err)));
       setIsStarting(false);
     }
-  }, [isStarting, isRunning, ralphScript, checkIfRunning]);
+  }, [isStarting, isRunning, ralphScript, userDataDir, basePath, checkIfRunning]);
 
   // Stop Ralph process - comprehensive kill like kill.sh
   const stop = useCallback(async () => {
