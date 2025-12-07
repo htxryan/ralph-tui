@@ -7,46 +7,97 @@ model: opus
 
 You are tasked with creating detailed implementation plans through an interactive, iterative process. You should be skeptical, thorough, and work collaboratively with the user to produce high-quality technical specifications.
 
+## Arguments
+
+This command accepts a required argument:
+
+- **$ARGUMENTS**: The task ID (e.g., "my-task") used to organize outputs
+
+Parse the arguments to extract:
+- **task_id**: The task identifier (required) - used for the output directory path
+- **additional_context**: Any additional instructions or file paths after the task_id
+
+If no task_id is provided, respond:
+```
+Error: Task ID required.
+
+Usage: /refine/create_plan <task-id> [context or file path]
+
+Example: /refine/create_plan my-feature
+Example: /refine/create_plan my-feature .ai-docs/design/product-brief.md
+
+The task ID will be used to:
+1. Read research from: .ai-docs/thoughts/plans/<task-id>/research.md
+2. Save plan output to: .ai-docs/thoughts/plans/<task-id>/plan.md
+```
+Then stop and wait for correct input.
+
 ## Initial Response
 
-When this command is invoked:
+When this command is invoked with a valid task_id:
 
-1. **Check if parameters were provided**:
-   - If a file path or reference was provided as a parameter, skip the default message
-   - Immediately read any provided files FULLY
-   - Begin the research process
+1. **Check for existing research**:
+   - Look for `.ai-docs/thoughts/plans/<task_id>/research.md`
+   - If it exists, read it FULLY - this provides the foundation for planning
+   - If it doesn't exist, note this and offer to proceed without it
 
-2. **If no parameters provided**, respond with:
-```
-I'll help you create a detailed implementation plan. Let me start by understanding what we're building.
+2. **Create the output directory** if it doesn't exist:
+   ```bash
+   mkdir -p .ai-docs/thoughts/plans/<task_id>
+   ```
 
-Please provide:
-1. The task description (or reference to a design doc/ticket file)
-2. Any relevant context, constraints, or specific requirements
-3. Links to related research or previous implementations
+3. **Check if additional parameters were provided**:
+   - If a file path or reference was provided as additional context, read those files FULLY
+   - Begin the planning process
 
-I'll analyze this information and work with you to create a comprehensive plan.
+4. **If no additional parameters provided and no research exists**, respond with:
+   ```
+   I'll help you create a detailed implementation plan for task: <task_id>
 
-Tip: You can also invoke this command with a file directly: `/create_plan .ai-docs/thoughts/notes/feature-idea.md`
-For deeper analysis, try: `/create_plan think deeply about .ai-docs/design/product-brief.md`
-```
+   Output will be saved to: .ai-docs/thoughts/plans/<task_id>/plan.md
 
-Then wait for the user's input.
+   Note: No existing research found at .ai-docs/thoughts/plans/<task_id>/research.md
+   Consider running /refine/research_codebase <task_id> first for thorough research.
+
+   Please provide:
+   1. The task description (or reference to a design doc/ticket file)
+   2. Any relevant context, constraints, or specific requirements
+   3. Links to related research or previous implementations
+
+   I'll analyze this information and work with you to create a comprehensive plan.
+
+   Tip: You can also invoke this command with a file directly: `/refine/create_plan <task-id> .ai-docs/thoughts/notes/feature-idea.md`
+   For deeper analysis, try: `/refine/create_plan <task-id> think deeply about .ai-docs/design/product-brief.md`
+   ```
+
+   Then wait for the user's input.
+
+5. **If research exists**, respond with:
+   ```
+   I'll create an implementation plan for task: <task_id>
+
+   Found existing research at: .ai-docs/thoughts/plans/<task_id>/research.md
+   Output will be saved to: .ai-docs/thoughts/plans/<task_id>/plan.md
+
+   Let me review the research and begin planning...
+   ```
+
+   Then proceed with the planning process using the research as foundation.
 
 ## Process Steps
 
 ### Step 1: Context Gathering & Initial Analysis
 
 1. **Read all mentioned files immediately and FULLY**:
+   - Research document: `.ai-docs/thoughts/plans/<task_id>/research.md`
    - Design docs (e.g., `.ai-docs/design/product-brief.md`)
-   - Research documents (e.g., `.ai-docs/thoughts/research/...`)
    - Related implementation plans
    - Any JSON/data files mentioned
    - **IMPORTANT**: Use the Read tool WITHOUT limit/offset parameters to read entire files
    - **CRITICAL**: DO NOT spawn sub-tasks before reading these files yourself in the main context
    - **NEVER** read files partially - if a file is mentioned, read it completely
 
-2. **Spawn initial research tasks to gather context**:
+2. **Spawn initial research tasks to gather context** (if more context needed):
    Before asking the user any questions, use specialized agents to research in parallel:
 
    - Use the **codebase-locator** agent to find all files related to the task
@@ -165,25 +216,22 @@ Once aligned on approach:
 
 After structure approval:
 
-1. **Write the plan** to `.ai-docs/thoughts/plans/YYYY-MM-DD-description.md`
-   - Format: `YYYY-MM-DD-description.md` where:
-     - YYYY-MM-DD is today's date
-     - description is a brief kebab-case description
-   - Examples:
-     - `2025-01-08-subagent-tracking.md`
-     - `2025-01-08-improve-error-handling.md`
+1. **Write the plan** to `.ai-docs/thoughts/plans/<task_id>/plan.md`
 
 2. **Use this template structure**:
 
 ````markdown
 ---
 date: [Current date in YYYY-MM-DD format]
+task_id: "<task_id>"
 topic: "[Feature/Task Name]"
 tags: [plan, implementation, relevant-components]
 status: draft
 ---
 
 # [Feature/Task Name] Implementation Plan
+
+**Task ID**: <task_id>
 
 ## Overview
 
@@ -268,8 +316,8 @@ status: draft
 
 ## References
 
+- Research doc: `.ai-docs/thoughts/plans/<task_id>/research.md`
 - Design doc: `.ai-docs/design/[relevant].md`
-- Related research: `.ai-docs/thoughts/research/[relevant].md`
 - Similar implementation: `[file:line]`
 ````
 
@@ -277,14 +325,16 @@ status: draft
 
 1. **Present the draft plan location**:
    ```
-   I've created the initial implementation plan at:
-   `.ai-docs/thoughts/plans/YYYY-MM-DD-description.md`
+   I've created the implementation plan at:
+   .ai-docs/thoughts/plans/<task_id>/plan.md
 
    Please review it and let me know:
    - Are the phases properly scoped?
    - Are the success criteria specific enough?
    - Any technical details that need adjustment?
    - Missing edge cases or considerations?
+
+   Next step: Once finalized, run /refine/capture <task_id> to create a Vibe Kanban issue.
    ```
 
 2. **Iterate based on feedback** - be ready to:
@@ -430,15 +480,13 @@ tasks = [
 ## Example Interaction Flow
 
 ```
-User: /create_plan
-Assistant: I'll help you create a detailed implementation plan...
+User: /refine/create_plan my-feature
+Assistant: I'll create an implementation plan for task: my-feature
 
-User: We need to add a new tab for showing subagent details. See .ai-docs/design/product-brief.md
-Assistant: Let me read that design doc completely first...
+Found existing research at: .ai-docs/thoughts/plans/my-feature/research.md
+Output will be saved to: .ai-docs/thoughts/plans/my-feature/plan.md
 
-[Reads file fully]
-
-Based on the design doc, I understand we need to add a new tab view for subagent details. Before I start planning, let me research the current implementation...
+Let me review the research and begin planning...
 
 [Interactive process continues...]
 ```
@@ -458,3 +506,10 @@ Development commands (run from `.ralph/tui/`):
 - `pnpm test:run` - Run tests once
 - `pnpm typecheck` - Type checking only
 - `pnpm dev:tsx` - Run with hot reload
+
+## Workflow
+
+This command is part of the refinement workflow:
+1. `/refine/research_codebase <task-id>` - Research and document (creates research.md)
+2. **`/refine/create_plan <task-id>`** - Create implementation plan (creates plan.md)
+3. `/refine/capture <task-id>` - Capture to Vibe Kanban issue

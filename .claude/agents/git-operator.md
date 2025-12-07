@@ -10,7 +10,7 @@ description: |
    - <example>User: "What commits have been made to the avatar system?"\nAssistant: "I'll use the git-operator agent to check the git history for avatar-related files."\n<Agent call to git-operator with task: "Show git log for files matching *avatar* with commit messages and dates"></example>\n\n- <example>User: "Commit the changes I just made to the authentication flow"\nAssistant: "I'll use the git-operator agent to stage and commit your changes."\n<Agent call to git-operator with task: "Stage all modified files related to authentication and commit with message 'Implement JWT token authentication for players'"></example>
    
    - <example>Context: After completing a code implementation task\nAssistant: "I've finished implementing the player join flow. Now I'll use the git-operator agent to commit these changes to version control."\n<Agent call to git-operator with task: "Stage files in /app/api/join and /components/player/ and commit with message 'Add player join flow with QR code support'"></example>
-model: haiku
+model: sonnet
 color: red
 ---
 

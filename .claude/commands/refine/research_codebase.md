@@ -1,11 +1,33 @@
 ---
-description: Document codebase as-is with thoughts directory for historical context
+description: "Document codebase as-is with thoughts directory for historical context"
 model: opus
 ---
 
 # Research Codebase
 
 You are tasked with conducting comprehensive research across the codebase to answer user questions by spawning parallel sub-agents and synthesizing their findings.
+
+## Arguments
+
+This command accepts a required argument:
+
+- **$ARGUMENTS**: The task ID (e.g., "my-task") used to organize outputs
+
+Parse the arguments to extract:
+- **task_id**: The task identifier (required) - used for the output directory path
+
+If no task_id is provided, respond:
+```
+Error: Task ID required.
+
+Usage: /refine/research_codebase <task-id> [research question]
+
+Example: /refine/research_codebase my-feature How does the JSONL streaming work?
+
+The task ID will be used to save research output to:
+.ai-docs/thoughts/plans/<task-id>/research.md
+```
+Then stop and wait for correct input.
 
 ## CRITICAL: YOUR ONLY JOB IS TO DOCUMENT AND EXPLAIN THE CODEBASE AS IT EXISTS TODAY
 - DO NOT suggest improvements or changes unless the user explicitly asks for them
@@ -18,12 +40,25 @@ You are tasked with conducting comprehensive research across the codebase to ans
 
 ## Initial Setup:
 
-When this command is invoked, respond with:
-```
-I'm ready to research the codebase. Please provide your research question or area of interest, and I'll analyze it thoroughly by exploring relevant components and connections.
-```
+When this command is invoked with a valid task_id:
 
-Then wait for the user's research query.
+1. **Create the output directory** if it doesn't exist:
+   ```bash
+   mkdir -p .ai-docs/thoughts/plans/<task_id>
+   ```
+
+2. **Respond with**:
+   ```
+   I'm ready to research the codebase for task: <task_id>
+
+   Output will be saved to: .ai-docs/thoughts/plans/<task_id>/research.md
+
+   Please provide your research question or area of interest, and I'll analyze it thoroughly by exploring relevant components and connections.
+   ```
+
+   If a research question was provided in the arguments, skip the prompt and proceed directly.
+
+Then wait for the user's research query (if not already provided).
 
 ## Steps to follow after receiving the research query:
 
@@ -80,21 +115,16 @@ Then wait for the user's research query.
 5. **Gather metadata for the research document:**
    - Get current date: `date +%Y-%m-%d`
    - Get current git info: `git rev-parse --short HEAD` and `git branch --show-current`
-   - Filename format: `.ai-docs/thoughts/research/YYYY-MM-DD-description.md`
-     - Format: `YYYY-MM-DD-description.md` where:
-       - YYYY-MM-DD is today's date
-       - description is a brief kebab-case description of the research topic
-     - Examples:
-       - `2025-01-08-jsonl-stream-processing.md`
-       - `2025-01-08-subagent-tracking-architecture.md`
-       - `2025-01-08-ink-component-patterns.md`
+   - **Output path**: `.ai-docs/thoughts/plans/<task_id>/research.md`
 
 6. **Generate research document:**
    - Use the metadata gathered in step 5
+   - **CRITICAL**: Write to `.ai-docs/thoughts/plans/<task_id>/research.md`
    - Structure the document with YAML frontmatter followed by content:
      ```markdown
      ---
      date: [Current date in YYYY-MM-DD format]
+     task_id: "<task_id>"
      researcher: claude
      git_commit: [Current commit hash]
      branch: [Current branch name]
@@ -105,6 +135,7 @@ Then wait for the user's research query.
 
      # Research: [User's Question/Topic]
 
+     **Task ID**: <task_id>
      **Date**: [Current date]
      **Git Commit**: [Current commit hash]
      **Branch**: [Current branch name]
@@ -156,6 +187,12 @@ Then wait for the user's research query.
 8. **Present findings:**
    - Present a concise summary of findings to the user
    - Include key file references for easy navigation
+   - Confirm the research was saved:
+     ```
+     Research saved to: .ai-docs/thoughts/plans/<task_id>/research.md
+
+     Next step: Run /refine/create_plan <task_id> to create an implementation plan based on this research.
+     ```
    - Ask if they have follow-up questions or need clarification
 
 9. **Handle follow-up questions:**
@@ -174,7 +211,10 @@ This project uses `.ai-docs/thoughts/` for storing research, notes, and historic
 ├── research/        # Research documents (like this one generates)
 ├── notes/           # General notes and explorations
 ├── decisions/       # Decision records and rationale
-└── plans/           # Implementation plans and designs
+└── plans/           # Implementation plans and designs (organized by task_id)
+    └── <task_id>/
+        ├── research.md   # This command's output
+        └── plan.md       # Created by /refine/create_plan
 ```
 
 Create subdirectories as needed. Keep the structure flat and simple.
@@ -207,6 +247,7 @@ Create subdirectories as needed. Keep the structure flat and simple.
   - Update frontmatter when adding follow-up research
   - Use snake_case for multi-word field names (e.g., `git_commit`)
   - Tags should be relevant to the research topic and components studied
+- **Output location**: Always write to `.ai-docs/thoughts/plans/<task_id>/research.md`
 
 ## Codebase Context
 
@@ -222,3 +263,10 @@ When researching, consider:
 - Custom hooks in `hooks/`
 - Type definitions in `lib/types.ts`
 - JSONL parsing in `lib/parser.ts`
+
+## Workflow
+
+This command is part of the refinement workflow:
+1. **`/refine/research_codebase <task-id>`** - Research and document (creates research.md)
+2. `/refine/create_plan <task-id>` - Create implementation plan (creates plan.md)
+3. `/refine/capture <task-id>` - Capture to Vibe Kanban issue

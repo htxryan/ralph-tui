@@ -28,7 +28,7 @@ description: |
    - [Agent analyzes existing error handling patterns to provide answer]
 
    This agent should be consulted proactively whenever you're about to make a significant technical or product decision to ensure alignment with established architecture and design principles.
-model: sonnet
+model: opus
 color: yellow
 ---
 
