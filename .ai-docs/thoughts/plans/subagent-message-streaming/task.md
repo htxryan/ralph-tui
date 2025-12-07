@@ -1,0 +1,1 @@
+Subagent messages do not stream live when looking at the subagent message list page; they should stream (and autoscroll) just like the main “Messages” tab
