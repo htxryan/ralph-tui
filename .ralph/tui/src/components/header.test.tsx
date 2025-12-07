@@ -105,8 +105,8 @@ describe('Header', () => {
     );
 
     expect(lastFrame()).toContain('Tokens:');
-    expect(lastFrame()).toContain('100in'); // Input tokens
-    expect(lastFrame()).toContain('50out'); // Output tokens
+    expect(lastFrame()).toContain('100 in'); // Input tokens
+    expect(lastFrame()).toContain('50 out'); // Output tokens
   });
 
   it('displays cached token info when cache is used', () => {
@@ -123,9 +123,9 @@ describe('Header', () => {
     );
 
     expect(lastFrame()).toContain('Tokens:');
-    expect(lastFrame()).toContain('150in'); // Total input (includes cached)
+    expect(lastFrame()).toContain('150 in'); // Total input (includes cached)
     expect(lastFrame()).toContain('45 cached'); // Cached portion
-    expect(lastFrame()).toContain('50out'); // Output tokens
+    expect(lastFrame()).toContain('50 out'); // Output tokens
   });
 
   it('displays session statistics', () => {
