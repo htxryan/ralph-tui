@@ -8,16 +8,47 @@ Ralph TUI is a terminal user interface for monitoring and controlling autonomous
 
 ## Repository Structure
 
-- `.ralph/tui/` - The main TUI application (Ink + React)
-- `.ralph/` - Ralph runtime files (scripts, logs, archives)
-- `.ai-docs/` - AI-native documentation
-  - `design/` - Product brief, tech stack
-  - `adr/` - Architecture Decision Records
-  - `prompts/` - Prompt templates
+```
+ralph-tui/
+├── src/                         # TUI source code (TypeScript + React/Ink)
+│   ├── cli.tsx                  # Entry point, argument parsing
+│   ├── app.tsx                  # Main React app, keyboard handling
+│   ├── commands/                # CLI commands (init, etc.)
+│   ├── components/              # React components by feature
+│   ├── hooks/                   # React hooks
+│   ├── lib/                     # Utilities, types, parser
+│   └── test/                    # Tests (unit, integration, e2e)
+│
+├── templates/                   # Default templates for `ralph init`
+│   ├── orchestrate.md           # Orchestration prompt
+│   └── workflows/               # Workflow files with YAML frontmatter
+│
+├── prompts/                     # Prompt templates
+│   └── resume.md                # Resume prompt
+│
+├── scripts/                     # Runtime scripts (for autonomous loops)
+│   ├── ralph.sh                 # Main autonomous loop
+│   ├── sync2.sh                 # Two-phase sync script
+│   ├── kill.sh                  # Process cleanup helper
+│   └── visualize.py             # Log visualization tool
+│
+├── docs/                        # User documentation
+├── .ai-docs/                    # AI-native documentation
+│   ├── design/                  # Product brief, tech stack
+│   ├── adr/                     # Architecture Decision Records
+│   └── thoughts/                # Research, plans, notes
+│
+├── .github/workflows/           # CI/CD pipelines
+│
+└── .ralph/                      # RUNTIME ONLY (gitignored)
+    ├── claude_output.jsonl      # Session logs
+    ├── claude.lock              # Lock file
+    └── archive/                 # Archived sessions
+```
 
 ## Development Commands
 
-All commands run from `.ralph/tui/`:
+Commands run from the repository root:
 
 ```bash
 # Development
@@ -33,6 +64,9 @@ pnpm run              # Install + build + start
 # Testing
 pnpm test             # Run tests in watch mode
 pnpm test:run         # Single test run
+pnpm test:unit        # Unit tests only
+pnpm test:integration # Integration tests only
+pnpm test:e2e         # End-to-end tests
 pnpm test:ci          # Verbose output for CI
 pnpm test:coverage    # With coverage report
 pnpm typecheck        # TypeScript type checking only

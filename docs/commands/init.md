@@ -19,14 +19,14 @@ This is typically the first command you run when setting up Ralph in a new proje
 ```
 .ralph/
 ├── settings.json                              # Configuration file (empty by default)
-├── orchestrate.example.md                     # Example orchestration prompt
+├── orchestrate.md                             # Orchestration prompt
 └── workflows/
-    ├── 01-feature-branch-incomplete.example.md
-    ├── 02-feature-branch-pr-ready.example.md
-    ├── 03-pr-pipeline-fix.example.md
-    ├── 04-cd-pipeline-fix.example.md
-    ├── 05-resume-in-progress.example.md
-    └── 06-new-work.example.md
+    ├── 01-feature-branch-incomplete.md
+    ├── 02-feature-branch-pr-ready.md
+    ├── 03-pr-pipeline-fix.md
+    ├── 04-cd-pipeline-fix.md
+    ├── 05-resume-in-progress.md
+    └── 06-new-work.md
 ```
 
 ### settings.json
@@ -44,8 +44,8 @@ See [Configuration](../configuration.md) for details.
 
 Ralph uses an orchestration-based approach with multiple workflow paths:
 
-- **orchestrate.example.md**: Example orchestration prompt that determines which workflow to execute based on project state (branch, PRs, pipelines, tasks).
-- **workflows/*.example.md**: Example workflow files for different scenarios:
+- **orchestrate.md**: Orchestration prompt that determines which workflow to execute based on project state (branch, PRs, pipelines, tasks).
+- **workflows/*.md**: Workflow files for different scenarios:
   - Feature branch with incomplete work
   - Feature branch ready to merge
   - PR pipeline fixes
@@ -53,7 +53,7 @@ Ralph uses an orchestration-based approach with multiple workflow paths:
   - Resuming in-progress work
   - Starting new work
 
-To customize, copy the `.example.md` files and remove the `.example` suffix (e.g., `orchestrate.example.md` → `orchestrate.md`). Your custom files will override the examples.
+Each workflow file includes YAML frontmatter with metadata like `name`, `condition`, `description`, `priority`, and `goal`. See [Workflows](../workflows.md) for the full schema.
 
 ## Options
 
@@ -103,13 +103,13 @@ Initializing Ralph in /path/to/project
 
 Would create:
   .ralph/settings.json
-  .ralph/orchestrate.example.md
-  .ralph/workflows/01-feature-branch-incomplete.example.md
-  .ralph/workflows/02-feature-branch-pr-ready.example.md
-  .ralph/workflows/03-pr-pipeline-fix.example.md
-  .ralph/workflows/04-cd-pipeline-fix.example.md
-  .ralph/workflows/05-resume-in-progress.example.md
-  .ralph/workflows/06-new-work.example.md
+  .ralph/orchestrate.md
+  .ralph/workflows/01-feature-branch-incomplete.md
+  .ralph/workflows/02-feature-branch-pr-ready.md
+  .ralph/workflows/03-pr-pipeline-fix.md
+  .ralph/workflows/04-cd-pipeline-fix.md
+  .ralph/workflows/05-resume-in-progress.md
+  .ralph/workflows/06-new-work.md
 
 Suggested .gitignore additions:
   # Ralph - Local settings (user-specific overrides)
@@ -120,10 +120,9 @@ Suggested .gitignore additions:
   .ralph/claude.lock
 
 Next steps:
-  1. Review the example files in .ralph/*.example.md and .ralph/workflows/
-  2. Copy and customize: orchestrate.example.md -> orchestrate.md
-  3. Add the suggested entries to your .gitignore
-  4. Run `ralph` to start monitoring
+  1. Review and customize the files in .ralph/orchestrate.md and .ralph/workflows/
+  2. Add the suggested entries to your .gitignore
+  3. Run `ralph` to start monitoring
 
 Ralph initialized successfully!
 ```
@@ -205,13 +204,13 @@ ralph init --agent codex --dry-run
 
 After running `ralph init`:
 
-1. **Review the example files** in `.ralph/*.example.md` and `.ralph/workflows/`
-2. **Customize orchestration** by copying `orchestrate.example.md` to `orchestrate.md` and editing
-3. **Customize workflows** by copying workflow files and removing the `.example` suffix
-4. **Update .gitignore** with the suggested entries
-5. **Start Ralph** by running `ralph` in your project directory
+1. **Review the orchestration and workflow files** in `.ralph/orchestrate.md` and `.ralph/workflows/`
+2. **Customize workflows** by editing the workflow files to match your project's needs
+3. **Update .gitignore** with the suggested entries
+4. **Start Ralph** by running `ralph` in your project directory
 
 ## See Also
 
 - [Configuration](../configuration.md) - Detailed configuration options
+- [Workflows](../workflows.md) - Workflow file format and schema
 - [Getting Started](../getting-started.md) - Quick start guide
