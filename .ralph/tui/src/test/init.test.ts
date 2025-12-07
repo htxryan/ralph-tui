@@ -70,15 +70,15 @@ describe('init integration', () => {
       expect(fs.existsSync(path.join(tempDir, '.ralph/workflows'))).toBe(true);
     });
 
-    it('creates orchestrate.example.md file', () => {
+    it('creates orchestrate.md file', () => {
       runInit(tempDir);
-      const orchestratePath = path.join(tempDir, '.ralph/orchestrate.example.md');
+      const orchestratePath = path.join(tempDir, '.ralph/orchestrate.md');
       expect(fs.existsSync(orchestratePath)).toBe(true);
     });
 
-    it('creates workflow example files', () => {
+    it('creates workflow files', () => {
       runInit(tempDir);
-      const workflowPath = path.join(tempDir, '.ralph/workflows/01-feature-branch-incomplete.example.md');
+      const workflowPath = path.join(tempDir, '.ralph/workflows/01-feature-branch-incomplete.md');
       expect(fs.existsSync(workflowPath)).toBe(true);
     });
 
@@ -88,9 +88,9 @@ describe('init integration', () => {
       expect(result.success).toBe(true);
       expect(result.created).toHaveLength(8);
       expect(result.created).toContain('.ralph/settings.json');
-      expect(result.created).toContain('.ralph/orchestrate.example.md');
-      expect(result.created).toContain('.ralph/workflows/01-feature-branch-incomplete.example.md');
-      expect(result.created).toContain('.ralph/workflows/06-new-work.example.md');
+      expect(result.created).toContain('.ralph/orchestrate.md');
+      expect(result.created).toContain('.ralph/workflows/01-feature-branch-incomplete.md');
+      expect(result.created).toContain('.ralph/workflows/06-new-work.md');
     });
   });
 
@@ -117,11 +117,11 @@ describe('init integration', () => {
       expect(content).toEqual(customSettings);
     });
 
-    it('preserves existing orchestrate.example.md content', () => {
-      // Pre-create orchestrate.example.md with custom content
+    it('preserves existing orchestrate.md content', () => {
+      // Pre-create orchestrate.md with custom content
       const ralphDir = path.join(tempDir, '.ralph');
       fs.mkdirSync(ralphDir, { recursive: true });
-      const orchestratePath = path.join(ralphDir, 'orchestrate.example.md');
+      const orchestratePath = path.join(ralphDir, 'orchestrate.md');
       const customContent = '# My Custom Orchestration\n\nThis should be preserved.';
       fs.writeFileSync(orchestratePath, customContent, 'utf-8');
 
@@ -129,7 +129,7 @@ describe('init integration', () => {
       const result = runInit(tempDir);
 
       // Verify original content preserved
-      expect(result.skipped).toContain('.ralph/orchestrate.example.md');
+      expect(result.skipped).toContain('.ralph/orchestrate.md');
       expect(fs.readFileSync(orchestratePath, 'utf-8')).toBe(customContent);
     });
 
@@ -144,8 +144,8 @@ describe('init integration', () => {
 
       // settings.json skipped, others created
       expect(result.skipped).toContain('.ralph/settings.json');
-      expect(result.created).toContain('.ralph/orchestrate.example.md');
-      expect(result.created).toContain('.ralph/workflows/01-feature-branch-incomplete.example.md');
+      expect(result.created).toContain('.ralph/orchestrate.md');
+      expect(result.created).toContain('.ralph/workflows/01-feature-branch-incomplete.md');
     });
   });
 
@@ -218,7 +218,7 @@ describe('init integration', () => {
 
       expect(result.created).toHaveLength(8);
       expect(result.created).toContain('.ralph/settings.json');
-      expect(result.created).toContain('.ralph/orchestrate.example.md');
+      expect(result.created).toContain('.ralph/orchestrate.md');
     });
 
     it('output indicates dry run mode', () => {
@@ -265,7 +265,7 @@ describe('init integration', () => {
 
       // Read file contents after first init
       const settingsPath = path.join(tempDir, '.ralph/settings.json');
-      const orchestratePath = path.join(tempDir, '.ralph/orchestrate.example.md');
+      const orchestratePath = path.join(tempDir, '.ralph/orchestrate.md');
       const content1 = {
         settings: fs.readFileSync(settingsPath, 'utf-8'),
         orchestrate: fs.readFileSync(orchestratePath, 'utf-8'),

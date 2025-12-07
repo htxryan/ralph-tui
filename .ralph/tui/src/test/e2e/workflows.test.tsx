@@ -319,8 +319,8 @@ describe('E2E Workflows', () => {
 
       expect(result.success).toBe(true);
       expect(result.created).toContain('.ralph/settings.json');
-      expect(result.created).toContain('.ralph/orchestrate.example.md');
-      expect(result.created).toContain('.ralph/workflows/01-feature-branch-incomplete.example.md');
+      expect(result.created).toContain('.ralph/orchestrate.md');
+      expect(result.created).toContain('.ralph/workflows/01-feature-branch-incomplete.md');
     });
 
     it('completes init with agent pre-configuration', () => {
