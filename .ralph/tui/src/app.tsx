@@ -177,19 +177,12 @@ export function App({
 
   // Wrapper for starting Ralph that archives the current session and starts fresh
   const handleStartRalph = useCallback(async () => {
-    const log = (msg: string) => fs.appendFileSync('/tmp/ralph-debug.log', `${msg}\n`);
-    log('[handleStartRalph] called');
-    log(`[handleStartRalph] sessionDir: ${sessionDir}`);
-    log(`[handleStartRalph] archiveDir: ${archiveDir}`);
-
     try {
       // Archive current session if it has content, then create fresh file
       // This ensures each Ralph run starts with a clean slate (no "previous session" box)
       const defaultPath = path.join(sessionDir, 'claude_output.jsonl');
-      log(`[handleStartRalph] defaultPath: ${defaultPath}`);
 
       await archiveCurrentSession(defaultPath, archiveDir);
-      log('[handleStartRalph] archived');
 
       // Create fresh empty file
       const dir = path.dirname(defaultPath);
@@ -197,18 +190,15 @@ export function App({
         fs.mkdirSync(dir, { recursive: true });
       }
       fs.writeFileSync(defaultPath, '', 'utf-8');
-      log('[handleStartRalph] created fresh file');
 
       // Update the path (this will trigger useJSONLStream to reset)
       setCurrentJsonlPath(defaultPath);
       setSessionStartIndex(undefined);
 
       // Start Ralph
-      log('[handleStartRalph] calling startRalph()');
       startRalph();
-      log('[handleStartRalph] startRalph() returned');
-    } catch (err) {
-      log(`[handleStartRalph] ERROR: ${err}`);
+    } catch {
+      // Error handling is done in useRalphProcess
     }
   }, [sessionDir, archiveDir, startRalph]);
 
@@ -324,9 +314,6 @@ export function App({
   const tabs: TabName[] = ['messages', 'task', 'todos', 'errors', 'stats'];
 
   useInput((input, key) => {
-    // Debug: Log every keypress to file
-    fs.appendFileSync('/tmp/ralph-debug.log', `[useInput] input: "${input}", key: ${JSON.stringify(key)}\n`);
-
     // Close shortcuts dialog on ANY key, but continue processing the key
     // This allows the key action to execute while dismissing the dialog
     if (isShortcutsDialogOpen) {
@@ -407,14 +394,8 @@ export function App({
     }
 
     // Start Ralph (when not running)
-    if (input === 's') {
-      fs.appendFileSync('/tmp/ralph-debug.log', `[app.tsx] s key pressed, isRalphRunning: ${isRalphRunning}, isRalphStarting: ${isRalphStarting}\n`);
-      if (!isRalphRunning && !isRalphStarting) {
-        fs.appendFileSync('/tmp/ralph-debug.log', '[app.tsx] Calling handleStartRalph()\n');
-        handleStartRalph();
-      } else {
-        fs.appendFileSync('/tmp/ralph-debug.log', '[app.tsx] NOT calling handleStartRalph - conditions not met\n');
-      }
+    if (input === 's' && !isRalphRunning && !isRalphStarting) {
+      handleStartRalph();
       return;
     }
 
