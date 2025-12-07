@@ -1,0 +1,1 @@
+On the message list page (and other pages where autoscroll is present), if autoscroll is active, there should be some kind of subtle indicator somewhere on screen. Maybe reserve a line or two at the bottom of the list, where when autoscroll is active we see something like 'Autoscrolling…', and when autoscroll is not active, we see 'Autoscrolling paused. Press L to resume.'
