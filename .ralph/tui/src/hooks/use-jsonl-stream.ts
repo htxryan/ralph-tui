@@ -35,7 +35,7 @@ export function useJSONLStream(options: UseJSONLStreamOptions): UseJSONLStreamRe
   const [messages, setMessages] = useState<ProcessedMessage[]>([]);
   const [toolCalls, setToolCalls] = useState<ToolCall[]>([]);
   const [stats, setStats] = useState<SessionStats>({
-    totalTokens: { input: 0, output: 0 },
+    totalTokens: { input: 0, output: 0, cacheRead: 0, cacheCreation: 0 },
     toolCallCount: 0,
     messageCount: 0,
     errorCount: 0,
@@ -224,7 +224,7 @@ export function useJSONLStream(options: UseJSONLStreamOptions): UseJSONLStreamRe
       setMessages([]);
       setToolCalls([]);
       setStats({
-        totalTokens: { input: 0, output: 0 },
+        totalTokens: { input: 0, output: 0, cacheRead: 0, cacheCreation: 0 },
         toolCallCount: 0,
         messageCount: 0,
         errorCount: 0,

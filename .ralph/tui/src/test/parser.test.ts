@@ -188,7 +188,7 @@ describe('calculateStats', () => {
   it('returns empty stats for empty messages array', () => {
     const result = calculateStats([]);
     expect(result).toEqual({
-      totalTokens: { input: 0, output: 0 },
+      totalTokens: { input: 0, output: 0, cacheRead: 0, cacheCreation: 0 },
       toolCallCount: 0,
       messageCount: 0,
       errorCount: 0,
@@ -220,6 +220,55 @@ describe('calculateStats', () => {
     const result = calculateStats(messages);
     expect(result.totalTokens.input).toBe(300);
     expect(result.totalTokens.output).toBe(150);
+  });
+
+  it('includes cache tokens in input total', () => {
+    const messages = [
+      createMessage('1', new Date(), [], {
+        input_tokens: 10,
+        output_tokens: 50,
+        cache_read_input_tokens: 100,
+        cache_creation_input_tokens: 200,
+      }),
+    ];
+    const result = calculateStats(messages);
+    // Total input = input_tokens + cache_read + cache_creation
+    expect(result.totalTokens.input).toBe(310); // 10 + 100 + 200
+    expect(result.totalTokens.output).toBe(50);
+    expect(result.totalTokens.cacheRead).toBe(100);
+    expect(result.totalTokens.cacheCreation).toBe(200);
+  });
+
+  it('handles messages without cache tokens', () => {
+    const messages = [
+      createMessage('1', new Date(), [], { input_tokens: 100, output_tokens: 50 }),
+    ];
+    const result = calculateStats(messages);
+    expect(result.totalTokens.input).toBe(100);
+    expect(result.totalTokens.cacheRead).toBe(0);
+    expect(result.totalTokens.cacheCreation).toBe(0);
+  });
+
+  it('sums cache tokens across multiple messages', () => {
+    const messages = [
+      createMessage('1', new Date(), [], {
+        input_tokens: 5,
+        output_tokens: 25,
+        cache_read_input_tokens: 100,
+        cache_creation_input_tokens: 0,
+      }),
+      createMessage('2', new Date(), [], {
+        input_tokens: 10,
+        output_tokens: 50,
+        cache_read_input_tokens: 200,
+        cache_creation_input_tokens: 50,
+      }),
+    ];
+    const result = calculateStats(messages);
+    expect(result.totalTokens.input).toBe(365); // (5+100+0) + (10+200+50)
+    expect(result.totalTokens.output).toBe(75);
+    expect(result.totalTokens.cacheRead).toBe(300); // 100 + 200
+    expect(result.totalTokens.cacheCreation).toBe(50); // 0 + 50
   });
 
   it('counts tool calls and subagents', () => {

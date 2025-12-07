@@ -6,7 +6,7 @@ import { SessionStats, KanbanTask, Assignment } from '../lib/types.js';
 
 describe('Header', () => {
   const mockStats: SessionStats = {
-    totalTokens: { input: 100, output: 50 },
+    totalTokens: { input: 100, output: 50, cacheRead: 0, cacheCreation: 0 },
     toolCallCount: 5,
     messageCount: 10,
     errorCount: 0,
@@ -105,8 +105,26 @@ describe('Header', () => {
     );
 
     expect(lastFrame()).toContain('Tokens:');
-    expect(lastFrame()).toContain('150'); // Total tokens
     expect(lastFrame()).toContain('100in'); // Input tokens
+    expect(lastFrame()).toContain('50out'); // Output tokens
+  });
+
+  it('displays cached token info when cache is used', () => {
+    const statsWithCache: SessionStats = {
+      ...mockStats,
+      totalTokens: { input: 150, output: 50, cacheRead: 45, cacheCreation: 0 },
+    };
+    const { lastFrame } = render(
+      <Header
+        task={null}
+        stats={statsWithCache}
+        isRalphRunning={false}
+      />
+    );
+
+    expect(lastFrame()).toContain('Tokens:');
+    expect(lastFrame()).toContain('150in'); // Total input (includes cached)
+    expect(lastFrame()).toContain('45 cached'); // Cached portion
     expect(lastFrame()).toContain('50out'); // Output tokens
   });
 

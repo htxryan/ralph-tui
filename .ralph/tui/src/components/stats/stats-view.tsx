@@ -181,6 +181,22 @@ export function StatsView({
           value={formatTokens(sessionStats.totalTokens.input)}
           icon={'\u2B07'}
         />
+        {sessionStats.totalTokens.cacheRead > 0 && (
+          <StatRow
+            label="  └ From cache"
+            value={formatTokens(sessionStats.totalTokens.cacheRead)}
+            icon={'\u21BA'}
+            valueColor={colors.dimmed}
+          />
+        )}
+        {sessionStats.totalTokens.cacheCreation > 0 && (
+          <StatRow
+            label="  └ Cached"
+            value={formatTokens(sessionStats.totalTokens.cacheCreation)}
+            icon={'\uD83D\uDCBE'}
+            valueColor={colors.dimmed}
+          />
+        )}
         <StatRow
           label="Output"
           value={formatTokens(sessionStats.totalTokens.output)}

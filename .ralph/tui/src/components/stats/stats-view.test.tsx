@@ -6,7 +6,7 @@ import { SessionStats } from '../../lib/types.js';
 
 describe('StatsView', () => {
   const createMockStats = (overrides: Partial<SessionStats> = {}): SessionStats => ({
-    totalTokens: { input: 1000, output: 500 },
+    totalTokens: { input: 1000, output: 500, cacheRead: 0, cacheCreation: 0 },
     toolCallCount: 10,
     messageCount: 20,
     errorCount: 0,
@@ -229,7 +229,7 @@ describe('StatsView', () => {
   describe('token usage section', () => {
     it('shows input tokens', () => {
       const stats = createMockStats({
-        totalTokens: { input: 5000, output: 2000 },
+        totalTokens: { input: 5000, output: 2000, cacheRead: 0, cacheCreation: 0 },
       });
 
       const { lastFrame } = render(
@@ -246,7 +246,7 @@ describe('StatsView', () => {
 
     it('shows output tokens', () => {
       const stats = createMockStats({
-        totalTokens: { input: 5000, output: 2000 },
+        totalTokens: { input: 5000, output: 2000, cacheRead: 0, cacheCreation: 0 },
       });
 
       const { lastFrame } = render(
@@ -263,7 +263,7 @@ describe('StatsView', () => {
 
     it('shows total tokens', () => {
       const stats = createMockStats({
-        totalTokens: { input: 5000, output: 2000 },
+        totalTokens: { input: 5000, output: 2000, cacheRead: 0, cacheCreation: 0 },
       });
 
       const { lastFrame } = render(
@@ -276,6 +276,57 @@ describe('StatsView', () => {
 
       expect(lastFrame()).toContain('Total');
       expect(lastFrame()).toContain('7'); // 5000 + 2000 = 7000 -> 7K
+    });
+
+    it('shows cache read tokens when present', () => {
+      const stats = createMockStats({
+        totalTokens: { input: 5000, output: 2000, cacheRead: 3000, cacheCreation: 0 },
+      });
+
+      const { lastFrame } = render(
+        <StatsView
+          sessionStats={stats}
+          isRalphRunning={false}
+          cwd="/test/project"
+        />
+      );
+
+      expect(lastFrame()).toContain('From cache');
+      expect(lastFrame()).toContain('3'); // 3000 -> 3k
+    });
+
+    it('shows cache creation tokens when present', () => {
+      const stats = createMockStats({
+        totalTokens: { input: 5000, output: 2000, cacheRead: 0, cacheCreation: 1500 },
+      });
+
+      const { lastFrame } = render(
+        <StatsView
+          sessionStats={stats}
+          isRalphRunning={false}
+          cwd="/test/project"
+        />
+      );
+
+      expect(lastFrame()).toContain('Cached');
+      expect(lastFrame()).toContain('1.5'); // 1500 -> 1.5k
+    });
+
+    it('hides cache rows when no cache usage', () => {
+      const stats = createMockStats({
+        totalTokens: { input: 5000, output: 2000, cacheRead: 0, cacheCreation: 0 },
+      });
+
+      const { lastFrame } = render(
+        <StatsView
+          sessionStats={stats}
+          isRalphRunning={false}
+          cwd="/test/project"
+        />
+      );
+
+      expect(lastFrame()).not.toContain('From cache');
+      expect(lastFrame()).not.toContain('Cached');
     });
   });
 
