@@ -4,7 +4,7 @@
   "private": true,
   "description": "Root workspace for Ralph TUI",
   "scripts": {
-    "link": "cd .ralph/tui && pnpm link --global",
+    "link": "cd .ralph/tui && pnpm install && pnpm build && pnpm link --global",
     "install": "cd .ralph/tui && pnpm install",
     "build": "cd .ralph/tui && pnpm build",
     "dev": "cd .ralph/tui && pnpm dev:tsx",
