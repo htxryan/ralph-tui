@@ -1,7 +1,3 @@
----
-description: Finalize an ADR by removing alternative options and updating status to Accepted
----
-
 You are helping to finalize an Architecture Decision Record (ADR) after a decision has been made.
 
 ## Your Task
@@ -17,7 +13,7 @@ An ADR has been created using the `/create-adr` command and contains multiple op
 ### 1. Identify the ADR to Finalize
 
 - If the user provides an ADR number or filename, use that
-- Otherwise, ask: "Which ADR would you like to finalize?" and list available ADRs from `.ai-docs/adr/`
+- Otherwise, ask: "Which ADR would you like to finalize?" and list available ADRs from `.ai-docs/thoughts/decisions/`
 
 ### 2. Determine Which Option Was Selected
 

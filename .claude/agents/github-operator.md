@@ -2,7 +2,7 @@
 name: github-operator
 description: |
   Use this agent when you need to perform GitHub-specific operations through the GitHub CLI (gh) such as creating pull requests, managing issues, reviewing PRs, adding labels, requesting reviews, managing GitHub Actions workflows, or any other GitHub platform features. DO NOT use this agent for standard Git operations (clone, pull, push, commit, branch, merge, etc.) - those should be done directly with Git CLI.\n\nExamples:\n- <example>User: "Create a pull request for the feature I just pushed"\nAssistant: "I'll use the github-operator agent to create a pull request using the GitHub CLI."\n<Agent tool invocation to github-operator></example>\n- <example>User: "Add the 'bug' label to issue #42"\nAssistant: "I'll use the github-operator agent to add that label to the issue."\n<Agent tool invocation to github-operator></example>\n- <example>User: "Request a review from @john on PR #15"\nAssistant: "I'll use the github-operator agent to request that review."\n<Agent tool invocation to github-operator></example>\n- <example>User: "Check the status of the CI workflow on my latest PR"\nAssistant: "I'll use the github-operator agent to check the GitHub Actions workflow status."\n<Agent tool invocation to github-operator></example>
-model: haiku
+model: sonnet
 color: blue
 ---
 

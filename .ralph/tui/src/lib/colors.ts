@@ -32,7 +32,7 @@ export const colors = {
   subagentGithubOperator: 'magenta',
   subagentVercelOperator: 'white',
   subagentNeonOperator: 'green',
-  subagentWebResearcher: 'blue',
+  subagentWebSearchResearcher: 'blue',
   subagentProductArchitect: 'magenta',
   subagentClaudeCodeGuide: 'cyan',
   subagentGeneralPurpose: 'gray',

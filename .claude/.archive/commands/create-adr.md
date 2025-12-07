@@ -1,13 +1,9 @@
----
-description: Create an Architecture Decision Record (ADR) with comprehensive analysis and technical implementation details
----
-
 You are helping to create an Architecture Decision Record (ADR) for this project.
 
 ## Your Task
 
 1. **Determine the next ADR number:**
-   - Check the `.ai-docs/adr/` directory for existing ADRs
+   - Check the `.ai-docs/thoughts/decisions/` directory for existing ADRs
    - Identify the highest numbered ADR (e.g., if `001-auth.md` exists, next is `002`)
    - Use a zero-padded 3-digit format (001, 002, 003, etc.)
 
@@ -17,7 +13,7 @@ You are helping to create an Architecture Decision Record (ADR) for this project
    - What options are being considered?
    - Is there a recommended option? Why?
 
-3. **Create a comprehensive ADR** at `.ai-docs/adr/XXX-topic.md` with the following structure:
+3. **Create a comprehensive ADR** at `.ai-docs/thoughts/decisions/XXX-topic.md` with the following structure:
 
 ## ADR Template Structure
 
