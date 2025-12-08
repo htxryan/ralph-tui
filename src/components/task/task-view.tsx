@@ -184,11 +184,16 @@ export function TaskView({
     return { contentLines: lines, descriptionStartIndex: descStartIdx };
   }, [task]);
 
-  // Calculate visible window
-  // Reserve space for: task ID box (3 lines), content border (2 lines), help text (1 line)
-  // The border adds 2 lines (top + bottom), plus we want scroll indicators inside
-  const reservedLines = 6;
-  const windowSize = Math.max(5, (height || 30) - reservedLines);
+  // Calculate visible window to fill available space
+  // Task ID box with double border = 3 lines, help text = 1 line
+  // Content box border adds 2 lines but we want to fill it with content
+  const taskIdBoxHeight = 3;
+  const helpTextHeight = 1;
+  const contentBorderHeight = 2;
+  // Content area height (inside the border) = total height - task ID - help - border
+  const contentAreaHeight = Math.max(5, (height || 30) - taskIdBoxHeight - helpTextHeight - contentBorderHeight);
+  // Reserve 2 lines for scroll indicators (shown conditionally inside content area)
+  const windowSize = contentAreaHeight;
   const maxScroll = Math.max(0, contentLines.length - windowSize);
 
   useInput((input, key) => {
@@ -264,7 +269,7 @@ export function TaskView({
       {/* Scrollable content area with border */}
       <Box
         flexDirection="column"
-        flexGrow={1}
+        height={contentAreaHeight + contentBorderHeight}
         borderStyle="single"
         borderColor={colors.border}
         paddingX={1}
