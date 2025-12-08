@@ -229,6 +229,39 @@ export function formatTokens(count: number): string {
 }
 
 /**
+ * Calculate total tokens from an array of messages.
+ * Input tokens include cache_read and cache_creation tokens (matching calculateStats behavior).
+ */
+export function calculateSubagentTokens(messages: ProcessedMessage[]): {
+  input: number;
+  output: number;
+  cacheRead: number;
+  total: number;
+} {
+  let input = 0;
+  let output = 0;
+  let cacheRead = 0;
+
+  for (const message of messages) {
+    if (message.usage) {
+      const msgCacheRead = message.usage.cache_read_input_tokens || 0;
+      const msgCacheCreation = message.usage.cache_creation_input_tokens || 0;
+      // Include cache tokens in input total (matching calculateStats behavior)
+      input += (message.usage.input_tokens || 0) + msgCacheRead + msgCacheCreation;
+      output += message.usage.output_tokens || 0;
+      cacheRead += msgCacheRead;
+    }
+  }
+
+  return {
+    input,
+    output,
+    cacheRead,
+    total: input + output,
+  };
+}
+
+/**
  * Format duration for display
  */
 export function formatDuration(startTime: Date | null): string {

@@ -319,23 +319,25 @@ export function useRalphProcess(
         });
       }
 
-      // Handle process termination gracefully - catch SIGTERM (143) and other signals
-      // This prevents unhandled promise rejections when user interrupts/kills the session
-      child.catch((err: Error & { exitCode?: number; signal?: string }) => {
-        // Exit code 143 = SIGTERM (128 + 15), exit code 130 = SIGINT (128 + 2)
-        // These are expected when user interrupts/kills the session
-        const isExpectedTermination =
-          err.exitCode === 143 || // SIGTERM
-          err.exitCode === 130 || // SIGINT
-          err.signal === 'SIGTERM' ||
-          err.signal === 'SIGINT';
+      // Handle process exit (both normal and via kill)
+      // This prevents unhandled promise rejection when process is terminated
+      child.catch((err: unknown) => {
+        const execaErr = err as { exitCode?: number; signal?: string; isTerminated?: boolean };
+        // Exit code 143 = SIGTERM (killed by user), which is expected
+        // Exit code 130 = SIGINT (Ctrl+C), also expected
+        // isTerminated = true when process was killed by a signal
+        const isNormalTermination =
+          execaErr.exitCode === 143 ||
+          execaErr.exitCode === 130 ||
+          execaErr.isTerminated === true ||
+          execaErr.signal === 'SIGTERM' ||
+          execaErr.signal === 'SIGINT';
 
-        if (!isExpectedTermination) {
-          // Only set error for unexpected failures
-          setError(err);
+        if (!isNormalTermination && execaErr.exitCode !== 0) {
+          // Actual error - set error state
+          setError(err instanceof Error ? err : new Error(String(err)));
         }
-
-        // Clean up running state
+        // Always update running state
         setIsRunning(false);
         setIsResuming(false);
       });

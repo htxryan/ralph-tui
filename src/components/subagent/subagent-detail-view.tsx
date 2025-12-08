@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Box, Text, useInput } from 'ink';
 import { colors, icons } from '../../lib/colors.js';
 import { ToolCall, ProcessedMessage } from '../../lib/types.js';
-import { formatTime, formatMessageDuration, truncate } from '../../lib/parser.js';
+import { formatTime, formatMessageDuration, truncate, formatTokens, calculateSubagentTokens } from '../../lib/parser.js';
 import { formatToolCall, getToolInputPreview } from '../../lib/tool-formatting.js';
 import { Breadcrumb } from './breadcrumb.js';
 
@@ -863,6 +863,11 @@ export function SubagentDetailView({
     return buildSubagentMessageList(toolCall, realSubagentMessages);
   }, [realSubagentMessages, toolCall]);
 
+  // Calculate total tokens for all subagent messages
+  const tokenStats = useMemo(() => {
+    return calculateSubagentTokens(realSubagentMessages || []);
+  }, [realSubagentMessages]);
+
   // Handle entering detail mode from Messages tab
   const handleEnterDetailMode = (index: number) => {
     setDetailIndex(index);
@@ -942,8 +947,8 @@ export function SubagentDetailView({
   }
 
   // Calculate content height
-  // Breadcrumb: 1 line, TabBar: 1 line, Footer: 1 line
-  const headerHeight = 2;
+  // Breadcrumb: 1 line, Token info: 1 line, TabBar: 1 line, Footer: 1 line
+  const headerHeight = 3;
   const footerHeight = 1;
   const contentHeight = height - headerHeight - footerHeight;
 
@@ -951,6 +956,19 @@ export function SubagentDetailView({
     <Box flexDirection="column" height={height}>
       {/* Breadcrumb */}
       <Breadcrumb path={breadcrumbPath} />
+
+      {/* Token counter - detailed format with input/output/cache */}
+      <Box paddingLeft={1}>
+        <Text color={colors.dimmed}>Tokens: </Text>
+        <Text color={colors.subagent}>{formatTokens(tokenStats.input)}</Text>
+        <Text color={colors.dimmed}> in</Text>
+        {tokenStats.cacheRead > 0 && (
+          <Text color={colors.dimmed}> ({formatTokens(tokenStats.cacheRead)} from cache)</Text>
+        )}
+        <Text color={colors.dimmed}>, </Text>
+        <Text color={colors.subagent}>{formatTokens(tokenStats.output)}</Text>
+        <Text color={colors.dimmed}> out</Text>
+      </Box>
 
       {/* Tab bar */}
       <SubagentTabBar currentTab={currentTab} onTabChange={setCurrentTab} />
