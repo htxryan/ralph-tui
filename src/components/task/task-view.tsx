@@ -185,10 +185,16 @@ export function TaskView({
   }, [task]);
 
   // Calculate visible window to fill available space
-  // Layout: Task ID box (3 lines) + Content box (flexGrow, with 2-line border) + Help text (1 line)
-  // Content area inside border = total height - task ID (3) - help (1) - border (2)
-  const fixedElements = 6; // 3 (task ID box) + 1 (help text) + 2 (content border)
-  const windowSize = Math.max(5, (height || 30) - fixedElements);
+  // Fixed elements outside the scrollable content:
+  // - Task ID box: 3 lines (double border = 2 + content = 1)
+  // - Help text: 1 line
+  // - Content box border: 2 lines (top + bottom)
+  // Total overhead = 6 lines
+  // windowSize = lines available for content inside the bordered box
+  const overhead = 6;
+  const windowSize = Math.max(5, (height || 30) - overhead);
+  // Content box needs to fit windowSize content + 2 border lines
+  const contentBoxHeight = windowSize + 2;
   const maxScroll = Math.max(0, contentLines.length - windowSize);
 
   useInput((input, key) => {
@@ -261,10 +267,10 @@ export function TaskView({
         </Text>
       </Box>
 
-      {/* Scrollable content area with border - uses flexGrow to fill remaining space */}
+      {/* Scrollable content area with border */}
       <Box
         flexDirection="column"
-        flexGrow={1}
+        height={contentBoxHeight}
         borderStyle="single"
         borderColor={colors.border}
         paddingX={1}
