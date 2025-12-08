@@ -1,8 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Box, Text, useInput } from 'ink';
 import { colors, icons } from '../../lib/colors.js';
 import { KanbanTask } from '../../lib/types.js';
 import { Spinner } from '../common/spinner.js';
+import {
+  parseMarkdown,
+  flattenMarkdownLines,
+  FlatLine,
+  StyledSegment,
+} from '../../lib/markdown.js';
+import { StyledText } from '../common/styled-text.js';
 
 export interface TaskViewProps {
   task: KanbanTask | null;
@@ -13,24 +20,199 @@ export interface TaskViewProps {
   height?: number;
 }
 
+// Content line type for unified scrolling
+interface ContentLine {
+  segments: StyledSegment[];
+  type: 'header' | 'metadata' | 'label' | 'description' | 'dependency' | 'comment' | 'divider';
+}
+
 export function TaskView({
   task,
   isLoading,
   error,
   onRefresh,
-  height,
+  height = 30,
 }: TaskViewProps): React.ReactElement {
   const [scrollOffset, setScrollOffset] = useState(0);
+
+  // Build all content lines for unified scrolling
+  const { contentLines, descriptionStartIndex } = useMemo(() => {
+    if (!task) return { contentLines: [], descriptionStartIndex: 0 };
+
+    const lines: ContentLine[] = [];
+    const contentWidth = 80; // Default content width for wrapping
+
+    // Helper to add a simple text line
+    const addLine = (
+      text: string,
+      type: ContentLine['type'],
+      style: Partial<StyledSegment> = {}
+    ) => {
+      lines.push({
+        segments: [{ text, ...style }],
+        type,
+      });
+    };
+
+    // Title
+    addLine(task.title, 'header', { bold: true, color: colors.header });
+    addLine('', 'divider');
+
+    // Metadata
+    const typeEmoji =
+      task.type === 'bug'
+        ? '\uD83D\uDC1B'
+        : task.type === 'feature'
+        ? '\u2728'
+        : '\uD83D\uDCCB';
+    const statusColor = colors[task.status as keyof typeof colors] || colors.dimmed;
+    const priorityColor = task.priority
+      ? colors[task.priority as keyof typeof colors] || colors.dimmed
+      : colors.dimmed;
+
+    lines.push({
+      segments: [
+        { text: 'Type: ', color: colors.dimmed },
+        { text: `${typeEmoji} ${task.type}`, color: undefined },
+        { text: '  Status: ', color: colors.dimmed },
+        { text: task.status, color: statusColor, bold: true },
+        ...(task.priority
+          ? [
+              { text: '  Priority: ', color: colors.dimmed },
+              { text: task.priority, color: priorityColor },
+            ]
+          : []),
+        ...(task.assignee
+          ? [
+              { text: '  Assignee: ', color: colors.dimmed },
+              { text: task.assignee, color: undefined },
+            ]
+          : []),
+      ],
+      type: 'metadata',
+    });
+
+    // Dates
+    lines.push({
+      segments: [
+        { text: `Created: ${new Date(task.created_at).toLocaleDateString()}`, color: colors.dimmed },
+        { text: ' | ', color: colors.dimmed },
+        { text: `Updated: ${new Date(task.updated_at).toLocaleDateString()}`, color: colors.dimmed },
+      ],
+      type: 'metadata',
+    });
+
+    // Labels
+    if (task.labels && task.labels.length > 0) {
+      const labelSegments: StyledSegment[] = [{ text: 'Labels: ', color: colors.dimmed }];
+      task.labels.forEach((label, i) => {
+        if (i > 0) labelSegments.push({ text: ', ' });
+        labelSegments.push({ text: `[${label}]`, color: colors.user });
+      });
+      lines.push({ segments: labelSegments, type: 'label' });
+    }
+
+    addLine('', 'divider');
+
+    // Description header
+    const descStartIdx = lines.length;
+    addLine('Description:', 'description', { bold: true, color: colors.header });
+    addLine('─'.repeat(40), 'divider', { dimmed: true });
+
+    // Parse description as markdown
+    if (task.description) {
+      const parsed = parseMarkdown(task.description);
+      const flattened = flattenMarkdownLines(parsed, contentWidth);
+
+      for (const flatLine of flattened) {
+        lines.push({
+          segments: flatLine.segments,
+          type: 'description',
+        });
+      }
+    } else {
+      addLine('No description provided.', 'description', { dimmed: true });
+    }
+
+    // Dependencies
+    if (
+      (task.blockers && task.blockers.length > 0) ||
+      (task.blocks && task.blocks.length > 0)
+    ) {
+      addLine('', 'divider');
+      addLine('Dependencies:', 'dependency', { bold: true, color: colors.header });
+      addLine('─'.repeat(40), 'divider', { dimmed: true });
+
+      if (task.blockers && task.blockers.length > 0) {
+        addLine('← Blocked by:', 'dependency', { dimmed: true });
+        for (const blocker of task.blockers) {
+          addLine(`  ${blocker}`, 'dependency', { color: colors.error });
+        }
+      }
+
+      if (task.blocks && task.blocks.length > 0) {
+        addLine('→ Blocks:', 'dependency', { dimmed: true });
+        for (const blocked of task.blocks) {
+          addLine(`  ${blocked}`, 'dependency', { color: colors.pending });
+        }
+      }
+    }
+
+    // Comments
+    if (task.comments && task.comments.length > 0) {
+      addLine('', 'divider');
+      addLine(`Comments (${task.comments.length}):`, 'comment', { bold: true, color: colors.header });
+      addLine('─'.repeat(40), 'divider', { dimmed: true });
+
+      for (const comment of task.comments) {
+        const dateStr = new Date(comment.created_at).toLocaleString();
+        addLine(
+          `[${dateStr}]${comment.author ? ` ${comment.author}` : ''}`,
+          'comment',
+          { dimmed: true }
+        );
+        // Parse comment content as markdown too
+        const parsed = parseMarkdown(comment.content);
+        const flattened = flattenMarkdownLines(parsed, contentWidth);
+        for (const flatLine of flattened) {
+          lines.push({ segments: flatLine.segments, type: 'comment' });
+        }
+        addLine('', 'divider');
+      }
+    }
+
+    return { contentLines: lines, descriptionStartIndex: descStartIdx };
+  }, [task]);
+
+  // Calculate visible window
+  // Reserve space for: task ID box (3 lines), help text (1 line), scroll indicators (2 lines)
+  const reservedLines = 6;
+  const windowSize = Math.max(5, (height || 30) - reservedLines);
+  const maxScroll = Math.max(0, contentLines.length - windowSize);
 
   useInput((input, key) => {
     if (input === 'r') {
       onRefresh();
     }
     if (key.upArrow) {
-      setScrollOffset(Math.max(0, scrollOffset - 1));
+      setScrollOffset(prev => Math.max(0, prev - 1));
     }
     if (key.downArrow) {
-      setScrollOffset(scrollOffset + 1);
+      setScrollOffset(prev => Math.min(maxScroll, prev + 1));
+    }
+    if (key.pageUp) {
+      setScrollOffset(prev => Math.max(0, prev - windowSize));
+    }
+    if (key.pageDown) {
+      setScrollOffset(prev => Math.min(maxScroll, prev + windowSize));
+    }
+    // Home key - go to top
+    if (input === 'g') {
+      setScrollOffset(0);
+    }
+    // End key - go to bottom
+    if (input === 'G') {
+      setScrollOffset(maxScroll);
     }
   });
 
@@ -61,16 +243,9 @@ export function TaskView({
     );
   }
 
-  const statusColor = colors[task.status as keyof typeof colors] || colors.dimmed;
-  const priorityColor = task.priority
-    ? colors[task.priority as keyof typeof colors] || colors.dimmed
-    : colors.dimmed;
-  const typeEmoji =
-    task.type === 'bug'
-      ? '\uD83D\uDC1B'
-      : task.type === 'feature'
-      ? '\u2728'
-      : '\uD83D\uDCCB';
+  const visibleLines = contentLines.slice(scrollOffset, scrollOffset + windowSize);
+  const showScrollUp = scrollOffset > 0;
+  const showScrollDown = scrollOffset + windowSize < contentLines.length;
 
   return (
     <Box flexDirection="column" height={height} flexGrow={1}>
@@ -86,145 +261,31 @@ export function TaskView({
         </Text>
       </Box>
 
-      {/* Title */}
-      <Text bold color={colors.header}>
-        {task.title}
-      </Text>
-
-      {/* Metadata row */}
-      <Box flexDirection="row" marginY={1}>
-        <Box marginRight={3}>
-          <Text color={colors.dimmed}>Type: </Text>
-          <Text>{typeEmoji} {task.type}</Text>
-        </Box>
-        <Box marginRight={3}>
-          <Text color={colors.dimmed}>Status: </Text>
-          <Text color={statusColor} bold>
-            {task.status}
+      {/* Scrollable content area */}
+      <Box flexDirection="column" flexGrow={1} height={windowSize + 2}>
+        {showScrollUp && (
+          <Text color={colors.dimmed}>
+            {'\u2191'} {scrollOffset} lines above
           </Text>
-        </Box>
-        {task.priority && (
-          <Box marginRight={3}>
-            <Text color={colors.dimmed}>Priority: </Text>
-            <Text color={priorityColor}>{task.priority}</Text>
+        )}
+
+        {visibleLines.map((line, i) => (
+          <Box key={scrollOffset + i}>
+            <StyledText segments={line.segments} />
           </Box>
-        )}
-        {task.assignee && (
-          <Box>
-            <Text color={colors.dimmed}>Assignee: </Text>
-            <Text>{task.assignee}</Text>
-          </Box>
-        )}
-      </Box>
+        ))}
 
-      {/* Dates */}
-      <Box flexDirection="row" marginBottom={1}>
-        <Text color={colors.dimmed}>
-          Created: {new Date(task.created_at).toLocaleDateString()}
-        </Text>
-        <Text color={colors.dimmed}> | </Text>
-        <Text color={colors.dimmed}>
-          Updated: {new Date(task.updated_at).toLocaleDateString()}
-        </Text>
-      </Box>
-
-      {/* Labels */}
-      {task.labels && task.labels.length > 0 && (
-        <Box flexDirection="row" marginBottom={1}>
-          <Text color={colors.dimmed}>Labels: </Text>
-          {task.labels.map((label, i) => (
-            <React.Fragment key={label}>
-              {i > 0 && <Text>, </Text>}
-              <Text color={colors.user}>[{label}]</Text>
-            </React.Fragment>
-          ))}
-        </Box>
-      )}
-
-      {/* Description */}
-      <Box
-        flexDirection="column"
-        borderStyle="single"
-        borderColor={colors.border}
-        paddingX={1}
-        marginY={1}
-      >
-        <Text bold color={colors.header}>Description:</Text>
-        {task.description ? (
-          task.description.split('\n').map((line, i) => (
-            <Text key={i}>{line}</Text>
-          ))
-        ) : (
-          <Text color={colors.dimmed}>No description provided.</Text>
-        )}
-      </Box>
-
-      {/* Dependencies */}
-      {((task.blockers && task.blockers.length > 0) ||
-        (task.blocks && task.blocks.length > 0)) && (
-        <Box
-          flexDirection="column"
-          borderStyle="single"
-          borderColor={colors.border}
-          paddingX={1}
-          marginY={1}
-        >
-          <Text bold color={colors.header}>Dependencies:</Text>
-
-          {task.blockers && task.blockers.length > 0 && (
-            <Box flexDirection="column">
-              <Text color={colors.dimmed}>
-                {'\u2190'} Blocked by:
-              </Text>
-              {task.blockers.map(blocker => (
-                <Text key={blocker} color={colors.error}>
-                  {'  '}{blocker}
-                </Text>
-              ))}
-            </Box>
-          )}
-
-          {task.blocks && task.blocks.length > 0 && (
-            <Box flexDirection="column">
-              <Text color={colors.dimmed}>
-                {'\u2192'} Blocks:
-              </Text>
-              {task.blocks.map(blocked => (
-                <Text key={blocked} color={colors.pending}>
-                  {'  '}{blocked}
-                </Text>
-              ))}
-            </Box>
-          )}
-        </Box>
-      )}
-
-      {/* Comments */}
-      {task.comments && task.comments.length > 0 && (
-        <Box
-          flexDirection="column"
-          borderStyle="single"
-          borderColor={colors.border}
-          paddingX={1}
-          marginY={1}
-        >
-          <Text bold color={colors.header}>
-            Comments ({task.comments.length}):
+        {showScrollDown && (
+          <Text color={colors.dimmed}>
+            {'\u2193'} {contentLines.length - scrollOffset - windowSize} lines below
           </Text>
-          {task.comments.map((comment, i) => (
-            <Box key={comment.id || i} flexDirection="column" marginTop={i > 0 ? 1 : 0}>
-              <Text color={colors.dimmed}>
-                [{new Date(comment.created_at).toLocaleString()}]
-                {comment.author && ` ${comment.author}`}
-              </Text>
-              <Text>{comment.content}</Text>
-            </Box>
-          ))}
-        </Box>
-      )}
+        )}
+      </Box>
 
       {/* Help text */}
-      <Text color={colors.dimmed}>Press 'r' to refresh</Text>
+      <Text color={colors.dimmed}>
+        [r] Refresh | [{'\u2191\u2193'}] Scroll | [PgUp/PgDn] Page | [g/G] Top/Bottom
+      </Text>
     </Box>
   );
 }
