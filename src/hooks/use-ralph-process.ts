@@ -136,6 +136,8 @@ export function useRalphProcess(
     try {
       // Spawn Ralph in detached mode so it keeps running after TUI exits
       // Pass RALPH_PROJECT_DIR so scripts know where user data lives
+      // Use reject: false to prevent ExecaError from being thrown on process termination
+      // We handle all exit codes gracefully in the .then() handler below
       const child = execa(ralphScript, [], {
         cwd: basePath,  // Run from user's project directory
         detached: true,
@@ -144,6 +146,29 @@ export function useRalphProcess(
           ...process.env,
           RALPH_PROJECT_DIR: basePath,
         },
+        reject: false,
+      });
+
+      // Handle process completion (both normal and via kill)
+      // With reject: false, the promise always resolves (never rejects)
+      child.then((result) => {
+        // Exit code 143 = SIGTERM (killed by user), which is expected
+        // Exit code 130 = SIGINT (Ctrl+C), also expected
+        const isNormalTermination =
+          result.exitCode === 143 ||
+          result.exitCode === 130 ||
+          result.exitCode === 0 ||
+          result.signal === 'SIGTERM' ||
+          result.signal === 'SIGINT';
+
+        if (!isNormalTermination) {
+          // Actual error - set error state
+          setError(new Error(`Ralph exited with code ${result.exitCode}`));
+        }
+
+        // Clean up running state
+        setIsRunning(false);
+        setIsStarting(false);
       });
 
       // Unref so the TUI can exit independently
@@ -284,11 +309,14 @@ export function useRalphProcess(
       ];
 
       // Spawn claude in detached mode
+      // Use reject: false to prevent ExecaError from being thrown on process termination
+      // We handle all exit codes gracefully in the .then() handler below
       const child = execa('claude', claudeArgs, {
         cwd: basePath,
         detached: true,
         stdio: ['pipe', 'pipe', 'pipe'],
         input: fullPrompt,
+        reject: false,
       });
 
       // Pipe output to log file
@@ -298,26 +326,26 @@ export function useRalphProcess(
         });
       }
 
-      // Handle process exit (both normal and via kill)
-      // This prevents unhandled promise rejection when process is terminated
-      child.catch((err: unknown) => {
-        const execaErr = err as { exitCode?: number; signal?: string; isTerminated?: boolean };
+      // Handle process completion (both normal and via kill)
+      // With reject: false, the promise always resolves (never rejects)
+      child.then((result) => {
         // Exit code 143 = SIGTERM (killed by user), which is expected
         // Exit code 130 = SIGINT (Ctrl+C), also expected
         // isTerminated = true when process was killed by a signal
         const isNormalTermination =
-          execaErr.exitCode === 143 ||
-          execaErr.exitCode === 130 ||
-          execaErr.isTerminated === true ||
-          execaErr.signal === 'SIGTERM' ||
-          execaErr.signal === 'SIGINT';
+          result.exitCode === 143 ||
+          result.exitCode === 130 ||
+          result.exitCode === 0 ||
+          result.signal === 'SIGTERM' ||
+          result.signal === 'SIGINT';
 
-        if (!isNormalTermination && execaErr.exitCode !== 0) {
+        if (!isNormalTermination) {
           // Actual error - set error state
-          setError(err instanceof Error ? err : new Error(String(err)));
+          setError(new Error(`Claude exited with code ${result.exitCode}`));
         }
         // Always update running state
         setIsRunning(false);
+        setIsResuming(false);
       });
 
       // Unref so the TUI can exit independently

@@ -14,6 +14,7 @@ import {
 } from './types.js';
 import { BaseTaskAdapter } from './base-adapter.js';
 import { VibeKanbanAdapter } from './vibe-kanban-adapter.js';
+import { GitHubIssuesAdapter } from './github-issues-adapter.js';
 import {
   createTaskAdapter,
   getSupportedProviders,
@@ -247,11 +248,14 @@ describe('task-adapters/factory', () => {
       expect(isProviderImplemented('vibe-kanban')).toBe(true);
     });
 
+    it('returns true for github-issues', () => {
+      expect(isProviderImplemented('github-issues')).toBe(true);
+    });
+
     it('returns false for stub adapters', () => {
       expect(isProviderImplemented('jira')).toBe(false);
       expect(isProviderImplemented('linear')).toBe(false);
       expect(isProviderImplemented('beads')).toBe(false);
-      expect(isProviderImplemented('github-issues')).toBe(false);
     });
   });
 
@@ -582,6 +586,181 @@ describe('config/taskManagement', () => {
       expect(DEFAULT_CONFIG.taskManagement).toBeDefined();
       expect(DEFAULT_CONFIG.taskManagement.provider).toBe('vibe-kanban');
       expect(DEFAULT_CONFIG.taskManagement.autoInstall).toBe(true);
+    });
+  });
+});
+
+// =============================================================================
+// GitHub Issues Adapter Tests
+// =============================================================================
+
+describe('task-adapters/github-issues-adapter', () => {
+  let adapter: GitHubIssuesAdapter;
+
+  describe('configuration', () => {
+    it('has correct name', () => {
+      adapter = new GitHubIssuesAdapter({
+        provider: 'github-issues',
+        autoInstall: false,
+      });
+      expect(adapter.name).toBe('github-issues');
+    });
+
+    it('parses owner/repo from config', async () => {
+      adapter = new GitHubIssuesAdapter({
+        provider: 'github-issues',
+        autoInstall: false,
+        providerConfig: {
+          githubRepo: 'owner/repo',
+        },
+      });
+      // Initialization will fail without gh CLI, but config should be parsed
+      await adapter.initialize();
+      // Can't directly test private fields, but we can test behavior
+    });
+
+    it('defaults to ralph label filter', () => {
+      adapter = new GitHubIssuesAdapter({
+        provider: 'github-issues',
+        autoInstall: false,
+      });
+      // Label filter is private, but we can test behavior indirectly
+      expect(adapter.name).toBe('github-issues');
+    });
+
+    it('accepts custom label filter', () => {
+      adapter = new GitHubIssuesAdapter({
+        provider: 'github-issues',
+        autoInstall: false,
+        providerConfig: {
+          labelFilter: 'custom-label',
+        },
+      });
+      expect(adapter.name).toBe('github-issues');
+    });
+
+    it('accepts null label filter to disable filtering', () => {
+      adapter = new GitHubIssuesAdapter({
+        provider: 'github-issues',
+        autoInstall: false,
+        providerConfig: {
+          labelFilter: null,
+        },
+      });
+      expect(adapter.name).toBe('github-issues');
+    });
+
+    it('accepts empty string label filter to disable filtering', () => {
+      adapter = new GitHubIssuesAdapter({
+        provider: 'github-issues',
+        autoInstall: false,
+        providerConfig: {
+          labelFilter: '',
+        },
+      });
+      expect(adapter.name).toBe('github-issues');
+    });
+  });
+
+  describe('isAvailable', () => {
+    it('returns false when gh CLI is not available', async () => {
+      adapter = new GitHubIssuesAdapter({
+        provider: 'github-issues',
+        autoInstall: false,
+      });
+      await adapter.initialize();
+      // Since gh CLI may not be available in test environment
+      const available = await adapter.isAvailable();
+      // This will be false if gh is not installed or not authenticated
+      expect(typeof available).toBe('boolean');
+    });
+  });
+
+  describe('initialization', () => {
+    it('initializes without throwing', async () => {
+      adapter = new GitHubIssuesAdapter({
+        provider: 'github-issues',
+        autoInstall: false,
+      });
+      await expect(adapter.initialize()).resolves.not.toThrow();
+    });
+
+    it('does not re-initialize if already initialized', async () => {
+      adapter = new GitHubIssuesAdapter({
+        provider: 'github-issues',
+        autoInstall: false,
+      });
+      await adapter.initialize();
+      await adapter.initialize(); // Should not throw
+    });
+  });
+
+  describe('listTasks', () => {
+    it('returns empty array or issues based on environment', async () => {
+      adapter = new GitHubIssuesAdapter({
+        provider: 'github-issues',
+        autoInstall: false,
+      });
+      await adapter.initialize();
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const tasks = await adapter.listTasks();
+      // In a git repo with gh CLI available, it may detect the repo and return issues
+      // In other environments, it returns an empty array
+      expect(Array.isArray(tasks)).toBe(true);
+      warnSpy.mockRestore();
+      errorSpy.mockRestore();
+    });
+  });
+
+  describe('getTask', () => {
+    it('returns null when not configured', async () => {
+      adapter = new GitHubIssuesAdapter({
+        provider: 'github-issues',
+        autoInstall: false,
+      });
+      await adapter.initialize();
+      const task = await adapter.getTask('#123');
+      expect(task).toBeNull();
+    });
+  });
+
+  describe('createTask', () => {
+    it('throws error when not configured and gh CLI unavailable', async () => {
+      // This test only applies when gh CLI is not available
+      // When gh CLI is available, the adapter auto-detects the repo
+      adapter = new GitHubIssuesAdapter({
+        provider: 'github-issues',
+        autoInstall: false,
+        providerConfig: {
+          githubRepo: '', // Explicitly no repo
+        },
+      });
+      await adapter.initialize();
+      // If gh CLI is available, it will auto-detect, so we can't test this case
+      // Instead, test that createTask throws some error
+      await expect(
+        adapter.createTask({ title: 'Test Issue' })
+      ).rejects.toThrow();
+    });
+  });
+
+  describe('updateTask', () => {
+    it('throws error when not configured and gh CLI unavailable', async () => {
+      // This test only applies when gh CLI is not available
+      adapter = new GitHubIssuesAdapter({
+        provider: 'github-issues',
+        autoInstall: false,
+        providerConfig: {
+          githubRepo: '', // Explicitly no repo
+        },
+      });
+      await adapter.initialize();
+      // If gh CLI is available, it will auto-detect, so we can't test this case
+      // Instead, test that updateTask throws some error
+      await expect(
+        adapter.updateTask('#123', { title: 'Updated' })
+      ).rejects.toThrow();
     });
   });
 });

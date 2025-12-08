@@ -47,3 +47,4 @@ export { BaseTaskAdapter } from './base-adapter.js';
 
 // Concrete adapters
 export { VibeKanbanAdapter } from './vibe-kanban-adapter.js';
+export { GitHubIssuesAdapter } from './github-issues-adapter.js';

@@ -21,8 +21,10 @@ RALPH_DIR="$PROJECT_DIR/.ralph"
 
 # File paths - user data in .ralph/, scripts from package
 export ORCHESTRATE_PROMPT="$RALPH_DIR/orchestrate.md"
+export ORCHESTRATE_SETTINGS="$RALPH_DIR/settings.json"
 export ASSIGNMENT_FILE="$RALPH_DIR/planning/assignment.json"
 export LOG_FILE="$RALPH_DIR/claude_output.jsonl"
+export PROCESS_PROMPT_SCRIPT="$SCRIPT_DIR/process-prompt.js"
 
 # Optional timeout (in seconds). Set to 0 for no timeout.
 # Default: 2 hours (7200 seconds)
@@ -57,6 +59,17 @@ warn() {
 
 error() {
     echo -e "${RED}[sync2]${NC} $(date '+%Y-%m-%d %H:%M:%S') $*" >&2
+}
+
+# Process the orchestrate.md template by injecting provider-specific instructions
+# Reads settings.json to determine provider, then injects the appropriate instructions
+process_orchestrate_prompt() {
+    if [ -f "$PROCESS_PROMPT_SCRIPT" ]; then
+        node "$PROCESS_PROMPT_SCRIPT" "$ORCHESTRATE_PROMPT" "$ORCHESTRATE_SETTINGS"
+    else
+        # Fallback to raw template if processor not available
+        cat "$ORCHESTRATE_PROMPT"
+    fi
 }
 
 # Inject a synthetic user event into the JSONL log
@@ -269,7 +282,9 @@ while [ $attempt -le $MAX_ORCHESTRATION_ATTEMPTS ]; do
     # Remove any existing assignment file before each attempt
     rm -f "$ASSIGNMENT_FILE"
 
-    # Build the prompt
+    # Build the prompt (process template to inject provider-specific instructions)
+    processed_prompt=$(process_orchestrate_prompt)
+
     if [ -n "$PREVIOUS_ERROR" ]; then
         # Include error feedback from previous attempt
         ORCHESTRATE_INPUT="# IMPORTANT: Previous Attempt Failed
@@ -293,10 +308,10 @@ Please re-read the orchestrate.md instructions below and ensure you:
 
 ---
 
-$(cat "$ORCHESTRATE_PROMPT")"
+$processed_prompt"
     else
-        # First attempt - just use the prompt as-is
-        ORCHESTRATE_INPUT=$(cat "$ORCHESTRATE_PROMPT")
+        # First attempt - just use the processed prompt
+        ORCHESTRATE_INPUT="$processed_prompt"
     fi
 
     # Run orchestration

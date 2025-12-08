@@ -45,14 +45,18 @@ describe('init command', () => {
       expect(fs.existsSync(path.join(tempDir, '.ralph/workflows'))).toBe(true);
     });
 
-    it('creates settings.json with empty object', () => {
+    it('creates settings.json with default task management config', () => {
       runInit(tempDir);
 
       const settingsPath = path.join(tempDir, '.ralph/settings.json');
       expect(fs.existsSync(settingsPath)).toBe(true);
 
       const content = fs.readFileSync(settingsPath, 'utf-8');
-      expect(JSON.parse(content)).toEqual({});
+      expect(JSON.parse(content)).toEqual({
+        taskManagement: {
+          provider: 'vibe-kanban',
+        },
+      });
     });
 
     it('creates workflows directory', () => {
@@ -297,7 +301,9 @@ describe('init command', () => {
       expect(result.skipped).not.toContain('.ralph/settings.json');
 
       const content = fs.readFileSync(settingsPath, 'utf-8');
-      expect(JSON.parse(content)).toEqual({});
+      expect(JSON.parse(content)).toEqual({
+        taskManagement: { provider: 'vibe-kanban' },
+      });
     });
 
     it('overwrites existing workflow files', () => {
@@ -321,7 +327,10 @@ describe('init command', () => {
       runInit(tempDir, { force: true, agent: 'codex' });
 
       const content = fs.readFileSync(settingsPath, 'utf-8');
-      expect(JSON.parse(content)).toEqual({ agent: { type: 'codex' } });
+      expect(JSON.parse(content)).toEqual({
+        agent: { type: 'codex' },
+        taskManagement: { provider: 'vibe-kanban' },
+      });
     });
   });
 

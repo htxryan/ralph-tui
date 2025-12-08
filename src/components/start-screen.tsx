@@ -1,6 +1,8 @@
 import React from 'react';
 import { Box, Text } from 'ink';
 import { colors } from '../lib/colors.js';
+import { type TaskManagementConfig } from '../lib/task-adapters/types.js';
+import { getProviderDisplayName } from '../lib/task-adapters/factory.js';
 
 // Big bubble-letter RALPH ASCII art
 const RALPH_ASCII = `
@@ -45,11 +47,61 @@ export interface StartScreenProps {
   height?: number;
   /** Width of the container */
   width?: number;
+  /** Task management configuration for display */
+  taskConfig?: TaskManagementConfig;
+}
+
+/**
+ * Get a human-readable description of the task manager configuration
+ */
+function getTaskManagerInfo(config?: TaskManagementConfig): string | null {
+  if (!config) return null;
+
+  const providerName = getProviderDisplayName(config.provider);
+  const providerConfig = config.providerConfig;
+
+  switch (config.provider) {
+    case 'github-issues': {
+      const repo = providerConfig?.githubRepo;
+      const label = providerConfig?.labelFilter;
+      if (repo) {
+        const labelInfo = label ? ` (label: ${label})` : '';
+        return `${providerName}: ${repo}${labelInfo}`;
+      }
+      const labelInfo = label ? ` (label: ${label})` : ' (auto-detect repo)';
+      return `${providerName}${labelInfo}`;
+    }
+    case 'vibe-kanban': {
+      const projectId = providerConfig?.vibeKanbanProjectId;
+      if (projectId) {
+        return `${providerName}: ${projectId}`;
+      }
+      return `${providerName} (auto-detect project)`;
+    }
+    case 'jira': {
+      const host = providerConfig?.jiraHost;
+      const project = providerConfig?.jiraProject;
+      if (host && project) {
+        return `${providerName}: ${project} @ ${host}`;
+      }
+      return providerName;
+    }
+    case 'linear': {
+      const team = providerConfig?.linearTeam;
+      if (team) {
+        return `${providerName}: ${team}`;
+      }
+      return providerName;
+    }
+    default:
+      return providerName;
+  }
 }
 
 export function StartScreen({
   height = 30,
   width = 100,
+  taskConfig,
 }: StartScreenProps): React.ReactElement {
   // Pick a random tagline (stable for component lifetime)
   const [tagline] = React.useState(
@@ -119,6 +171,15 @@ export function StartScreen({
           {' 🤖'}
         </Text>
       </Box>
+
+      {/* Task Manager Info */}
+      {taskConfig && (
+        <Box marginTop={1}>
+          <Text color={colors.dimmed}>
+            Task Manager: <Text color={colors.selected}>{getTaskManagerInfo(taskConfig)}</Text>
+          </Text>
+        </Box>
+      )}
     </Box>
   );
 }
