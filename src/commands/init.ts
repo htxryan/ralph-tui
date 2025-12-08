@@ -82,31 +82,6 @@ function loadTemplate(templateName: string): string {
 }
 
 /**
- * Load provider-specific instructions from templates/providers/
- */
-function loadProviderInstructions(provider: TaskProvider): string {
-  const providerPath = path.join(PACKAGE_ROOT, 'templates', 'providers', `${provider}.md`);
-  try {
-    if (fs.existsSync(providerPath)) {
-      return fs.readFileSync(providerPath, 'utf-8');
-    }
-  } catch {
-    // Fall through to default
-  }
-  // Return a placeholder if provider file doesn't exist
-  return `## Task Manager: ${provider}\n\nProvider instructions not available. Please configure manually.`;
-}
-
-/**
- * Process the orchestrate.md template by injecting provider-specific content
- */
-function processOrchestrateTemplate(provider: TaskProvider): string {
-  const template = loadTemplate('orchestrate.md');
-  const providerInstructions = loadProviderInstructions(provider);
-  return template.replace('{{TASK_MANAGER_INSTRUCTIONS}}', providerInstructions);
-}
-
-/**
  * Get the path to the templates directory
  */
 export function getTemplatesDir(): string {
@@ -217,11 +192,11 @@ function getFilesToCreate(projectRoot: string, options: InitOptions): FileToCrea
     description: 'Configuration file',
   });
 
-  // orchestrate.md - processed with provider-specific content
+  // orchestrate.md - template with placeholder (processed at runtime by sync2.sh)
   files.push({
     relativePath: '.ralph/orchestrate.md',
-    content: processOrchestrateTemplate(provider),
-    description: `Orchestration prompt (configured for ${provider})`,
+    content: loadTemplate('orchestrate.md'),
+    description: 'Orchestration prompt template',
   });
 
   // workflows/*.md - workflow files
