@@ -141,4 +141,4 @@ Test files are co-located with components (`*.test.tsx`) or in `src/test/` for i
 
 ## Work Tracking
 
-This project uses Vibe Kanban for task tracking instead of markdown TODOs. Use the Vibe Kanban MCP server to manage tasks.
+This project uses GitHub Issues for task tracking instead of markdown TODOs. Use the `github-operator` Task subagent (which will in turn use the GitHub CLI (`gh`)) to manage tasks.

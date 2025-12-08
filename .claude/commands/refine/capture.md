@@ -2,17 +2,11 @@
 
 You are tasked with capturing the task definition, research, and implementation plan from a task's directory and creating a comprehensive GitHub Issue with ALL the detail preserved.
 
-## CRITICAL: AUTONOMOUS EXECUTION - NEVER ASK QUESTIONS
+@.claude/.partials/autonomous-execution.md
 
-**You MUST complete this command autonomously without asking clarifying questions.**
-
-- **NEVER** ask the user questions during execution
-- **NEVER** pause and wait for user input or confirmation
-- **ALWAYS** make your best judgment when decisions arise
-- **ALWAYS** produce a valid GitHub Issue as output
+**Additional rules for capture:**
 - If something is ambiguous about formatting or structure, make a reasonable choice
-- The user will critique your output AFTER you produce it - do not pre-emptively ask for guidance
-- Getting stuck waiting for user input is UNACCEPTABLE - always move forward
+- Produce a valid GitHub Issue as output
 
 ## Arguments
 
@@ -38,6 +32,8 @@ This will:
 4. Create a GitHub Issue with full content
 ```
 Then stop and wait for correct input.
+
+@.claude/.partials/plans-directory-structure.md
 
 ## Process
 
@@ -257,10 +253,7 @@ Include the issue URL from the `gh issue create` command output.
    - The issue template uses H1 for topic and H2 for sections (Task, Research, Plan)
    - Content from source files must have headers adjusted to fit logically within H2 sections
    - **Remove redundant top-level H1s** from source files if they duplicate the section header
-     - e.g., Remove `# Research: Topic` from research.md since it's under `## Research`
-     - e.g., Remove `# Implementation Plan` from plan.md since it's under `## Plan`
-   - **Shift remaining headers down** so they nest properly under the H2 section:
-     - H1 → H3, H2 → H4, H3 → H5, etc.
+   - **Shift remaining headers down** so they nest properly under the H2 section
    - Preserve all other formatting: code blocks, lists, bold, etc.
 
 3. **Error Handling**:
@@ -282,14 +275,7 @@ Include the issue URL from the `gh issue create` command output.
    - No brackets, no topic text, no other content in the title
    - The topic appears as a heading in the issue body
 
-## Workflow Context
-
-This command is part of the refinement workflow:
-1. `/refine/research_codebase <task-id>` - Research and document (reads task.md, creates research.md)
-2. `/refine/create_plan <task-id>` - Create implementation plan (reads task.md + research.md, creates plan.md)
-3. **`/refine/capture <task-id>`** - Capture to GitHub Issue (this command)
-
-The capture step is the final step that takes all the detailed work from task definition, research, and planning and creates a trackable issue in GitHub for implementation tracking.
+@.claude/.partials/workflow-commands.md
 
 ## Example
 

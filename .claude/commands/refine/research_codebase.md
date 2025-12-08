@@ -25,18 +25,11 @@ The task ID corresponds to a task directory containing:
 ```
 Then stop and wait for correct input.
 
-## CRITICAL: AUTONOMOUS EXECUTION - NEVER ASK QUESTIONS
+@.claude/.partials/autonomous-execution.md
 
-**You MUST complete this command autonomously without asking clarifying questions.**
-
-- **NEVER** ask the user questions during execution
-- **NEVER** pause and wait for user input or confirmation
-- **ALWAYS** make your best judgment when decisions arise
-- **ALWAYS** produce a complete, valid research document as output
+**Additional rules for research:**
 - If something is ambiguous, make a reasonable assumption and document it
 - If you're unsure about scope, err on the side of being thorough
-- The user will critique your output AFTER you produce it - do not pre-emptively ask for guidance
-- Getting stuck waiting for user input is UNACCEPTABLE - always move forward
 
 ## CRITICAL: YOUR ONLY JOB IS TO DOCUMENT AND EXPLAIN THE CODEBASE AS IT EXISTS TODAY
 - DO NOT suggest improvements or changes unless the user explicitly asks for them
@@ -46,6 +39,8 @@ Then stop and wait for correct input.
 - DO NOT recommend refactoring, optimization, or architectural changes
 - ONLY describe what exists, where it exists, how it works, and how components interact
 - You are creating a technical map/documentation of the existing system
+
+@.claude/.partials/plans-directory-structure.md
 
 ## Initial Setup:
 
@@ -225,26 +220,6 @@ When this command is invoked with a valid task_id:
    - Spawn new sub-agents as needed for additional investigation
    - Continue updating the document autonomously without asking for clarification
 
-## Directory Structure
-
-This project uses `.ai-docs/thoughts/plans/` for task-based workflows:
-
-```
-.ai-docs/thoughts/plans/
-└── <task_id>/
-    ├── task.md       # Input: Defines the task/research assignment (created by user)
-    ├── research.md   # Output: This command's research findings
-    └── plan.md       # Output: Created by /refine/create_plan
-```
-
-Historical context and notes are stored in `.ai-docs/thoughts/`:
-```
-.ai-docs/thoughts/
-├── research/        # General research documents
-├── notes/           # General notes and explorations
-└── decisions/       # Decision records and rationale
-```
-
 ## Important notes:
 - Always use parallel Task agents to maximize efficiency and minimize context usage
 - Always run fresh codebase research - never rely solely on existing research documents
@@ -281,7 +256,7 @@ Historical context and notes are stored in `.ai-docs/thoughts/`:
 
 This is the Ralph TUI codebase - a terminal user interface for monitoring autonomous AI coding agents. Key areas to be aware of:
 
-- **Main TUI application**: `.ralph/tui/src/` (Ink + React + TypeScript)
+- **Main TUI application**: `src/` (Ink + React + TypeScript)
 - **Core patterns**: Stream processing, subagent tracking, process management
 - **AI documentation**: `.ai-docs/` (design docs, ADRs, prompts, thoughts)
 - **Configuration**: `.claude/` (agents, commands, skills)
@@ -292,9 +267,4 @@ When researching, consider:
 - Type definitions in `lib/types.ts`
 - JSONL parsing in `lib/parser.ts`
 
-## Workflow
-
-This command is part of the refinement workflow:
-1. **`/refine/research_codebase <task-id>`** - Research and document (reads task.md, creates research.md)
-2. `/refine/create_plan <task-id>` - Create implementation plan (reads task.md + research.md, creates plan.md)
-3. `/refine/capture <task-id>` - Capture to Vibe Kanban issue
+@.claude/.partials/workflow-commands.md
