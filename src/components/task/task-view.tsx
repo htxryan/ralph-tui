@@ -185,15 +185,10 @@ export function TaskView({
   }, [task]);
 
   // Calculate visible window to fill available space
-  // Task ID box with double border = 3 lines, help text = 1 line
-  // Content box border adds 2 lines but we want to fill it with content
-  const taskIdBoxHeight = 3;
-  const helpTextHeight = 1;
-  const contentBorderHeight = 2;
-  // Content area height (inside the border) = total height - task ID - help - border
-  const contentAreaHeight = Math.max(5, (height || 30) - taskIdBoxHeight - helpTextHeight - contentBorderHeight);
-  // Reserve 2 lines for scroll indicators (shown conditionally inside content area)
-  const windowSize = contentAreaHeight;
+  // Layout: Task ID box (3 lines) + Content box (flexGrow, with 2-line border) + Help text (1 line)
+  // Content area inside border = total height - task ID (3) - help (1) - border (2)
+  const fixedElements = 6; // 3 (task ID box) + 1 (help text) + 2 (content border)
+  const windowSize = Math.max(5, (height || 30) - fixedElements);
   const maxScroll = Math.max(0, contentLines.length - windowSize);
 
   useInput((input, key) => {
@@ -224,7 +219,7 @@ export function TaskView({
 
   if (isLoading) {
     return (
-      <Box flexDirection="column" padding={1} height={height} flexGrow={1}>
+      <Box flexDirection="column" padding={1} height={height}>
         <Spinner label="Loading task..." />
       </Box>
     );
@@ -232,7 +227,7 @@ export function TaskView({
 
   if (error) {
     return (
-      <Box flexDirection="column" padding={1} height={height} flexGrow={1}>
+      <Box flexDirection="column" padding={1} height={height}>
         <Text color={colors.error}>
           {icons.error} Error loading task: {error.message}
         </Text>
@@ -243,7 +238,7 @@ export function TaskView({
 
   if (!task) {
     return (
-      <Box flexDirection="column" padding={1} height={height} flexGrow={1}>
+      <Box flexDirection="column" padding={1} height={height}>
         <Text color={colors.dimmed}>No task selected.</Text>
       </Box>
     );
@@ -254,7 +249,7 @@ export function TaskView({
   const showScrollDown = scrollOffset + windowSize < contentLines.length;
 
   return (
-    <Box flexDirection="column" height={height} flexGrow={1}>
+    <Box flexDirection="column" height={height}>
       {/* Task ID */}
       <Box
         borderStyle="double"
@@ -266,10 +261,10 @@ export function TaskView({
         </Text>
       </Box>
 
-      {/* Scrollable content area with border */}
+      {/* Scrollable content area with border - uses flexGrow to fill remaining space */}
       <Box
         flexDirection="column"
-        height={contentAreaHeight + contentBorderHeight}
+        flexGrow={1}
         borderStyle="single"
         borderColor={colors.border}
         paddingX={1}
