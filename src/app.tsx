@@ -62,15 +62,16 @@ export function App({
   // when switching to archived sessions. This ensures the session picker always
   // shows the full archive list, even when viewing an archived session.
   const sessionDir = useMemo(() => path.dirname(jsonlPath), [jsonlPath]);
+  // Project root is the parent of the .ralph directory (sessionDir)
+  const projectRoot = useMemo(() => path.dirname(sessionDir), [sessionDir]);
   // Use config.paths.archiveDir if available, otherwise fall back to default
   const archiveDir = useMemo(() => {
     if (config?.paths?.archiveDir) {
-      // archiveDir from config is relative to project root, so use sessionDir's parent
-      const projectRoot = path.dirname(sessionDir);
+      // archiveDir from config is relative to project root
       return path.resolve(projectRoot, config.paths.archiveDir);
     }
     return path.join(sessionDir, 'archive');
-  }, [sessionDir, config?.paths?.archiveDir]);
+  }, [sessionDir, projectRoot, config?.paths?.archiveDir]);
 
   // App state
   const [currentTab, setCurrentTab] = useState<TabName>('messages');
@@ -89,7 +90,7 @@ export function App({
   const { rows: terminalRows, columns: terminalColumns } = useTerminalSize();
 
   // Data hooks
-  const { assignment } = useAssignment();
+  const { assignment } = useAssignment({ basePath: projectRoot });
   const effectiveTaskId = providedIssueId || assignment?.task_id || null;
 
   const {
