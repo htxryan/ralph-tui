@@ -146,6 +146,27 @@ export function useRalphProcess(
         },
       });
 
+      // Handle process termination gracefully - catch SIGTERM (143) and other signals
+      // This prevents unhandled promise rejections when user stops the session
+      child.catch((err: Error & { exitCode?: number; signal?: string }) => {
+        // Exit code 143 = SIGTERM (128 + 15), exit code 130 = SIGINT (128 + 2)
+        // These are expected when user stops the session
+        const isExpectedTermination =
+          err.exitCode === 143 || // SIGTERM
+          err.exitCode === 130 || // SIGINT
+          err.signal === 'SIGTERM' ||
+          err.signal === 'SIGINT';
+
+        if (!isExpectedTermination) {
+          // Only set error for unexpected failures
+          setError(err);
+        }
+
+        // Clean up running state
+        setIsRunning(false);
+        setIsStarting(false);
+      });
+
       // Unref so the TUI can exit independently
       child.unref();
 
@@ -297,6 +318,27 @@ export function useRalphProcess(
           fs.appendFileSync(logFile, data);
         });
       }
+
+      // Handle process termination gracefully - catch SIGTERM (143) and other signals
+      // This prevents unhandled promise rejections when user interrupts/kills the session
+      child.catch((err: Error & { exitCode?: number; signal?: string }) => {
+        // Exit code 143 = SIGTERM (128 + 15), exit code 130 = SIGINT (128 + 2)
+        // These are expected when user interrupts/kills the session
+        const isExpectedTermination =
+          err.exitCode === 143 || // SIGTERM
+          err.exitCode === 130 || // SIGINT
+          err.signal === 'SIGTERM' ||
+          err.signal === 'SIGINT';
+
+        if (!isExpectedTermination) {
+          // Only set error for unexpected failures
+          setError(err);
+        }
+
+        // Clean up running state
+        setIsRunning(false);
+        setIsResuming(false);
+      });
 
       // Unref so the TUI can exit independently
       child.unref();
