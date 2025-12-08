@@ -35,12 +35,8 @@ interface GitHubIssue {
   author: {
     login: string;
   } | null;
-  assignees: {
-    nodes: Array<{ login: string }>;
-  };
-  labels: {
-    nodes: Array<{ name: string }>;
-  };
+  assignees: Array<{ login: string }>;
+  labels: Array<{ name: string }>;
   createdAt: string;
   updatedAt: string;
   url: string;
@@ -451,7 +447,7 @@ export class GitHubIssuesAdapter extends BaseTaskAdapter {
    * Map GitHub issue to our KanbanTask type
    */
   private mapGitHubIssue(issue: GitHubIssue): KanbanTask {
-    const labels = issue.labels.nodes.map(l => l.name);
+    const labels = issue.labels.map(l => l.name);
 
     return this.normalizeTask({
       id: `#${issue.number}`,
@@ -462,7 +458,7 @@ export class GitHubIssuesAdapter extends BaseTaskAdapter {
       priority: this.inferPriorityFromLabels(labels),
       created_at: issue.createdAt,
       updated_at: issue.updatedAt,
-      assignee: issue.assignees.nodes[0]?.login,
+      assignee: issue.assignees[0]?.login,
       labels,
     });
   }
