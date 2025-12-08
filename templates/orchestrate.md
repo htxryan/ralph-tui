@@ -2,56 +2,9 @@
 
 Your job is to determine which workflow to execute, identify or create the associated task, and write the assignment file.
 
-## Step 0: Determine Task Manager
-
-First, read `./.ralph/settings.json` to determine which task management provider is configured.
-
-Look for the `taskManagement.provider` field. Supported values:
-- `"vibe-kanban"` (default) - Uses Vibe Kanban MCP tools
-- `"github-issues"` - Uses GitHub Issues via `gh` CLI
-
-If the file doesn't exist or `taskManagement.provider` is not set, default to `"vibe-kanban"`.
-
-**IMPORTANT**: Use ONLY the configured provider's tools throughout this workflow. Do not mix providers.
-
 ---
 
-## Task Manager Reference
-
-### Vibe Kanban (MCP Tools)
-
-Use these MCP tools when `taskManagement.provider` is `"vibe-kanban"`:
-
-| Operation | Command |
-|-----------|---------|
-| List Projects | `mcp__vibe_kanban__list_projects()` |
-| List Tasks | `mcp__vibe_kanban__list_tasks(project_id=<uuid>, status="todo"\|"inprogress"\|"done")` |
-| Get Task | `mcp__vibe_kanban__get_task(task_id=<uuid>)` |
-| Create Task | `mcp__vibe_kanban__create_task(project_id=<uuid>, title="...", description="...")` |
-| Update Task | `mcp__vibe_kanban__update_task(task_id=<uuid>, status="todo"\|"inprogress"\|"inreview"\|"done"\|"cancelled")` |
-
-**Project Discovery**: Call `list_projects()` and find the project matching this git repository path.
-
-### GitHub Issues (gh CLI)
-
-Use these `gh` commands when `taskManagement.provider` is `"github-issues"`:
-
-| Operation | Command |
-|-----------|---------|
-| List Issues | `gh issue list --state open --label "<label>" --json number,title,state,labels` |
-| Get Issue | `gh issue view <number> --json number,title,body,state,labels` |
-| Create Issue | `gh issue create --title "..." --body "..." --label "<label>"` |
-| Update Status | Close: `gh issue close <number>` / Reopen: `gh issue reopen <number>` |
-| Add Comment | `gh issue comment <number> --body "..."` |
-
-**Label Filter**: Check `taskManagement.providerConfig.labelFilter` in settings.json. Default is `"ralph"`. Use this label to filter issues.
-
-**Status Mapping**:
-- `todo` → open issues not being worked on
-- `inprogress` → open issues with "in-progress" label (or similar)
-- `done` → closed issues
-
-**Project Discovery**: The `gh` CLI auto-detects the repository from the git remote. Or check `taskManagement.providerConfig.githubRepo` for explicit `owner/repo`.
+{{TASK_MANAGER_INSTRUCTIONS}}
 
 ---
 
@@ -65,17 +18,13 @@ Collect the following information:
 
 1.1. Check the current git branch name
 
-1.2. Get the project/repository context:
-   - **Vibe Kanban**: Call `list_projects()` and find the project matching this git repository path. Note the `project_id`.
-   - **GitHub Issues**: The repository is auto-detected from git remote (or use `githubRepo` from config).
+1.2. Get the project/repository context using the task manager commands above
 
 1.3. If on `develop` branch (or `main` if no `develop`):
    - Check for any unmerged PRs targeting the main branch
    - If PRs exist, check their CI/CD pipeline status
    - Check the CD pipeline status for the main branch itself
-   - Check for any in-progress tasks:
-     - **Vibe Kanban**: `list_tasks(project_id=<uuid>, status="inprogress")`
-     - **GitHub Issues**: `gh issue list --state open --label "<label>" --json number,title,state,labels` and look for issues with "in-progress" indicator
+   - Check for any in-progress tasks using the task manager
 
 1.4. If NOT on `develop`/`main` branch (feature/bugfix branch):
    - Check if a PR exists for this branch
@@ -175,33 +124,11 @@ Create the assignment file at `./.ralph/planning/assignment.json`:
    }
    ```
 
-**Task ID Format**:
-- **Vibe Kanban**: UUID (e.g., `"ac7f8755-3ba5-4aaf-a514-8aef29b7d447"`)
-- **GitHub Issues**: Issue number as string (e.g., `"42"`)
-
-**Example assignments:**
-
-```json
-{
-  "workflow": ".ralph/workflows/01-feature-branch-incomplete.md",
-  "task_id": "ac7f8755-3ba5-4aaf-a514-8aef29b7d447"
-}
-```
-
-```json
-{
-  "workflow": ".ralph/workflows/06-new-work.md",
-  "task_id": "42"
-}
-```
-
 Once the assignment file is written, your job is complete. EXIT.
 
 ---
 
 ## Quick Reference
-
-See `./.ralph/workflows/index.md` for a complete index of available workflows.
 
 | # | Workflow | Trigger Condition | Task Action |
 |---|----------|-------------------|-------------|
@@ -214,25 +141,11 @@ See `./.ralph/workflows/index.md` for a complete index of available workflows.
 
 ---
 
-## Assignment File Schema
-
-**Location:** `./.ralph/planning/assignment.json`
-
-```json
-{
-  "workflow": "string - relative path to workflow file from repo root",
-  "task_id": "string - task identifier (UUID for Vibe Kanban, issue number for GitHub Issues)"
-}
-```
-
----
-
 ## Workflow Decision Diagram
 
 ```mermaid
 flowchart TD
-    START([Start Orchestration]) --> CONFIG[Step 0: Read settings.json]
-    CONFIG --> GATHER[Step 1: Gather Context]
+    START([Start Orchestration]) --> GATHER[Step 1: Gather Context]
 
     GATHER --> Q1{Q1: On develop branch?}
 
@@ -261,7 +174,6 @@ flowchart TD
     WRITE --> DONE([EXIT])
 
     style START fill:#e3f2fd,stroke:#1565c0
-    style CONFIG fill:#f3e5f5,stroke:#7b1fa2
     style GATHER fill:#e8f5e9,stroke:#2e7d32
     style TASK fill:#e1f5fe,stroke:#0288d1
     style WRITE fill:#fff8e1,stroke:#f9a825

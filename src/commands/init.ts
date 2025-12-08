@@ -11,6 +11,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
 import type { AgentType } from '../lib/config.js';
+import type { TaskProvider } from '../lib/task-adapters/types.js';
 
 // Get the package root directory (works in both dev and installed contexts)
 const __filename = fileURLToPath(import.meta.url);
@@ -26,6 +27,8 @@ const PACKAGE_ROOT = path.resolve(__dirname, '..', '..');
 export interface InitOptions {
   /** Pre-configure a specific agent */
   agent?: string;
+  /** Pre-configure task management provider */
+  provider?: string;
   /** Show what would be created without creating */
   dryRun?: boolean;
   /** Force overwrite existing files */
@@ -79,6 +82,31 @@ function loadTemplate(templateName: string): string {
 }
 
 /**
+ * Load provider-specific instructions from templates/providers/
+ */
+function loadProviderInstructions(provider: TaskProvider): string {
+  const providerPath = path.join(PACKAGE_ROOT, 'templates', 'providers', `${provider}.md`);
+  try {
+    if (fs.existsSync(providerPath)) {
+      return fs.readFileSync(providerPath, 'utf-8');
+    }
+  } catch {
+    // Fall through to default
+  }
+  // Return a placeholder if provider file doesn't exist
+  return `## Task Manager: ${provider}\n\nProvider instructions not available. Please configure manually.`;
+}
+
+/**
+ * Process the orchestrate.md template by injecting provider-specific content
+ */
+function processOrchestrateTemplate(provider: TaskProvider): string {
+  const template = loadTemplate('orchestrate.md');
+  const providerInstructions = loadProviderInstructions(provider);
+  return template.replace('{{TASK_MANAGER_INSTRUCTIONS}}', providerInstructions);
+}
+
+/**
  * Get the path to the templates directory
  */
 export function getTemplatesDir(): string {
@@ -97,6 +125,8 @@ export function getPromptsDir(): string {
 // ============================================================================
 
 const VALID_AGENT_TYPES: AgentType[] = ['claude-code', 'codex', 'opencode', 'kiro', 'custom'];
+const VALID_TASK_PROVIDERS: TaskProvider[] = ['vibe-kanban', 'github-issues', 'jira', 'linear', 'beads'];
+const DEFAULT_TASK_PROVIDER: TaskProvider = 'vibe-kanban';
 
 // ============================================================================
 // Gitignore Suggestions
@@ -131,24 +161,55 @@ const WORKFLOW_FILES = [
 ];
 
 /**
+ * Determine the task provider from options, existing settings, or default
+ */
+function determineProvider(projectRoot: string, options: InitOptions): TaskProvider {
+  // First, check if provider is specified in options
+  if (options.provider && VALID_TASK_PROVIDERS.includes(options.provider as TaskProvider)) {
+    return options.provider as TaskProvider;
+  }
+
+  // Second, try to read from existing settings.json
+  const settingsPath = path.join(projectRoot, '.ralph', 'settings.json');
+  try {
+    if (fs.existsSync(settingsPath)) {
+      const content = fs.readFileSync(settingsPath, 'utf-8');
+      const settings = JSON.parse(content);
+      if (settings.taskManagement?.provider && VALID_TASK_PROVIDERS.includes(settings.taskManagement.provider)) {
+        return settings.taskManagement.provider as TaskProvider;
+      }
+    }
+  } catch {
+    // Ignore parse errors, use default
+  }
+
+  // Default to vibe-kanban
+  return DEFAULT_TASK_PROVIDER;
+}
+
+/**
  * Get the list of files to create during init
  */
 function getFilesToCreate(projectRoot: string, options: InitOptions): FileToCreate[] {
   const files: FileToCreate[] = [];
 
-  // settings.json - empty object or with agent config
-  let settingsContent = '{}';
+  // Determine which task provider to use
+  const provider = determineProvider(projectRoot, options);
+
+  // settings.json - with agent and/or task management config
+  const settingsObj: Record<string, unknown> = {};
+
   if (options.agent && VALID_AGENT_TYPES.includes(options.agent as AgentType)) {
-    settingsContent = JSON.stringify(
-      {
-        agent: {
-          type: options.agent,
-        },
-      },
-      null,
-      2
-    );
+    settingsObj.agent = { type: options.agent };
   }
+
+  // Always include taskManagement config with the determined provider
+  settingsObj.taskManagement = {
+    provider: provider,
+    ...(provider === 'github-issues' ? { providerConfig: { labelFilter: 'ralph' } } : {}),
+  };
+
+  const settingsContent = JSON.stringify(settingsObj, null, 2);
 
   files.push({
     relativePath: '.ralph/settings.json',
@@ -156,11 +217,11 @@ function getFilesToCreate(projectRoot: string, options: InitOptions): FileToCrea
     description: 'Configuration file',
   });
 
-  // orchestrate.md - orchestration prompt template
+  // orchestrate.md - processed with provider-specific content
   files.push({
     relativePath: '.ralph/orchestrate.md',
-    content: loadTemplate('orchestrate.md'),
-    description: 'Orchestration prompt template',
+    content: processOrchestrateTemplate(provider),
+    description: `Orchestration prompt (configured for ${provider})`,
   });
 
   // workflows/*.md - workflow files
@@ -213,6 +274,12 @@ export function runInit(projectRoot: string, options: InitOptions = {}): InitRes
     // Validate agent option if provided
     if (options.agent && !VALID_AGENT_TYPES.includes(options.agent as AgentType)) {
       result.error = `Invalid agent type: "${options.agent}". Valid types are: ${VALID_AGENT_TYPES.join(', ')}`;
+      return result;
+    }
+
+    // Validate provider option if provided
+    if (options.provider && !VALID_TASK_PROVIDERS.includes(options.provider as TaskProvider)) {
+      result.error = `Invalid task provider: "${options.provider}". Valid providers are: ${VALID_TASK_PROVIDERS.join(', ')}`;
       return result;
     }
 

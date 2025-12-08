@@ -356,12 +356,14 @@ describe('init integration', () => {
       expect(configResult.error).toBeUndefined();
     });
 
-    it('empty settings.json is valid for config system', () => {
+    it('settings.json with default task management is valid for config system', () => {
       runInit(tempDir);
 
       const configResult = loadConfigFile(getProjectConfigPath(tempDir));
       expect(configResult.loaded).toBe(true);
-      expect(configResult.config).toEqual({});
+      expect(configResult.config).toEqual({
+        taskManagement: { provider: 'vibe-kanban' },
+      });
     });
 
     it('settings.json with agent is merged correctly by config system', () => {
@@ -390,9 +392,11 @@ describe('init integration', () => {
       expect(result.created).toContain('.ralph/settings.json');
       expect(result.skipped).not.toContain('.ralph/settings.json');
 
-      // Verify content was overwritten
+      // Verify content was overwritten with default task management
       const content = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'));
-      expect(content).toEqual({});
+      expect(content).toEqual({
+        taskManagement: { provider: 'vibe-kanban' },
+      });
     });
 
     it('--force with --agent overwrites config with new agent', () => {

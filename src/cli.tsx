@@ -186,6 +186,7 @@ program
   .command('init')
   .description('Initialize Ralph in the current directory')
   .option('-a, --agent <name>', 'Pre-configure a specific agent (claude-code, codex, opencode, kiro, custom)')
+  .option('-p, --provider <name>', 'Task management provider (vibe-kanban, github-issues, jira, linear, beads)')
   .option('-n, --dry-run', 'Show what would be created without creating files')
   .option('-f, --force', 'Overwrite existing files')
   .action((options) => {
@@ -193,12 +194,14 @@ program
 
     const result = runInit(projectRoot, {
       agent: options.agent,
+      provider: options.provider,
       dryRun: options.dryRun,
       force: options.force,
     });
 
     const output = formatInitOutput(result, {
       agent: options.agent,
+      provider: options.provider,
       dryRun: options.dryRun,
       force: options.force,
     });
