@@ -185,7 +185,8 @@ export function TaskView({
   }, [task]);
 
   // Calculate visible window
-  // Reserve space for: task ID box (3 lines), help text (1 line), scroll indicators (2 lines)
+  // Reserve space for: task ID box (3 lines), content border (2 lines), help text (1 line)
+  // The border adds 2 lines (top + bottom), plus we want scroll indicators inside
   const reservedLines = 6;
   const windowSize = Math.max(5, (height || 30) - reservedLines);
   const maxScroll = Math.max(0, contentLines.length - windowSize);
@@ -254,15 +255,20 @@ export function TaskView({
         borderStyle="double"
         borderColor={colors.subagent}
         paddingX={1}
-        marginBottom={1}
       >
         <Text color={colors.subagent} bold>
           {task.id}
         </Text>
       </Box>
 
-      {/* Scrollable content area */}
-      <Box flexDirection="column" flexGrow={1} height={windowSize + 2}>
+      {/* Scrollable content area with border */}
+      <Box
+        flexDirection="column"
+        flexGrow={1}
+        borderStyle="single"
+        borderColor={colors.border}
+        paddingX={1}
+      >
         {showScrollUp && (
           <Text color={colors.dimmed}>
             {'\u2191'} {scrollOffset} lines above
