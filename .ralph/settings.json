@@ -1,0 +1,8 @@
+{
+  "taskManagement": {
+    "provider": "github-issues",
+    "providerConfig": {
+      "labelFilter": "ralph"
+    }
+  }
+}
