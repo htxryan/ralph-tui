@@ -283,7 +283,6 @@ while [ $attempt -le $MAX_ORCHESTRATION_ATTEMPTS ]; do
     rm -f "$ASSIGNMENT_FILE"
 
     # Build the prompt (process template to inject provider-specific instructions)
-    local processed_prompt
     processed_prompt=$(process_orchestrate_prompt)
 
     if [ -n "$PREVIOUS_ERROR" ]; then
