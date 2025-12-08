@@ -624,7 +624,7 @@ export function App({
       {/* Main content area with optional sidebar */}
       <Box flexDirection="row" height={contentHeight}>
         {/* Main content */}
-        <Box flexDirection="column" flexGrow={1}>
+        <Box flexDirection="column" flexGrow={1} height={contentHeight}>
           {renderContent()}
         </Box>
 
