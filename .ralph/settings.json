@@ -1,5 +1,12 @@
 {
   "taskManagement": {
-    "provider": "github-issues"
+    "provider": "github-issues",
+    "providerConfig": {
+      "labelFilter": "ralph"
+    }
+  },
+  "variables": {
+    "target_branch": "develop",
+    "docs": "`./.ai-docs/design/product-brief.md` and `./.ai-docs/design/game-rules.md`"
   }
 }

@@ -1,188 +1,72 @@
 # Task
 
-Your job is to determine which workflow to execute, identify or create the associated task, and write the assignment file.
+Your job is to determine the place to pick up work for a work item according to an execution workflow. It is possible that no work has been done, and it is possible that work is in-progress and should be resumed where it left off.
 
----
+You will use the `.ralph/assignment.json` file to track the work item that is in progress. If this file does not exist, it means that no work has been done. If this file exists, it means that work MIGHT be in-progress, and you must assess where to pick up work from.
 
-{{TASK_MANAGER_INSTRUCTIONS}}
+## Orchestration Workflow
 
----
+1. Determine if a `.ralph/assignment.json` file exists. And if a `.ralph/assignment.json` file exists, determine if the work is truly in-progress or if it was already completed. Use the current git branch, git history (with the `git-operator` subagent), outstanding PR status, outstanding PR CI pipelines statuses, the task manager work item status (see instructions below), and other contextual clues to determine the current state.
 
-## Workflow Selection Process
+### 2. IFF Work Is In Progress
 
-Follow these steps to select the appropriate workflow from `./.ralph/workflows/` and prepare the assignment.
+If work is in progress, you should:
 
-### Step 1: Gather Context
+2.1. Read the execution workflow stored in `{{execute_path}}` and determine the next logical step for resuming work.
 
-Collect the following information:
+2.2. Write your decision (in detail) to the `.ralph/assignment.json` file in the `next_step` field (overwriting the existing `next_step` value).
 
-1.1. Check the current git branch name
+### 3. IFF Work Is Not In Progress
 
-1.2. Get the project/repository context using the task manager commands above
+If work is not in progress, you should:
 
-1.3. If on `develop` branch (or `main` if no `develop`):
-   - Check for any unmerged PRs targeting the main branch
-   - If PRs exist, check their CI/CD pipeline status
-   - Check the CD pipeline status for the main branch itself
-   - Check for any in-progress tasks using the task manager
+3.1. Use the task manager (see instructions below) to pick the next most important work item to work on.
 
-1.4. If NOT on `develop`/`main` branch (feature/bugfix branch):
-   - Check if a PR exists for this branch
-   - Assess whether work appears complete or incomplete
-   - Find the associated task
+3.2. Set the status of the work item to "in_progress" in the task manager.
 
-### Step 2: Select Workflow
+3.3. Read the execution workflow stored in `{{execute_path}}` and determine the first logical step for starting work.
 
-Use this decision tree to select the appropriate workflow:
-
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                           WORKFLOW SELECTION                                 │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│  Q1: Are you on the `develop` branch?                                       │
-│  │                                                                          │
-│  ├─ NO (on feature/bugfix branch)                                           │
-│  │   │                                                                      │
-│  │   └─ Q2: What is the work status?                                        │
-│  │       │                                                                  │
-│  │       ├─ Incomplete or no PR exists                                      │
-│  │       │   └─► WORKFLOW: 01-feature-branch-incomplete                     │
-│  │       │                                                                  │
-│  │       └─ Complete with unmerged PR                                       │
-│  │           └─► WORKFLOW: 02-feature-branch-pr-ready                       │
-│  │                                                                          │
-│  └─ YES (on develop)                                                        │
-│      │                                                                      │
-│      └─ Q3: Are there unmerged PRs with FAILING pipelines?                  │
-│          │                                                                  │
-│          ├─ YES                                                             │
-│          │   └─► WORKFLOW: 03-pr-pipeline-fix                               │
-│          │                                                                  │
-│          └─ NO (no PRs, or all PRs have passing pipelines)                  │
-│              │                                                              │
-│              └─ Q4: Has the CD pipeline for develop FAILED?                 │
-│                  │                                                          │
-│                  ├─ YES (or still running - wait first)                     │
-│                  │   └─► WORKFLOW: 04-cd-pipeline-fix                       │
-│                  │                                                          │
-│                  └─ NO (CD pipeline passing)                                │
-│                      │                                                      │
-│                      └─ Q5: Are there any tasks with                        │
-│                             status "inprogress"?                            │
-│                          │                                                  │
-│                          ├─ YES                                             │
-│                          │   └─► WORKFLOW: 05-resume-in-progress            │
-│                          │                                                  │
-│                          └─ NO                                              │
-│                              └─► WORKFLOW: 06-new-work                      │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
-
-### Step 3: Identify or Create Task
-
-Based on the selected workflow, identify or create the task to work on.
-
-#### For Workflow 01 (feature-branch-incomplete) or 02 (feature-branch-pr-ready):
-- Find the existing task associated with the current branch
-- Search by listing in-progress tasks or check recent tasks that match the branch name/feature
-- If no task is found, create one with a title derived from the branch name
-
-#### For Workflow 03 (pr-pipeline-fix):
-- Create a new task: "Fix failing CI/CD pipeline for PR #[number]"
-- Set status to in-progress
-
-#### For Workflow 04 (cd-pipeline-fix):
-- Create a new task: "Fix failing CD pipeline for develop branch"
-- Set status to in-progress
-
-#### For Workflow 05 (resume-in-progress):
-- Use the in-progress task found in Step 1
-- This is the highest priority task from the list with status "inprogress"
-
-#### For Workflow 06 (new-work):
-- List available tasks ready to work on (status: todo/open)
-- If there's an existing task ready to work on, use that task and update its status to in-progress
-- If no ready tasks exist, create a new task with a placeholder title (will be updated during planning)
-- Update the task status to in-progress
-
-### Step 4: Write Assignment File (Handoff)
-
-Create the assignment file at `./.ralph/planning/assignment.json`:
-
-1. Ensure the directory exists:
-   ```bash
-   mkdir -p ./.ralph/planning
-   ```
-
-2. Write the JSON file with the following structure:
+3.4. Create (overwriting any existing) the `.ralph/assignment.json` file with the following structure:
+   
    ```json
    {
-     "workflow": ".ralph/workflows/[XX-workflow-name].md",
-     "task_id": "<task-identifier>"
+     "task_id": "<task-identifier>",
+     "next_step": "<next_step>",
+     "pull_request_url": null,
+     "work_log": []
    }
    ```
 
-Once the assignment file is written, your job is complete. EXIT.
-
----
-
-## Quick Reference
-
-| # | Workflow | Trigger Condition | Task Action |
-|---|----------|-------------------|-------------|
-| 01 | feature-branch-incomplete | On feature branch + work incomplete | Find existing or create |
-| 02 | feature-branch-pr-ready | On feature branch + unmerged PR exists | Find existing or create |
-| 03 | pr-pipeline-fix | On develop + PR has failing CI/CD | Create new |
-| 04 | cd-pipeline-fix | On develop + CD pipeline failed | Create new |
-| 05 | resume-in-progress | On develop + has inprogress tasks | Use found task |
-| 06 | new-work | On develop + nothing in progress | Pick from todo or create new |
-
----
-
-## Workflow Decision Diagram
+## Orchestration Workflow Diagram
 
 ```mermaid
 flowchart TD
-    START([Start Orchestration]) --> GATHER[Step 1: Gather Context]
+    A[Start] --> B{Does .ralph/assignment.json exist?}
 
-    GATHER --> Q1{Q1: On develop branch?}
+    B -->|No| C[Work Not In Progress]
+    B -->|Yes| D{Assess work status}
 
-    Q1 -->|No| Q2{Q2: Work status?}
-    Q2 -->|Incomplete/No PR| W1([01-feature-branch-incomplete])
-    Q2 -->|Complete with PR| W2([02-feature-branch-pr-ready])
+    D -->|"Check git branch, history,<br/>PR status, CI pipelines,<br/>task manager status"| E{Is work truly in progress?}
 
-    Q1 -->|Yes| Q3{Q3: Unmerged PRs with<br/>failing pipelines?}
-    Q3 -->|Yes| W3([03-pr-pipeline-fix])
-    Q3 -->|No/Passing| Q4{Q4: CD pipeline failed?}
+    E -->|Yes| F[Work In Progress]
+    E -->|No| C
 
-    Q4 -->|Yes/Running| W4([04-cd-pipeline-fix])
-    Q4 -->|No, passing| Q5{Q5: Any inprogress<br/>tasks?}
+    subgraph WIP ["Work In Progress Path"]
+        F --> G[Read execution workflow<br/>from execute_path]
+        G --> H[Determine next logical step<br/>for resuming work]
+        H --> I[Write decision to<br/>.ralph/assignment.json<br/>next_step field]
+    end
 
-    Q5 -->|Yes| W5([05-resume-in-progress])
-    Q5 -->|No| W6([06-new-work])
+    subgraph NWP ["Work Not In Progress Path"]
+        C --> J[Use task manager to pick<br/>next most important work item]
+        J --> K[Set work item status<br/>to 'in_progress']
+        K --> L[Read execution workflow<br/>from execute_path]
+        L --> M[Determine first logical step<br/>for starting work]
+        M --> N[Create .ralph/assignment.json<br/>with task_id, next_step,<br/>pull_request_url, work_log]
+    end
 
-    W1 --> TASK[Step 3: Identify/Create Task]
-    W2 --> TASK
-    W3 --> TASK
-    W4 --> TASK
-    W5 --> TASK
-    W6 --> TASK
-
-    TASK --> WRITE[Step 4: Write assignment.json]
-    WRITE --> DONE([EXIT])
-
-    style START fill:#e3f2fd,stroke:#1565c0
-    style GATHER fill:#e8f5e9,stroke:#2e7d32
-    style TASK fill:#e1f5fe,stroke:#0288d1
-    style WRITE fill:#fff8e1,stroke:#f9a825
-    style DONE fill:#ffebee,stroke:#c62828
-
-    style W1 fill:#fff3e0,stroke:#e65100
-    style W2 fill:#fff3e0,stroke:#e65100
-    style W3 fill:#fce4ec,stroke:#880e4f
-    style W4 fill:#f3e5f5,stroke:#4a148c
-    style W5 fill:#fff8e1,stroke:#ff8f00
-    style W6 fill:#e8f5e9,stroke:#2e7d32
+    I --> O[End: Ready to Execute]
+    N --> O
 ```
+
+{{!TASK_MANAGER_INSTRUCTIONS}}

@@ -77,7 +77,7 @@ function processTemplate(templatePath, settingsPath) {
   const template = readFileSync(templatePath, 'utf-8');
 
   // Check if template has placeholder
-  if (!template.includes('{{TASK_MANAGER_INSTRUCTIONS}}')) {
+  if (!template.includes('{{!TASK_MANAGER_INSTRUCTIONS}}')) {
     // No placeholder - return template as-is (backwards compatibility)
     return template;
   }
@@ -89,7 +89,7 @@ function processTemplate(templatePath, settingsPath) {
   const providerInstructions = loadProviderInstructions(provider);
 
   // Replace placeholder
-  return template.replace('{{TASK_MANAGER_INSTRUCTIONS}}', providerInstructions);
+  return template.replace('{{!TASK_MANAGER_INSTRUCTIONS}}', providerInstructions);
 }
 
 // Main
