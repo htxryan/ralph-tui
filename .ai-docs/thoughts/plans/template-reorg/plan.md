@@ -2,989 +2,572 @@
 
 **Issue**: [#32 - Reorg templates](https://github.com/htxryan/ralph-tui/issues/32)
 **Branch**: `spike/ralph`
-**Created**: 2025-12-08
+**Status**: Planning
 
 ---
 
-## 1. Executive Summary
+## Executive Summary
 
-This plan addresses the reorganization of Ralph's template and configuration system to support multi-project workflows. The key changes are:
+This plan addresses a significant reorganization of Ralph's template and configuration structure to support a project-based workflow model. The key changes include:
 
-1. **Templates**: Use `.ralph-template/` folder (with projects structure) for `ralph init` instead of flat `templates/`
-2. **Orchestrate prompt**: Move to bundled `prompts/` folder, read at runtime (not copied during init)
-3. **Project selection**: Present users with a project picker when Ralph launches
-4. **Settings merging**: Merge project-specific settings with root `.ralph/settings.json`
+1. Moving bundled prompts out of user-copied templates
+2. Introducing a project selection UI at startup
+3. Restructuring the `.ralph/` directory to support multiple "projects" (execution modes)
+4. Simplifying the assignment.json schema and location
+5. Adding template variable substitution at runtime
 
 ---
 
-## 2. Current State Analysis
+## Current State Analysis
 
-### 2.1 Current Directory Structure
+### Directory Structure (Current)
 
 ```
 ralph-tui/
-├── templates/                    # OLD - currently used by init
-│   ├── orchestrate.md           # Copied to .ralph/orchestrate.md
-│   ├── providers/               # Provider-specific prompts
-│   │   ├── github-issues.md
-│   │   └── vibe-kanban.md
-│   └── workflows/               # MISSING - should exist here based on code
-│
-├── prompts/                      # NEW location for runtime prompts
-│   ├── orchestrate.md           # Already exists here!
-│   └── resume.md
-│
-├── .ralph-template/              # NEW template structure (already created)
-│   ├── settings.json            # Root settings template
-│   └── projects/
-│       ├── develop/
-│       │   ├── settings.json    # Project-specific settings
-│       │   └── workflows/       # Project-specific workflows
-│       │       ├── 01-feature-branch-incomplete.md
-│       │       ├── 02-feature-branch-pr-ready.md
-│       │       └── ...
-│       └── refine/
-│           ├── settings.json
-│           └── workflows/
-│               └── refine-issue.md
-```
-
-### 2.2 Current `ralph init` Behavior
-
-**File**: `src/commands/init.ts`
-
-Current implementation:
-- Loads templates from `templates/` directory in the package
-- Copies `orchestrate.md` to `.ralph/orchestrate.md`
-- Copies workflow files to `.ralph/workflows/`
-- Creates `settings.json` with task management config
-
-**Key functions**:
-- `loadTemplate(templateName)` - Loads from `templates/` directory
-- `getFilesToCreate()` - Returns list of files to create
-- `runInit()` - Main init logic
-
-### 2.3 Current Config Loading
-
-**File**: `src/lib/config.ts`
-
-Current precedence (highest to lowest):
-1. CLI arguments
-2. Local overrides (`.ralph/settings.local.json`)
-3. Project settings (`.ralph/settings.json`)
-4. Global user config (`~/.config/ralph/settings.json`)
-5. Built-in defaults
-
-**Missing**: No project-level (`.ralph/projects/<project>/settings.json`) merging.
-
-### 2.4 Current Workflow Loading
-
-**File**: `src/hooks/use-ralph-process.ts`
-
-Current behavior:
-- Checks for `orchestrate.md` in `.ralph/` directory (user's project)
-- Runs `scripts/ralph.sh` which uses the orchestrate prompt
-- No project-specific workflow loading
-
----
-
-## 3. Target State
-
-### 3.1 Target Directory Structure
-
-After `ralph init`:
-```
-user-project/
-└── .ralph/
-    ├── settings.json            # Root settings (from template)
-    ├── settings.local.json      # User-specific overrides (gitignored)
-    ├── claude_output.jsonl      # Session log (gitignored)
-    ├── claude.lock              # Lock file (gitignored)
-    ├── archive/                 # Archived sessions
-    ├── planning/                # Planning artifacts
-    │   └── assignment.json
-    └── projects/                # Multiple project configurations
+├── templates/
+│   └── providers/                    # Task manager instructions
+│       ├── github-issues.md
+│       └── vibe-kanban.md
+├── prompts/
+│   ├── orchestrate.md                # Main orchestration prompt (exists)
+│   └── resume.md                     # Resume prompt (exists)
+└── .ralph/                           # Example project config (gitignored in prod)
+    ├── settings.json
+    └── projects/
         ├── develop/
-        │   ├── settings.json    # Project-specific settings
-        │   └── workflows/
-        │       └── *.md
+        │   ├── execute.md
+        │   └── settings.json
         └── refine/
-            ├── settings.json
-            └── workflows/
-                └── *.md
+            ├── execute.md
+            └── settings.json
 ```
 
-**Key changes**:
-- `orchestrate.md` is **NOT** in user's `.ralph/` - read from package's `prompts/` at runtime
-- `projects/` folder contains multiple project configurations
-- Each project has its own `settings.json` and `workflows/`
+### Current Issues
 
-### 3.2 New Config Precedence
-
-1. CLI arguments
-2. Local overrides (`.ralph/settings.local.json`)
-3. **Active project settings** (`.ralph/projects/<active>/settings.json`) **← NEW**
-4. Root project settings (`.ralph/settings.json`)
-5. Global user config (`~/.config/ralph/settings.json`)
-6. Built-in defaults
-
-### 3.3 New Workflow Selection
-
-When Ralph launches:
-1. Scan `.ralph/projects/` for available projects
-2. If multiple projects exist, present a selection UI
-3. If only one project, auto-select it (or prompt for confirmation)
-4. Load selected project's workflows and settings
-5. Read `orchestrate.md` from package's `prompts/` directory
+1. **`ralph init` copies orchestrate.md** - This file should be bundled, not copied
+2. **No project selection UI** - Ralph doesn't know which project to use
+3. **Assignment file path** - Currently `.ralph/planning/assignment.json`, should be `.ralph/assignment.json`
+4. **Assignment schema outdated** - Needs `next_step` and `pull_request_url` fields
+5. **No `{{execute_path}}` substitution** - Orchestrate.md references this placeholder but it's never replaced
+6. **Workflow templates removed but init.ts still references them** - The 01-06 workflow files are gone but code expects them
 
 ---
 
-## 4. Implementation Plan
+## Target State
 
-### Phase 1: Template Reorganization
+### Directory Structure (After Implementation)
 
-#### 4.1.1 Remove Old Template Files
-
-**Files to modify/remove**:
-- Delete `templates/orchestrate.md` (already in `prompts/`)
-- Delete `templates/workflows/` (if exists, move to `.ralph-template/`)
-- Keep `templates/providers/` for provider-specific prompt includes
-
-**Rationale**: Consolidate all init templates in `.ralph-template/`, runtime prompts in `prompts/`
-
-#### 4.1.2 Finalize `.ralph-template/` Structure
-
-**Current state**: `.ralph-template/` already exists with projects structure
-
-**Actions**:
-- Verify all workflow files are present in `projects/develop/workflows/`
-- Ensure `projects/refine/workflows/refine-issue.md` has content (currently 0 bytes)
-- Add any missing files from old `templates/workflows/` location
-
-**Files to verify**:
 ```
-.ralph-template/
-├── settings.json                            ✅ Exists
-└── projects/
+ralph-tui/
+├── .ralph-templates/                 # SOURCE for ralph init (bundled)
+│   ├── settings.json                 # Template settings
+│   └── projects/
+│       └── default/                  # Example project
+│           ├── execute.md
+│           └── settings.json
+├── prompts/                          # Bundled prompts (read at runtime, NOT copied)
+│   ├── orchestrate.md
+│   └── resume.md
+├── templates/
+│   └── providers/                    # Task manager instructions (unchanged)
+│       ├── github-issues.md
+│       └── vibe-kanban.md
+└── package.json                      # files: [..., ".ralph-templates"]
+```
+
+### User's `.ralph/` Structure (After `ralph init`)
+
+```
+.ralph/
+├── settings.json                     # Root configuration
+├── settings.local.json               # Local overrides (gitignored)
+├── assignment.json                   # Current task assignment (NEW LOCATION)
+├── claude_output.jsonl               # Session logs
+├── claude.lock                       # Lock file
+├── archive/                          # Archived sessions
+└── projects/                         # Project configurations
     ├── develop/
-    │   ├── settings.json                    ✅ Exists
-    │   └── workflows/
-    │       ├── 01-feature-branch-incomplete.md  ✅ Exists
-    │       ├── 02-feature-branch-pr-ready.md    ✅ Exists
-    │       ├── 03-pr-pipeline-fix.md            ✅ Exists
-    │       ├── 04-cd-pipeline-fix.md            ✅ Exists
-    │       ├── 05-resume-in-progress.md         ✅ Exists
-    │       └── 06-new-work.md                   ✅ Exists
+    │   ├── execute.md               # Execution workflow
+    │   ├── settings.json            # Project-specific settings
+    │   └── settings.local.json      # Project-specific local overrides
     └── refine/
-        ├── settings.json                    ✅ Exists
-        └── workflows/
-            └── refine-issue.md              ⚠️ Empty (0 bytes)
+        ├── execute.md
+        ├── settings.json
+        └── settings.local.json
 ```
 
-#### 4.1.3 Update `package.json` Files Array
+### New Assignment Schema
 
-**File**: `package.json`
-
-**Current**:
 ```json
-"files": [
-  "dist",
-  "prompts",
-  "scripts",
-  "templates",
-  "README.md",
-  "LICENSE"
-]
-```
-
-**Target**:
-```json
-"files": [
-  "dist",
-  "prompts",
-  "scripts",
-  "templates",        // Keep for providers/
-  ".ralph-template",  // ADD for init
-  "README.md",
-  "LICENSE"
-]
-```
-
----
-
-### Phase 2: Update `ralph init` Command
-
-#### 4.2.1 Modify Template Loading
-
-**File**: `src/commands/init.ts`
-
-**Changes**:
-
-1. **New function**: `copyTemplateDirectory()`
-   ```typescript
-   /**
-    * Recursively copy the .ralph-template directory to user's .ralph/
-    * Preserves directory structure and file contents
-    */
-   function copyTemplateDirectory(
-     sourceDir: string,
-     destDir: string,
-     options: { force?: boolean; dryRun?: boolean }
-   ): { created: string[]; skipped: string[] }
-   ```
-
-2. **Update `getFilesToCreate()`**:
-   - Remove orchestrate.md from the list (no longer copied)
-   - Change workflow source from `templates/workflows/` to `.ralph-template/projects/develop/workflows/`
-   - Actually, replace this function entirely with `copyTemplateDirectory()` logic
-
-3. **Update `runInit()`**:
-   - Use `.ralph-template/` as source instead of individual template files
-   - Skip `orchestrate.md` entirely (read from `prompts/` at runtime)
-   - Copy entire `projects/` structure
-
-4. **Add `getTemplateDir()` function**:
-   ```typescript
-   function getTemplateDir(): string {
-     return path.join(PACKAGE_ROOT, '.ralph-template');
-   }
-   ```
-
-#### 4.2.2 Update Init Output Messages
-
-**Changes**:
-- Update "Next steps" to reference projects instead of orchestrate.md
-- Add note about project selection
-- Update file list to reflect new structure
-
-**Example output**:
-```
-Initializing Ralph in /path/to/project
-
-Created:
-  .ralph/settings.json
-  .ralph/projects/develop/settings.json
-  .ralph/projects/develop/workflows/01-feature-branch-incomplete.md
-  .ralph/projects/develop/workflows/02-feature-branch-pr-ready.md
-  ...
-  .ralph/projects/refine/settings.json
-  .ralph/projects/refine/workflows/refine-issue.md
-
-Suggested .gitignore additions:
-  .ralph/settings.local.json
-  .ralph/claude_output.jsonl
-  .ralph/claude.lock
-
-Next steps:
-  1. Review projects in .ralph/projects/
-  2. Customize workflows for your project's needs
-  3. Add the suggested entries to your .gitignore
-  4. Run `ralph` to start monitoring
-
-Ralph initialized successfully!
-```
-
----
-
-### Phase 3: Orchestrate Prompt Runtime Loading
-
-#### 4.3.1 Update `use-ralph-process.ts`
-
-**File**: `src/hooks/use-ralph-process.ts`
-
-**Current behavior**:
-```typescript
-const orchestratePath = path.join(userDataDir, 'orchestrate.md');
-if (!fs.existsSync(orchestratePath)) {
-  setError(new Error(`Orchestration prompt not found: ${orchestratePath}`));
-  // ...
+{
+  "task_id": "<task-identifier>",
+  "next_step": "<next_step>",
+  "pull_request_url": null
 }
 ```
 
-**New behavior**:
-```typescript
-// Get orchestrate.md from package's prompts/ directory, not user's .ralph/
-const packagePromptsDir = path.join(packageDir, 'prompts');
-const orchestratePath = path.join(packagePromptsDir, 'orchestrate.md');
-if (!fs.existsSync(orchestratePath)) {
-  setError(new Error(`Orchestration prompt not found in package: ${orchestratePath}`));
-  // ...
+---
+
+## Implementation Tasks
+
+### Phase 1: Template Structure Reorganization
+
+#### 1.1 Create `.ralph-templates/` Directory
+
+**Files to create:**
+- `.ralph-templates/settings.json` - Template with default task management config
+- `.ralph-templates/projects/default/execute.md` - Example execution workflow
+- `.ralph-templates/projects/default/settings.json` - Example project settings
+
+**Actions:**
+1. Create `.ralph-templates/` directory structure
+2. Create template files with placeholder content
+3. Add `.ralph-templates` to package.json `files` array
+
+#### 1.2 Update `init.ts` Command
+
+**File:** `src/commands/init.ts`
+
+**Changes:**
+1. Change template source from `templates/` to `.ralph-templates/`
+2. Remove orchestrate.md from files to copy (it's bundled)
+3. Remove workflow files from files to copy (replaced by projects)
+4. Update `loadTemplate()` to use new path
+5. Add new helper `getTemplatesDir()` to return `.ralph-templates` path
+6. Update `getFilesToCreate()` to copy the new structure:
+   - `.ralph/settings.json`
+   - `.ralph/projects/default/execute.md`
+   - `.ralph/projects/default/settings.json`
+
+#### 1.3 Update Package Bundling
+
+**File:** `package.json`
+
+**Changes:**
+```json
+{
+  "files": [
+    "dist",
+    "prompts",
+    "scripts",
+    "templates",
+    ".ralph-templates",  // NEW
+    "README.md",
+    "LICENSE"
+  ]
 }
 ```
 
-#### 4.3.2 Update `scripts/ralph.sh`
-
-**File**: `scripts/ralph.sh`
-
-The script needs to read `orchestrate.md` from the package's `prompts/` directory, not the user's `.ralph/` directory.
-
-**Changes**:
-- Add `RALPH_PACKAGE_DIR` environment variable (set by the hook)
-- Update orchestrate path: `$RALPH_PACKAGE_DIR/prompts/orchestrate.md`
-- Keep workflow paths pointing to user's `.ralph/projects/<active>/workflows/`
-
-#### 4.3.3 Update `scripts/sync2.sh` (if used)
-
-Similar changes to read orchestrate.md from package prompts directory.
-
 ---
 
-### Phase 4: Project Selection UI
+### Phase 2: Project Selection UI
 
-#### 4.4.1 Create Project Picker Component
+#### 2.1 Create Project Picker Component
 
-**New file**: `src/components/project-picker.tsx`
+**File:** `src/components/project-picker.tsx` (NEW)
 
+**Features:**
+1. List available projects from `.ralph/projects/`
+2. Display project name and description (from settings or execute.md header)
+3. Allow keyboard navigation (↑/↓, Enter to select)
+4. Handle case when no projects exist (prompt to run `ralph init`)
+5. Visual design similar to `SessionPicker` component
+
+**Props:**
 ```typescript
 interface ProjectPickerProps {
   projects: ProjectInfo[];
-  onSelect: (project: ProjectInfo) => void;
+  onSelectProject: (project: ProjectInfo) => void;
   onClose: () => void;
   width?: number;
   maxHeight?: number;
 }
 
 interface ProjectInfo {
-  name: string;           // e.g., "develop", "refine"
-  path: string;           // Full path to project directory
-  hasSettings: boolean;   // Whether settings.json exists
-  workflowCount: number;  // Number of workflow files
+  name: string;           // Directory name (e.g., "develop")
+  path: string;           // Full path to project dir
+  displayName?: string;   // Human-readable name from settings
+  description?: string;   // Description from settings
 }
 ```
 
-**Component features**:
-- List available projects from `.ralph/projects/`
-- Show project name, workflow count
-- Keyboard navigation (up/down arrows)
-- Enter to select, Escape to cancel
-- Similar styling to existing `SessionPicker` component
+#### 2.2 Create `useProjects` Hook
 
-#### 4.4.2 Create `useProjectSelection` Hook
+**File:** `src/hooks/use-projects.ts` (NEW)
 
-**New file**: `src/hooks/use-project-selection.ts`
+**Features:**
+1. Scan `.ralph/projects/` directory for project subdirectories
+2. Load each project's `settings.json` to get display metadata
+3. Watch for changes to project directory
+4. Return list of available projects
 
+**Interface:**
 ```typescript
-interface UseProjectSelectionResult {
+interface UseProjectsResult {
   projects: ProjectInfo[];
-  activeProject: ProjectInfo | null;
   isLoading: boolean;
   error: Error | null;
-  selectProject: (project: ProjectInfo) => void;
   refresh: () => void;
 }
-
-export function useProjectSelection(options?: {
-  basePath?: string;
-  autoSelect?: boolean;  // Auto-select if only one project
-}): UseProjectSelectionResult
 ```
 
-**Features**:
-- Scan `.ralph/projects/` for available projects
-- Track currently active project
-- Persist active project selection (in `.ralph/active-project` or similar)
-- Load project-specific config when selected
+#### 2.3 Add Project State to App
 
-#### 4.4.3 Integrate Project Selection into App Launch
+**File:** `src/app.tsx`
 
-**File**: `src/app.tsx`
+**Changes:**
+1. Add `activeProject: ProjectInfo | null` state
+2. Show `ProjectPicker` on startup when no project is active
+3. Pass active project to header for display
+4. Store selected project in session (localStorage or file)
+5. Add ability to switch projects (new shortcut key)
 
-**Changes**:
+#### 2.4 Update Header Component
 
-1. Add state for project selection:
-   ```typescript
-   const [activeProject, setActiveProject] = useState<ProjectInfo | null>(null);
-   const [isProjectPickerOpen, setIsProjectPickerOpen] = useState(false);
-   ```
+**File:** `src/components/header.tsx`
 
-2. Add project selection logic on mount:
-   ```typescript
-   useEffect(() => {
-     const projects = scanProjects(projectRoot);
-     if (projects.length === 0) {
-       // No projects - show error or prompt to init
-     } else if (projects.length === 1) {
-       // Single project - auto-select
-       setActiveProject(projects[0]);
-     } else {
-       // Multiple projects - show picker
-       setIsProjectPickerOpen(true);
-     }
-   }, [projectRoot]);
-   ```
-
-3. Block main UI until project is selected:
-   ```typescript
-   if (!activeProject) {
-     return <ProjectPicker ... />;
-   }
-   ```
-
-4. Add keyboard shortcut (e.g., 'P') to switch projects during session
-
-#### 4.4.4 Pass Active Project to Process Hook
-
-**Changes**:
-- Update `useRalphProcess` to accept active project
-- Update workflow paths to use active project's workflows
-- Update config merging to include active project's settings
+**Changes:**
+1. Display active project name
+2. Show project-specific label filter if configured
 
 ---
 
-### Phase 5: Settings Merging with Projects
+### Phase 3: Configuration Merging
 
-#### 4.5.1 Update Config Loading
+#### 3.1 Update Config Loading System
 
-**File**: `src/lib/config.ts`
+**File:** `src/lib/config.ts`
 
-**Add new function**:
+**Changes:**
+1. Add `loadProjectConfig(projectPath: string)` function
+2. Implement config merging order:
+   1. Built-in defaults
+   2. Global user config
+   3. Project settings (`.ralph/settings.json`)
+   4. Project local settings (`.ralph/settings.local.json`)
+   5. Active project settings (`.ralph/projects/<name>/settings.json`)
+   6. Active project local settings (`.ralph/projects/<name>/settings.local.json`)
+   7. CLI arguments
+3. Add support for `variables` field in settings (for template substitution)
+
+**New Types:**
 ```typescript
-/**
- * Get the path to the active project settings file
- */
-export function getProjectConfigPath(
-  projectRoot: string,
-  projectName: string
-): string {
-  return path.join(projectRoot, '.ralph', 'projects', projectName, 'settings.json');
+interface ProjectConfig {
+  taskManagement?: Partial<TaskManagementConfig>;
+  variables?: Record<string, string>;  // NEW: Template variables
+  displayName?: string;                 // Human-readable project name
+  description?: string;                 // Project description
 }
 ```
 
-**Update `getConfig()`**:
-```typescript
-export function getConfig(
-  projectRoot: string,
-  cliOptions: CLIOptions = {},
-  activeProject?: string  // NEW parameter
-): GetConfigResult {
-  // ... existing loading ...
+#### 3.2 Add Template Variable Substitution
 
-  // NEW: Load active project config
-  let projectConfigResult: ConfigLoadResult = { loaded: false, config: {}, path: '' };
-  if (activeProject) {
-    projectConfigResult = loadConfigFile(getProjectConfigPath(projectRoot, activeProject));
-    if (projectConfigResult.error) {
-      warnings.push(`Failed to parse project config (${projectConfigResult.path}): ${projectConfigResult.error}`);
-    }
-  }
+**File:** `src/lib/template.ts` (NEW)
 
-  // Updated merge order:
-  // 1. Defaults
-  let merged: RalphConfig = { ...DEFAULT_CONFIG };
-  // 2. Global config
-  if (globalResult.loaded && !globalResult.error) {
-    merged = deepMerge(merged, globalResult.config);
-  }
-  // 3. Root project config
-  if (projectResult.loaded && !projectResult.error) {
-    merged = deepMerge(merged, projectResult.config);
-  }
-  // 4. Active project config (NEW)
-  if (projectConfigResult.loaded && !projectConfigResult.error) {
-    merged = deepMerge(merged, projectConfigResult.config);
-  }
-  // 5. Local overrides
-  if (localResult.loaded && !localResult.error) {
-    merged = deepMerge(merged, localResult.config);
-  }
-  // 6. CLI options
-  merged = deepMerge(merged, cliConfig);
-
-  // ...
-}
-```
-
-#### 4.5.2 Update CLI to Pass Active Project
-
-**File**: `src/cli.tsx`
-
-**Changes**:
-- Read active project from persisted state or environment variable
-- Pass active project to `loadConfig()`
-- Handle case where no project is selected (defer to TUI selection)
+**Features:**
+1. `substituteVariables(template: string, variables: Record<string, string>): string`
+2. Replace `{{variable_name}}` patterns with values from config
+3. Handle missing variables (log warning, leave placeholder)
+4. Special variable `{{execute_path}}` resolves to active project's execute.md path
 
 ---
 
-### Phase 6: Workflow Loading Updates
+### Phase 4: Assignment File Changes
 
-#### 4.6.1 Update Workflow Path Resolution
+#### 4.1 Update Assignment Type
 
-**New file**: `src/lib/project.ts`
+**File:** `src/lib/types.ts`
 
-```typescript
-/**
- * Get available projects from the .ralph/projects directory
- */
-export function getAvailableProjects(projectRoot: string): ProjectInfo[] {
-  const projectsDir = path.join(projectRoot, '.ralph', 'projects');
-  if (!fs.existsSync(projectsDir)) {
-    return [];
-  }
-
-  const entries = fs.readdirSync(projectsDir, { withFileTypes: true });
-  return entries
-    .filter(entry => entry.isDirectory())
-    .map(entry => ({
-      name: entry.name,
-      path: path.join(projectsDir, entry.name),
-      hasSettings: fs.existsSync(path.join(projectsDir, entry.name, 'settings.json')),
-      workflowCount: countWorkflows(path.join(projectsDir, entry.name, 'workflows')),
-    }));
-}
-
-/**
- * Get the workflows directory for the active project
- */
-export function getWorkflowsDir(projectRoot: string, projectName: string): string {
-  return path.join(projectRoot, '.ralph', 'projects', projectName, 'workflows');
-}
-
-/**
- * Get the orchestrate prompt from the package
- */
-export function getOrchestratePromptPath(): string {
-  // Returns path within the installed package, not user's directory
-  const packageDir = getPackageDir();
-  return path.join(packageDir, 'prompts', 'orchestrate.md');
-}
-```
-
-#### 4.6.2 Update Script Environment Variables
-
-When Ralph starts a process, pass these environment variables:
-- `RALPH_PROJECT_DIR` - User's project root (existing)
-- `RALPH_PACKAGE_DIR` - Package installation directory (NEW)
-- `RALPH_ACTIVE_PROJECT` - Name of active project (NEW)
-- `RALPH_WORKFLOWS_DIR` - Path to active project's workflows (NEW)
-
----
-
-## 5. Test Updates
-
-### 5.1 Unit Tests
-
-#### 5.1.1 `src/commands/init.test.ts`
-
-**Changes**:
-- Update tests to expect new `.ralph/projects/` structure
-- Remove tests for `orchestrate.md` creation (no longer created)
-- Add tests for recursive directory copying
-- Update file count expectations
-
-**New tests to add**:
-```typescript
-describe('project structure', () => {
-  it('creates projects directory with develop project', () => {
-    const result = runInit(tempDir);
-    expect(fs.existsSync(path.join(tempDir, '.ralph/projects/develop'))).toBe(true);
-    expect(fs.existsSync(path.join(tempDir, '.ralph/projects/develop/settings.json'))).toBe(true);
-    expect(fs.existsSync(path.join(tempDir, '.ralph/projects/develop/workflows'))).toBe(true);
-  });
-
-  it('creates projects directory with refine project', () => {
-    const result = runInit(tempDir);
-    expect(fs.existsSync(path.join(tempDir, '.ralph/projects/refine'))).toBe(true);
-  });
-
-  it('does not create orchestrate.md in user directory', () => {
-    runInit(tempDir);
-    expect(fs.existsSync(path.join(tempDir, '.ralph/orchestrate.md'))).toBe(false);
-  });
-});
-```
-
-**Tests to update**:
+**Changes:**
 ```typescript
 // OLD
-it('creates orchestrate.md with content', () => {
-  runInit(tempDir);
-  const filePath = path.join(tempDir, '.ralph/orchestrate.md');
-  expect(fs.existsSync(filePath)).toBe(true);
-});
+export interface Assignment {
+  workflow?: string;
+  task_id?: string;
+}
 
-// REMOVE - no longer applicable
+// NEW
+export interface Assignment {
+  task_id: string;
+  next_step: string;
+  pull_request_url: string | null;
+}
 ```
 
-#### 5.1.2 `src/lib/config.test.ts`
+#### 4.2 Update Assignment Hook
 
-**New tests to add**:
-```typescript
-describe('project config loading', () => {
-  it('merges active project settings with root settings', () => {
-    // Setup root settings
-    writeConfigFile(getProjectConfigPath(projectRoot), {
-      taskManagement: { provider: 'github-issues' }
-    });
+**File:** `src/hooks/use-assignment.ts`
 
-    // Setup project settings
-    fs.mkdirSync(path.join(projectRoot, '.ralph/projects/develop'), { recursive: true });
-    writeConfigFile(
-      path.join(projectRoot, '.ralph/projects/develop/settings.json'),
-      { taskManagement: { providerConfig: { labelFilter: 'dev' } } }
-    );
+**Changes:**
+1. Change path from `.ralph/planning/assignment.json` to `.ralph/assignment.json`
+2. Update parsing to handle new schema
+3. Add backwards compatibility for old schema during transition
 
-    const result = getConfig(projectRoot, {}, 'develop');
+#### 4.3 Update sync2.sh
 
-    expect(result.config.taskManagement.provider).toBe('github-issues');
-    expect(result.config.taskManagement.providerConfig?.labelFilter).toBe('dev');
-  });
+**File:** `scripts/sync2.sh`
 
-  it('project settings override root settings', () => {
-    // ... test that project-level settings take precedence
-  });
-});
-```
+**Changes:**
+1. Update `ASSIGNMENT_FILE` from `.ralph/planning/assignment.json` to `.ralph/assignment.json`
+2. Update validation logic for new schema
+3. Remove `workflow` field validation, add `next_step` validation
 
-#### 5.1.3 New: `src/lib/project.test.ts`
+#### 4.4 Update orchestrate.md Schema Reference
 
-**New test file** for project scanning and management:
-```typescript
-describe('project utilities', () => {
-  describe('getAvailableProjects', () => {
-    it('returns empty array when no projects directory', () => {});
-    it('returns all project directories', () => {});
-    it('includes workflow count for each project', () => {});
-    it('detects settings.json presence', () => {});
-  });
+**File:** `prompts/orchestrate.md`
 
-  describe('getWorkflowsDir', () => {
-    it('returns correct path for project', () => {});
-  });
-
-  describe('getOrchestratePromptPath', () => {
-    it('returns path within package, not user directory', () => {});
-  });
-});
-```
-
-### 5.2 Integration Tests
-
-#### 5.2.1 `src/test/e2e/workflows.test.tsx`
-
-**Changes**:
-- Update mocks to reflect new directory structure
-- Add tests for project selection flow
-- Update init workflow tests
-
-**New tests to add**:
-```typescript
-describe('Project Selection Workflow', () => {
-  it('shows project picker when multiple projects exist', () => {
-    // Mock multiple projects in .ralph/projects/
-    // Verify picker is displayed
-  });
-
-  it('auto-selects when only one project exists', () => {
-    // Mock single project
-    // Verify no picker, project is auto-selected
-  });
-
-  it('loads correct workflows after project selection', () => {
-    // Select a project
-    // Verify its workflows are used
-  });
-
-  it('applies project settings after selection', () => {
-    // Select project with specific settings
-    // Verify settings are merged
-  });
-});
-```
-
-### 5.3 Component Tests
-
-#### 5.3.1 New: `src/components/project-picker.test.tsx`
-
-```typescript
-describe('ProjectPicker', () => {
-  it('renders list of projects', () => {});
-  it('highlights selected project', () => {});
-  it('navigates with arrow keys', () => {});
-  it('selects project on Enter', () => {});
-  it('closes on Escape', () => {});
-  it('shows workflow count for each project', () => {});
-});
-```
-
-#### 5.3.2 New: `src/hooks/use-project-selection.test.ts`
-
-```typescript
-describe('useProjectSelection', () => {
-  it('scans for available projects', () => {});
-  it('auto-selects when only one project', () => {});
-  it('persists selected project', () => {});
-  it('loads project after selection', () => {});
-});
-```
+**Changes:**
+1. Update the documented schema in the prompt
+2. Change path reference from `.ralph/planning/assignment.json` to `.ralph/assignment.json`
+3. Ensure `{{execute_path}}` placeholder is documented and explained
 
 ---
 
-## 6. Documentation Updates
+### Phase 5: Script Updates
 
-### 6.1 `docs/commands/init.md`
+#### 5.1 Update sync2.sh for Project Support
 
-**Changes**:
+**File:** `scripts/sync2.sh`
+
+**Changes:**
+1. Accept `RALPH_PROJECT` environment variable to specify active project
+2. Load orchestrate.md from package's `prompts/` directory (not `.ralph/`)
+3. Add `{{execute_path}}` substitution before running orchestrate.md
+4. Merge project-specific settings
+
+**Flow:**
+```
+1. Read RALPH_PROJECT env var or .ralph/active-project file
+2. Load prompts/orchestrate.md from package
+3. Substitute {{execute_path}} with .ralph/projects/<project>/execute.md
+4. Inject task manager instructions (existing logic)
+5. Run orchestration
+```
+
+#### 5.2 Update process-prompt.js
+
+**File:** `scripts/process-prompt.js`
+
+**Changes:**
+1. Add parameter for active project path
+2. Load project-specific settings and merge with root settings
+3. Add template variable substitution (beyond just task manager instructions)
+4. Handle `{{execute_path}}` substitution
+
+---
+
+### Phase 6: TUI Integration
+
+#### 6.1 Update Start Screen
+
+**File:** `src/components/start-screen.tsx`
+
+**Changes:**
+1. Show active project name if one is selected
+2. Add hint for project switching shortcut
+3. Consider: Show project picker instead of start screen when no project is active
+
+#### 6.2 Add Keyboard Shortcut for Project Switching
+
+**File:** `src/app.tsx`
+
+**Changes:**
+1. Add 'j' key handler (or similar) to open project picker
+2. When project changes, update state and reload configuration
+3. Show project name in footer shortcuts
+
+#### 6.3 Update useRalphProcess Hook
+
+**File:** `src/hooks/use-ralph-process.ts`
+
+**Changes:**
+1. Pass active project to ralph.sh via environment variable
+2. Ensure `RALPH_PROJECT` env var is set when spawning process
+
+---
+
+## Testing Requirements
+
+### Unit Tests
+
+#### 1. init.ts Tests (`src/commands/init.test.ts`)
+
+**Update existing tests:**
+- Test that `.ralph-templates/` is used as source
+- Test that `orchestrate.md` is NOT copied
+- Test that `projects/default/` structure is created
+- Test that old workflow files are NOT created
+
+**Add new tests:**
+- Test project directory creation
+- Test template variable handling in copied files
+
+#### 2. config.ts Tests (`src/lib/config.test.ts`)
+
+**Add new tests:**
+- Test project config loading
+- Test config merging order with project settings
+- Test `variables` field handling
+- Test missing project config gracefully handled
+
+#### 3. Template Tests (`src/lib/template.test.ts`) (NEW)
+
+**New test file:**
+- Test basic variable substitution
+- Test `{{execute_path}}` special variable
+- Test missing variable handling
+- Test nested/escaped braces
+
+#### 4. use-assignment.ts Tests
+
+**Update existing tests:**
+- Test new file path (`.ralph/assignment.json`)
+- Test new schema validation
+- Test backwards compatibility with old schema
+
+#### 5. use-projects.ts Tests (NEW)
+
+**New test file:**
+- Test project discovery from directory
+- Test project metadata loading
+- Test empty projects directory
+- Test invalid project structures
+
+### Integration Tests
+
+#### 1. Project Selection Flow (`src/test/integration.test.tsx`)
+
+**Add new tests:**
+- Test project picker appears on startup when no project active
+- Test project selection persists across sessions
+- Test configuration merging with active project
+- Test assignment file is read from new location
+
+#### 2. sync2.sh Integration
+
+**Add new tests (shell or e2e):**
+- Test `RALPH_PROJECT` environment variable is respected
+- Test `{{execute_path}}` substitution works
+- Test orchestrate.md is read from package, not .ralph/
+
+### E2E Tests
+
+#### 1. Full Workflow Test (`src/test/e2e/workflows.test.tsx`)
+
+**Update/add tests:**
+- Test starting Ralph with project selection
+- Test switching projects mid-session
+- Test assignment.json is created in new location with new schema
+
+---
+
+## Documentation Updates
+
+### 1. docs/commands/init.md
+
+**Changes:**
 - Update "What Gets Created" section to show new structure
-- Remove `orchestrate.md` from file list
-- Add `projects/` directory explanation
-- Update examples and output samples
-- Add section on project structure
+- Remove references to workflow files
+- Add section about projects directory
+- Update examples
 
-**New sections to add**:
-```markdown
-### Projects
+### 2. docs/configuration.md
 
-Ralph supports multiple project configurations within a single repository.
-Each project has its own workflows and settings.
+**Changes:**
+- Add section about project-specific configuration
+- Document `variables` field
+- Update paths configuration section
+- Add project config merging explanation
 
-Default projects created by `ralph init`:
-- **develop** - Standard development workflows (feature branches, PRs, pipelines)
-- **refine** - Issue refinement workflows
+### 3. docs/workflows.md
 
-You can create additional projects by adding directories to `.ralph/projects/`.
-```
+**Changes:**
+- Rename or deprecate this doc (workflows replaced by projects)
+- OR: Update to describe the new project/execute.md structure
+- Explain how execute.md relates to the old workflow concept
 
-### 6.2 `docs/configuration.md`
+### 4. AGENTS.md
 
-**Changes**:
-- Add section on project-level settings
-- Update precedence documentation
-- Add examples of project settings overrides
-
-**New sections**:
-```markdown
-## Project-Level Settings
-
-Each project in `.ralph/projects/<name>/` can have its own `settings.json`
-that overrides root settings.
-
-### Precedence (highest to lowest)
-1. CLI arguments
-2. `.ralph/settings.local.json`
-3. `.ralph/projects/<active>/settings.json`  ← NEW
-4. `.ralph/settings.json`
-5. Global user config
-6. Built-in defaults
-
-### Example: Different label filters per project
-
-Root settings (`.ralph/settings.json`):
-```json
-{
-  "taskManagement": {
-    "provider": "github-issues"
-  }
-}
-```
-
-Develop project (`.ralph/projects/develop/settings.json`):
-```json
-{
-  "taskManagement": {
-    "providerConfig": {
-      "labelFilter": "ralph-dev"
-    }
-  }
-}
-```
-
-Refine project (`.ralph/projects/refine/settings.json`):
-```json
-{
-  "taskManagement": {
-    "providerConfig": {
-      "labelFilter": "ralph-refine"
-    }
-  }
-}
-```
-```
-
-### 6.3 `docs/workflows.md`
-
-**Changes**:
-- Update path references from `.ralph/workflows/` to `.ralph/projects/<project>/workflows/`
-- Add section on project-specific workflows
-- Explain how orchestrate.md is now bundled (not user-editable)
-
-### 6.4 `AGENTS.md`
-
-**Changes**:
+**Changes:**
 - Update Repository Structure section
-- Update `.ralph/` directory description
+- Update architecture description
 - Add note about project selection
 
-### 6.5 `README.md`
+### 5. README.md
 
-**Changes** (if applicable):
-- Update quick start to mention project selection
-- Update directory structure diagram
-
----
-
-## 7. Migration Considerations
-
-### 7.1 Existing Users
-
-Users who have already run `ralph init` will have the old structure:
-```
-.ralph/
-├── settings.json
-├── orchestrate.md        # Will be ignored
-└── workflows/            # Will be ignored
-```
-
-**Migration path**:
-1. Run `ralph init --force` to get new structure
-2. Or manually create `projects/` directory and move workflows
-
-**Recommendation**: Add a migration check/warning:
-```typescript
-// In cli.tsx or app.tsx
-if (fs.existsSync(path.join(projectRoot, '.ralph/workflows'))) {
-  console.warn('Warning: Old .ralph structure detected. Run `ralph init --force` to migrate.');
-}
-```
-
-### 7.2 Backwards Compatibility
-
-For a transitional period, consider:
-- If `.ralph/projects/` doesn't exist but `.ralph/workflows/` does, use legacy mode
-- Show deprecation warning encouraging migration
-- Eventually remove legacy support in a major version
+**Changes:**
+- Update quick start to include project selection
+- Update examples
 
 ---
 
-## 8. Implementation Order
+## Migration Guide
 
-### Recommended Sequence
+### For Existing Users
 
-1. **Phase 1**: Template Reorganization
-   - Verify `.ralph-template/` contents
-   - Update `package.json` files array
-   - Remove old template references
+1. **Manual migration required:**
+   - Move assignment.json: `mv .ralph/planning/assignment.json .ralph/assignment.json`
+   - Create projects directory structure
+   - Convert existing workflows to execute.md format
 
-2. **Phase 2**: Update `ralph init`
-   - Implement new template copying logic
-   - Update output messages
-   - Update tests
+2. **Backwards compatibility:**
+   - Old assignment.json location will be checked as fallback for 2 versions
+   - Old schema fields will be accepted with deprecation warning
 
-3. **Phase 3**: Orchestrate Runtime Loading
-   - Update `use-ralph-process.ts`
-   - Update shell scripts
-   - Test runtime loading
+### Breaking Changes
 
-4. **Phase 4**: Project Selection UI
-   - Create `ProjectPicker` component
-   - Create `useProjectSelection` hook
-   - Integrate into `App` component
-   - Add tests
-
-5. **Phase 5**: Settings Merging
-   - Update config loading
-   - Pass active project through
-   - Update tests
-
-6. **Phase 6**: Documentation
-   - Update all doc files
-   - Add migration notes
-
-### Dependencies
-
-```
-Phase 1 ─────┐
-             ├──→ Phase 2 ──→ Phase 3 ──┐
-Phase 4 ─────┘                          ├──→ Phase 6
-                                        │
-Phase 5 ────────────────────────────────┘
-```
-
-Phases 1, 4 can run in parallel.
-Phases 2, 3 depend on Phase 1.
-Phase 6 depends on all others.
+1. `ralph init` creates different structure (projects instead of workflows)
+2. Assignment file location changed
+3. Assignment schema changed
+4. `orchestrate.md` no longer copied to `.ralph/`
+5. Project selection required at startup
 
 ---
 
-## 9. Risks and Mitigations
+## Implementation Order
+
+### Sprint 1: Core Infrastructure
+1. Phase 1: Template Structure Reorganization
+2. Phase 4: Assignment File Changes
+3. Update tests for above changes
+
+### Sprint 2: Project System
+1. Phase 2: Project Selection UI
+2. Phase 3: Configuration Merging
+3. Update tests for above changes
+
+### Sprint 3: Script Integration
+1. Phase 5: Script Updates
+2. Phase 6: TUI Integration
+3. E2E testing
+
+### Sprint 4: Documentation & Polish
+1. Documentation updates
+2. Migration guide
+3. Final testing pass
+
+---
+
+## Risks & Mitigations
 
 | Risk | Impact | Mitigation |
 |------|--------|------------|
-| Breaking existing installations | High | Add migration warning, support legacy mode temporarily |
-| Shell script path issues | Medium | Use environment variables, test on multiple platforms |
-| Project picker UX confusion | Low | Auto-select single project, clear UI messaging |
-| Settings merge conflicts | Low | Document precedence clearly, add debug logging |
+| Breaking existing user setups | High | Provide migration guide, backwards compat for 2 versions |
+| Bundled prompts not found at runtime | High | Test npm pack/install flow thoroughly |
+| Config merging order confusion | Medium | Clear documentation, debug logging |
+| Project picker UX issues | Medium | User testing, simple keyboard nav |
+| sync2.sh integration bugs | High | Extensive shell script testing |
 
 ---
 
-## 10. Acceptance Criteria
+## Success Criteria
 
-- [ ] `ralph init` creates `.ralph/projects/` structure with develop and refine projects
-- [ ] `ralph init` does NOT create `orchestrate.md` in user's directory
-- [ ] Running `ralph` prompts for project selection when multiple projects exist
-- [ ] Running `ralph` auto-selects when only one project exists
-- [ ] Selected project's settings are merged with root settings
-- [ ] Selected project's workflows are used by the orchestration
-- [ ] `orchestrate.md` is read from package's `prompts/` directory at runtime
-- [ ] All existing tests pass with updates
-- [ ] New tests cover project selection and settings merging
-- [ ] Documentation is updated to reflect new structure
-- [ ] Package includes `.ralph-template/` in distribution
-
----
-
-## 11. Files to Create/Modify Summary
-
-### New Files
-- `src/components/project-picker.tsx`
-- `src/hooks/use-project-selection.ts`
-- `src/lib/project.ts`
-- `src/lib/project.test.ts`
-- `src/components/project-picker.test.tsx`
-- `src/hooks/use-project-selection.test.ts`
-
-### Modified Files
-- `src/commands/init.ts`
-- `src/commands/init.test.ts`
-- `src/lib/config.ts`
-- `src/lib/config.test.ts`
-- `src/hooks/use-ralph-process.ts`
-- `src/app.tsx`
-- `src/cli.tsx`
-- `src/test/e2e/workflows.test.tsx`
-- `scripts/ralph.sh`
-- `scripts/sync2.sh`
-- `package.json`
-- `docs/commands/init.md`
-- `docs/configuration.md`
-- `docs/workflows.md`
-- `AGENTS.md`
-
-### Files to Delete/Clean Up
-- `templates/orchestrate.md` (if exists separately from prompts/)
-- `templates/workflows/` (move contents to `.ralph-template/`)
-
----
-
-## 12. Open Questions
-
-1. **Project persistence**: How should the active project selection be persisted between sessions?
-   - Option A: `.ralph/active-project` file
-   - Option B: Environment variable
-   - Option C: CLI flag `--project <name>`
-   - **Recommendation**: Use `.ralph/active-project` file + CLI flag override
-
-2. **Default project**: When a user runs `ralph` without prior selection, which project should be default?
-   - Option A: Always show picker
-   - Option B: Default to first alphabetically
-   - Option C: Default to "develop"
-   - **Recommendation**: Auto-select if only one, otherwise show picker
-
-3. **Orchestrate customization**: Should users be able to override the bundled orchestrate.md?
-   - Option A: No, always use bundled version
-   - Option B: Yes, check for `.ralph/orchestrate.md` first
-   - **Recommendation**: Option B for power users, with warning that updates won't apply
-
----
-
-*Plan created: 2025-12-08*
-*Last updated: 2025-12-08*
+1. `ralph init` creates new structure with projects/default
+2. Ralph starts with project picker when no project is active
+3. Selected project's execute.md is used in orchestration loop
+4. Assignment.json is created at `.ralph/assignment.json` with new schema
+5. `{{execute_path}}` is correctly substituted in orchestrate.md
+6. Project-specific settings are merged correctly
+7. All existing tests pass
+8. New tests cover all new functionality
+9. Documentation is updated and accurate
