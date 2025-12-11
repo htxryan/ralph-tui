@@ -65,32 +65,31 @@ describe('init integration', () => {
       expect(fs.existsSync(settingsPath)).toBe(true);
     });
 
-    it('creates workflows/ directory', () => {
+    it('creates projects/default directory', () => {
       runInit(tempDir);
-      expect(fs.existsSync(path.join(tempDir, '.ralph/workflows'))).toBe(true);
+      expect(fs.existsSync(path.join(tempDir, '.ralph/projects/default'))).toBe(true);
     });
 
-    it('creates orchestrate.md file', () => {
+    it('creates projects/default/execute.md file', () => {
       runInit(tempDir);
-      const orchestratePath = path.join(tempDir, '.ralph/orchestrate.md');
-      expect(fs.existsSync(orchestratePath)).toBe(true);
+      const executePath = path.join(tempDir, '.ralph/projects/default/execute.md');
+      expect(fs.existsSync(executePath)).toBe(true);
     });
 
-    it('creates workflow files', () => {
+    it('creates projects/default/settings.json file', () => {
       runInit(tempDir);
-      const workflowPath = path.join(tempDir, '.ralph/workflows/01-feature-branch-incomplete.md');
-      expect(fs.existsSync(workflowPath)).toBe(true);
+      const settingsPath = path.join(tempDir, '.ralph/projects/default/settings.json');
+      expect(fs.existsSync(settingsPath)).toBe(true);
     });
 
     it('creates all expected files', () => {
       const result = runInit(tempDir);
 
       expect(result.success).toBe(true);
-      expect(result.created).toHaveLength(8);
+      expect(result.created).toHaveLength(3);
       expect(result.created).toContain('.ralph/settings.json');
-      expect(result.created).toContain('.ralph/orchestrate.md');
-      expect(result.created).toContain('.ralph/workflows/01-feature-branch-incomplete.md');
-      expect(result.created).toContain('.ralph/workflows/06-new-work.md');
+      expect(result.created).toContain('.ralph/projects/default/settings.json');
+      expect(result.created).toContain('.ralph/projects/default/execute.md');
     });
   });
 
@@ -117,20 +116,20 @@ describe('init integration', () => {
       expect(content).toEqual(customSettings);
     });
 
-    it('preserves existing orchestrate.md content', () => {
-      // Pre-create orchestrate.md with custom content
-      const ralphDir = path.join(tempDir, '.ralph');
-      fs.mkdirSync(ralphDir, { recursive: true });
-      const orchestratePath = path.join(ralphDir, 'orchestrate.md');
-      const customContent = '# My Custom Orchestration\n\nThis should be preserved.';
-      fs.writeFileSync(orchestratePath, customContent, 'utf-8');
+    it('preserves existing execute.md content', () => {
+      // Pre-create execute.md with custom content
+      const projectDir = path.join(tempDir, '.ralph/projects/default');
+      fs.mkdirSync(projectDir, { recursive: true });
+      const executePath = path.join(projectDir, 'execute.md');
+      const customContent = '# My Custom Execution\n\nThis should be preserved.';
+      fs.writeFileSync(executePath, customContent, 'utf-8');
 
       // Run init
       const result = runInit(tempDir);
 
       // Verify original content preserved
-      expect(result.skipped).toContain('.ralph/orchestrate.md');
-      expect(fs.readFileSync(orchestratePath, 'utf-8')).toBe(customContent);
+      expect(result.skipped).toContain('.ralph/projects/default/execute.md');
+      expect(fs.readFileSync(executePath, 'utf-8')).toBe(customContent);
     });
 
     it('creates missing files when some already exist', () => {
@@ -144,8 +143,8 @@ describe('init integration', () => {
 
       // settings.json skipped, others created
       expect(result.skipped).toContain('.ralph/settings.json');
-      expect(result.created).toContain('.ralph/orchestrate.md');
-      expect(result.created).toContain('.ralph/workflows/01-feature-branch-incomplete.md');
+      expect(result.created).toContain('.ralph/projects/default/settings.json');
+      expect(result.created).toContain('.ralph/projects/default/execute.md');
     });
   });
 
@@ -216,9 +215,9 @@ describe('init integration', () => {
     it('reports what would be created', () => {
       const result = runInit(tempDir, { dryRun: true });
 
-      expect(result.created).toHaveLength(8);
+      expect(result.created).toHaveLength(3);
       expect(result.created).toContain('.ralph/settings.json');
-      expect(result.created).toContain('.ralph/orchestrate.md');
+      expect(result.created).toContain('.ralph/projects/default/execute.md');
     });
 
     it('output indicates dry run mode', () => {
@@ -257,7 +256,7 @@ describe('init integration', () => {
       const result2 = runInit(tempDir);
 
       expect(result2.created).toHaveLength(0);
-      expect(result2.skipped).toHaveLength(8);
+      expect(result2.skipped).toHaveLength(3);
     });
 
     it('files are identical after second init', () => {
@@ -265,10 +264,10 @@ describe('init integration', () => {
 
       // Read file contents after first init
       const settingsPath = path.join(tempDir, '.ralph/settings.json');
-      const orchestratePath = path.join(tempDir, '.ralph/orchestrate.md');
+      const executePath = path.join(tempDir, '.ralph/projects/default/execute.md');
       const content1 = {
         settings: fs.readFileSync(settingsPath, 'utf-8'),
-        orchestrate: fs.readFileSync(orchestratePath, 'utf-8'),
+        execute: fs.readFileSync(executePath, 'utf-8'),
       };
 
       // Run init again
@@ -277,7 +276,7 @@ describe('init integration', () => {
       // Verify contents unchanged
       const content2 = {
         settings: fs.readFileSync(settingsPath, 'utf-8'),
-        orchestrate: fs.readFileSync(orchestratePath, 'utf-8'),
+        execute: fs.readFileSync(executePath, 'utf-8'),
       };
 
       expect(content1).toEqual(content2);
@@ -361,8 +360,9 @@ describe('init integration', () => {
 
       const configResult = loadConfigFile(getProjectConfigPath(tempDir));
       expect(configResult.loaded).toBe(true);
-      expect(configResult.config).toEqual({
-        taskManagement: { provider: 'vibe-kanban' },
+      expect(configResult.config.taskManagement).toEqual({
+        provider: 'github-issues',
+        providerConfig: { labelFilter: 'ralph' },
       });
     });
 
@@ -394,8 +394,9 @@ describe('init integration', () => {
 
       // Verify content was overwritten with default task management
       const content = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'));
-      expect(content).toEqual({
-        taskManagement: { provider: 'vibe-kanban' },
+      expect(content.taskManagement).toEqual({
+        provider: 'github-issues',
+        providerConfig: { labelFilter: 'ralph' },
       });
     });
 
@@ -433,7 +434,7 @@ describe('init integration', () => {
       const result = runInit(tempDir, { dryRun: true, force: true });
 
       // All files should be in "created" (would be created)
-      expect(result.created).toHaveLength(8);
+      expect(result.created).toHaveLength(3);
       expect(result.skipped).toHaveLength(0);
     });
 

@@ -101,7 +101,20 @@ interface KanbanTask {
 
 ### In Configuration
 
-Set the provider in your Ralph configuration:
+Set the provider in your Ralph configuration (`.ralph/settings.json` or `.ralph/projects/<name>/settings.json`):
+
+```json
+{
+  "taskManagement": {
+    "provider": "github-issues",
+    "providerConfig": {
+      "labelFilter": "ralph"
+    }
+  }
+}
+```
+
+The default provider is `github-issues`. For Vibe Kanban:
 
 ```json
 {

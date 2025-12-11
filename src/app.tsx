@@ -21,6 +21,7 @@ import { useAssignment } from './hooks/use-assignment.js';
 import { useClaudeCodeTodos } from './hooks/use-claude-code-todos.js';
 import { useRalphProcess } from './hooks/use-ralph-process.js';
 import { useTerminalSize } from './hooks/use-terminal-size.js';
+import { useProjects, ProjectInfo } from './hooks/use-projects.js';
 import { Header } from './components/header.js';
 import { TabBar } from './components/tab-bar.js';
 import { Footer } from './components/footer.js';
@@ -36,6 +37,7 @@ import { SessionPicker, SessionInfo } from './components/session-picker.js';
 import { ShortcutsDialog } from './components/shortcuts-dialog.js';
 import { StartScreen } from './components/start-screen.js';
 import { FilterDialog } from './components/messages/filter-dialog.js';
+import { ProjectPicker } from './components/project-picker.js';
 
 export interface AppProps {
   jsonlPath: string;
@@ -56,6 +58,10 @@ export function App({
   // Session state - manage which JSONL file we're viewing
   const [currentJsonlPath, setCurrentJsonlPath] = useState(jsonlPath);
   const [isSessionPickerOpen, setIsSessionPickerOpen] = useState(false);
+
+  // Project state - manage which project (execution mode) is active
+  const [activeProject, setActiveProject] = useState<ProjectInfo | null>(null);
+  const [isProjectPickerOpen, setIsProjectPickerOpen] = useState(false);
 
   // Compute session and archive directories from the ORIGINAL jsonlPath prop
   // (not currentJsonlPath). These are the canonical directories that don't change
@@ -119,6 +125,12 @@ export function App({
     refresh: refreshTodos,
   } = useClaudeCodeTodos();
 
+  // Projects hook
+  const {
+    projects,
+    isLoading: isLoadingProjects,
+  } = useProjects({ basePath: projectRoot });
+
   const {
     isStarting: isRalphStarting,
     isRunning: isRalphRunning,
@@ -128,7 +140,7 @@ export function App({
     start: startRalph,
     stop: stopRalph,
     resume: resumeRalph,
-  } = useRalphProcess();
+  } = useRalphProcess({ activeProjectName: activeProject?.name });
 
   // Interrupt mode state
   const [isInterruptMode, setIsInterruptMode] = useState(false);
@@ -269,6 +281,20 @@ export function App({
     setIsFilterDialogOpen(false);
   }, []);
 
+  // Project picker handlers
+  const handleOpenProjectPicker = useCallback(() => {
+    setIsProjectPickerOpen(true);
+  }, []);
+
+  const handleCloseProjectPicker = useCallback(() => {
+    setIsProjectPickerOpen(false);
+  }, []);
+
+  const handleSelectProject = useCallback((project: ProjectInfo) => {
+    setActiveProject(project);
+    setIsProjectPickerOpen(false);
+  }, []);
+
   const handleSelectSession = useCallback(
     async (session: SessionInfo) => {
       setIsSessionPickerOpen(false);
@@ -386,9 +412,9 @@ export function App({
       // For other keys, continue processing below
     }
 
-    // When in interrupt mode, session picker, or filter dialog is open, don't handle any global shortcuts
+    // When in interrupt mode, session picker, project picker, or filter dialog is open, don't handle any global shortcuts
     // Those components handle their own input
-    if (isInterruptMode || isSessionPickerOpen || isFilterDialogOpen) {
+    if (isInterruptMode || isSessionPickerOpen || isProjectPickerOpen || isFilterDialogOpen) {
       return;
     }
 
@@ -483,6 +509,12 @@ export function App({
       handleOpenFilterDialog();
       return;
     }
+
+    // Open project picker
+    if (input === 'j') {
+      handleOpenProjectPicker();
+      return;
+    }
   });
 
   // Fixed overhead: Header (~4 lines with border) + TabBar (~1 line, only in main view) + Footer (~2 lines)
@@ -535,6 +567,7 @@ export function App({
               height={contentHeight}
               width={terminalColumns}
               taskConfig={config?.taskManagement}
+              activeProject={activeProject}
             />
           );
         }
@@ -614,6 +647,7 @@ export function App({
         isRalphRunning={isRalphRunning}
         assignment={assignment}
         ralphError={ralphError}
+        activeProject={activeProject}
       />
 
       {/* Tab Bar - hide when in detail views */}
@@ -699,6 +733,26 @@ export function App({
             onClose={handleCloseFilterDialog}
             width={Math.min(60, terminalColumns - 4)}
             messageCounts={messageCounts}
+          />
+        </Box>
+      )}
+
+      {/* Project Picker Overlay */}
+      {isProjectPickerOpen && (
+        <Box
+          position="absolute"
+          width="100%"
+          height="100%"
+          justifyContent="center"
+          alignItems="center"
+        >
+          <ProjectPicker
+            projects={projects}
+            activeProject={activeProject}
+            onSelectProject={handleSelectProject}
+            onClose={handleCloseProjectPicker}
+            width={Math.min(60, terminalColumns - 4)}
+            maxHeight={Math.min(20, terminalRows - 4)}
           />
         </Box>
       )}

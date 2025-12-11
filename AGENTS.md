@@ -19,12 +19,21 @@ ralph-tui/
 │   ├── lib/                     # Utilities, types, parser
 │   └── test/                    # Tests (unit, integration, e2e)
 │
-├── templates/                   # Default templates for `ralph init`
-│   ├── orchestrate.md           # Orchestration prompt
-│   └── workflows/               # Workflow files with YAML frontmatter
+├── .ralph-templates/            # Default templates for `ralph init`
+│   ├── settings.json            # Default settings
+│   └── projects/
+│       └── default/
+│           ├── settings.json    # Default project settings
+│           └── execute.md       # Default execution workflow
 │
-├── prompts/                     # Prompt templates
+├── prompts/                     # Bundled prompt templates (not copied)
+│   ├── orchestrate.md           # Orchestration prompt
 │   └── resume.md                # Resume prompt
+│
+├── templates/                   # Provider-specific templates
+│   └── providers/               # Task provider prompts
+│       ├── github-issues.md
+│       └── vibe-kanban.md
 │
 ├── scripts/                     # Runtime scripts (for autonomous loops)
 │   ├── ralph.sh                 # Main autonomous loop
@@ -41,9 +50,14 @@ ralph-tui/
 ├── .github/workflows/           # CI/CD pipelines
 │
 └── .ralph/                      # RUNTIME ONLY (gitignored)
+    ├── settings.json            # Project configuration
     ├── claude_output.jsonl      # Session logs
     ├── claude.lock              # Lock file
-    └── archive/                 # Archived sessions
+    ├── archive/                 # Archived sessions
+    └── projects/                # User project definitions
+        └── <name>/
+            ├── settings.json    # Project-specific settings
+            └── execute.md       # Project execution workflow
 ```
 
 ## Development Commands

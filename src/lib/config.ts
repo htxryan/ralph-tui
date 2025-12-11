@@ -95,6 +95,8 @@ export interface RalphConfig {
   paths: PathsConfig;
   /** Task management configuration */
   taskManagement: TaskManagementConfig;
+  /** Template variables for runtime substitution */
+  variables: Record<string, string>;
 }
 
 /**
@@ -106,7 +108,23 @@ export type PartialRalphConfig = {
   process?: Partial<ProcessConfig>;
   paths?: Partial<PathsConfig>;
   taskManagement?: Partial<TaskManagementConfig>;
+  /** Template variables for runtime substitution */
+  variables?: Record<string, string>;
 };
+
+/**
+ * Project-specific configuration (stored in .ralph/projects/<name>/settings.json)
+ */
+export interface ProjectConfig {
+  /** Human-readable project name */
+  displayName?: string;
+  /** Project description */
+  description?: string;
+  /** Task management overrides for this project */
+  taskManagement?: Partial<TaskManagementConfig>;
+  /** Template variables specific to this project */
+  variables?: Record<string, string>;
+}
 
 /**
  * CLI options that can override configuration
@@ -172,6 +190,7 @@ export const DEFAULT_CONFIG: RalphConfig = {
     planningDir: '.ralph/planning',
   },
   taskManagement: DEFAULT_TASK_MANAGEMENT_CONFIG,
+  variables: {},
 };
 
 // ============================================================================
@@ -221,6 +240,20 @@ export function getProjectConfigPath(projectRoot: string): string {
  */
 export function getLocalConfigPath(projectRoot: string): string {
   return path.join(projectRoot, '.ralph', 'settings.local.json');
+}
+
+/**
+ * Get the path to a specific project's settings file
+ */
+export function getActiveProjectConfigPath(projectRoot: string, projectName: string): string {
+  return path.join(projectRoot, '.ralph', 'projects', projectName, 'settings.json');
+}
+
+/**
+ * Get the path to a specific project's local overrides file
+ */
+export function getActiveProjectLocalConfigPath(projectRoot: string, projectName: string): string {
+  return path.join(projectRoot, '.ralph', 'projects', projectName, 'settings.local.json');
 }
 
 // ============================================================================
@@ -508,6 +541,8 @@ export interface GetConfigResult {
     global: ConfigLoadResult;
     project: ConfigLoadResult;
     local: ConfigLoadResult;
+    activeProject?: ConfigLoadResult;
+    activeProjectLocal?: ConfigLoadResult;
   };
   /** Any warnings (e.g., config file parse errors that were skipped) */
   warnings: string[];
@@ -516,17 +551,43 @@ export interface GetConfigResult {
 /**
  * Load configuration from all sources and merge them
  *
+ * Merge order (lowest to highest precedence):
+ * 1. Built-in defaults
+ * 2. Global user config
+ * 3. Project settings (.ralph/settings.json)
+ * 4. Project local settings (.ralph/settings.local.json)
+ * 5. Active project settings (.ralph/projects/<name>/settings.json)
+ * 6. Active project local settings (.ralph/projects/<name>/settings.local.json)
+ * 7. CLI options (highest)
+ *
  * @param projectRoot - The project root directory
  * @param cliOptions - CLI options that override config files
+ * @param activeProjectName - Name of the active project (optional)
  * @returns The merged configuration and loading metadata
  */
-export function getConfig(projectRoot: string, cliOptions: CLIOptions = {}): GetConfigResult {
+export function getConfig(
+  projectRoot: string,
+  cliOptions: CLIOptions = {},
+  activeProjectName?: string
+): GetConfigResult {
   const warnings: string[] = [];
 
   // Load from all sources
   const globalResult = loadConfigFile(getGlobalConfigPath());
   const projectResult = loadConfigFile(getProjectConfigPath(projectRoot));
   const localResult = loadConfigFile(getLocalConfigPath(projectRoot));
+
+  // Load active project config if specified
+  let activeProjectResult: ConfigLoadResult | undefined;
+  let activeProjectLocalResult: ConfigLoadResult | undefined;
+  if (activeProjectName) {
+    activeProjectResult = loadConfigFile(
+      getActiveProjectConfigPath(projectRoot, activeProjectName)
+    );
+    activeProjectLocalResult = loadConfigFile(
+      getActiveProjectLocalConfigPath(projectRoot, activeProjectName)
+    );
+  }
 
   // Collect warnings for files that existed but couldn't be parsed
   if (globalResult.error) {
@@ -537,6 +598,12 @@ export function getConfig(projectRoot: string, cliOptions: CLIOptions = {}): Get
   }
   if (localResult.error) {
     warnings.push(`Failed to parse local config (${localResult.path}): ${localResult.error}`);
+  }
+  if (activeProjectResult?.error) {
+    warnings.push(`Failed to parse active project config (${activeProjectResult.path}): ${activeProjectResult.error}`);
+  }
+  if (activeProjectLocalResult?.error) {
+    warnings.push(`Failed to parse active project local config (${activeProjectLocalResult.path}): ${activeProjectLocalResult.error}`);
   }
 
   // Convert CLI options to config format
@@ -551,17 +618,27 @@ export function getConfig(projectRoot: string, cliOptions: CLIOptions = {}): Get
     merged = deepMerge(merged, globalResult.config);
   }
 
-  // 3. Project config
+  // 3. Project config (.ralph/settings.json)
   if (projectResult.loaded && !projectResult.error) {
     merged = deepMerge(merged, projectResult.config);
   }
 
-  // 4. Local overrides
+  // 4. Local overrides (.ralph/settings.local.json)
   if (localResult.loaded && !localResult.error) {
     merged = deepMerge(merged, localResult.config);
   }
 
-  // 5. CLI options (highest)
+  // 5. Active project config (.ralph/projects/<name>/settings.json)
+  if (activeProjectResult?.loaded && !activeProjectResult.error) {
+    merged = deepMerge(merged, activeProjectResult.config);
+  }
+
+  // 6. Active project local config (.ralph/projects/<name>/settings.local.json)
+  if (activeProjectLocalResult?.loaded && !activeProjectLocalResult.error) {
+    merged = deepMerge(merged, activeProjectLocalResult.config);
+  }
+
+  // 7. CLI options (highest)
   merged = deepMerge(merged, cliConfig);
 
   // Validate the final merged config
@@ -584,6 +661,8 @@ export function getConfig(projectRoot: string, cliOptions: CLIOptions = {}): Get
       global: globalResult,
       project: projectResult,
       local: localResult,
+      activeProject: activeProjectResult,
+      activeProjectLocal: activeProjectLocalResult,
     },
     warnings,
   };
@@ -593,8 +672,12 @@ export function getConfig(projectRoot: string, cliOptions: CLIOptions = {}): Get
  * Simple version of getConfig that just returns the config object
  * Throws on validation errors, logs warnings to stderr
  */
-export function loadConfig(projectRoot: string, cliOptions: CLIOptions = {}): RalphConfig {
-  const result = getConfig(projectRoot, cliOptions);
+export function loadConfig(
+  projectRoot: string,
+  cliOptions: CLIOptions = {},
+  activeProjectName?: string
+): RalphConfig {
+  const result = getConfig(projectRoot, cliOptions, activeProjectName);
 
   // Log warnings to stderr
   for (const warning of result.warnings) {

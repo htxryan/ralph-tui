@@ -93,8 +93,29 @@ export interface TaskComment {
   created_at: string;
 }
 
+/**
+ * Assignment schema - tracks the current work assignment
+ *
+ * This file is created at .ralph/assignment.json during orchestration
+ * and updated throughout the execution workflow.
+ */
 export interface Assignment {
-  workflow?: string;  // Optional - not set during orchestration phase
+  /** The task identifier from the task management system */
+  task_id: string;
+  /** The next step to execute in the workflow */
+  next_step: string;
+  /** URL of the pull request once created, null otherwise */
+  pull_request_url: string | null;
+  /** Work log entries (optional) */
+  work_log?: string[];
+}
+
+/**
+ * Legacy assignment schema for backwards compatibility
+ * @deprecated Use Assignment instead
+ */
+export interface LegacyAssignment {
+  workflow?: string;
   task_id?: string;
 }
 

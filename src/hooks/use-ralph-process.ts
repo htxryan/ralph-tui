@@ -6,6 +6,8 @@ import { fileURLToPath } from 'url';
 
 export interface UseRalphProcessOptions {
   basePath?: string;
+  /** Active project name to pass to ralph.sh via RALPH_PROJECT env var */
+  activeProjectName?: string;
 }
 
 export interface UseRalphProcessResult {
@@ -59,7 +61,7 @@ function findProjectRoot(): string {
 export function useRalphProcess(
   options: UseRalphProcessOptions = {}
 ): UseRalphProcessResult {
-  const { basePath = findProjectRoot() } = options;
+  const { basePath = findProjectRoot(), activeProjectName } = options;
 
   // Package scripts directory (bundled with the npm package)
   const packageDir = getPackageDir();
@@ -145,6 +147,7 @@ export function useRalphProcess(
         env: {
           ...process.env,
           RALPH_PROJECT_DIR: basePath,
+          RALPH_PROJECT: activeProjectName || 'default',
         },
         reject: false,
       });
@@ -190,7 +193,7 @@ export function useRalphProcess(
       setError(err instanceof Error ? err : new Error(String(err)));
       setIsStarting(false);
     }
-  }, [isStarting, isRunning, ralphScript, userDataDir, basePath, checkIfRunning]);
+  }, [isStarting, isRunning, ralphScript, userDataDir, basePath, checkIfRunning, activeProjectName]);
 
   // Stop Ralph process - comprehensive kill like kill.sh
   const stop = useCallback(async () => {
