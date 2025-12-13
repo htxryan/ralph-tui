@@ -22,7 +22,7 @@ If work is not in progress, you should:
 
 3.1. Use the task manager (see instructions below) to pick the next most important work item to work on.
 
-3.2. Set the status of the work item to "in_progress" in the task manager.
+3.2. Set the status of the work item to `{{in_progress_status}}` in the task manager.
 
 3.3. Read the execution workflow stored in `{{execute_path}}` and determine the first logical step for starting work.
 
@@ -58,7 +58,7 @@ flowchart TD
 
     subgraph NWP ["Work Not In Progress Path"]
         C --> J[Use task manager to pick<br/>next most important work item]
-        J --> K[Set work item status<br/>to 'in_progress']
+        J --> K[Set work item status<br/>to '{{in_progress_status}}']
         K --> L[Read execution workflow<br/>from execute_path]
         L --> M[Determine first logical step<br/>for starting work]
         M --> N[Create assignment.json<br/>with task_id, next_step,<br/>pull_request_url]

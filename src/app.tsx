@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { Box, useApp, useInput } from 'ink';
 import * as path from 'path';
 import * as fs from 'fs';
@@ -11,7 +11,7 @@ import {
   MessageFilterType,
   ALL_MESSAGE_FILTER_TYPES,
 } from './lib/types.js';
-import { type RalphConfig } from './lib/config.js';
+import { type RalphConfig, loadConfig } from './lib/config.js';
 import { calculateSessionStats, getMessageFilterType } from './lib/parser.js';
 import { archiveCurrentSession } from './lib/archive.js';
 import { getContextualShortcuts, getAllShortcutsForDialog } from './lib/shortcuts.js';
@@ -62,6 +62,12 @@ export function App({
   // Project state - manage which project (execution mode) is active
   const [activeProject, setActiveProject] = useState<ProjectInfo | null>(null);
   const [isProjectPickerOpen, setIsProjectPickerOpen] = useState(false);
+  // Track if we should auto-start Ralph after project selection
+  const [pendingStartAfterProjectSelect, setPendingStartAfterProjectSelect] = useState(false);
+
+  // Config state - starts with the initial config and gets updated when project is selected
+  // This allows project-specific settings to be merged in after project selection
+  const [currentConfig, setCurrentConfig] = useState<RalphConfig | undefined>(config);
 
   // Compute session and archive directories from the ORIGINAL jsonlPath prop
   // (not currentJsonlPath). These are the canonical directories that don't change
@@ -70,14 +76,14 @@ export function App({
   const sessionDir = useMemo(() => path.dirname(jsonlPath), [jsonlPath]);
   // Project root is the parent of the .ralph directory (sessionDir)
   const projectRoot = useMemo(() => path.dirname(sessionDir), [sessionDir]);
-  // Use config.paths.archiveDir if available, otherwise fall back to default
+  // Use currentConfig.paths.archiveDir if available, otherwise fall back to default
   const archiveDir = useMemo(() => {
-    if (config?.paths?.archiveDir) {
+    if (currentConfig?.paths?.archiveDir) {
       // archiveDir from config is relative to project root
-      return path.resolve(projectRoot, config.paths.archiveDir);
+      return path.resolve(projectRoot, currentConfig.paths.archiveDir);
     }
     return path.join(sessionDir, 'archive');
-  }, [sessionDir, projectRoot, config?.paths?.archiveDir]);
+  }, [sessionDir, projectRoot, currentConfig?.paths?.archiveDir]);
 
   // App state
   const [currentTab, setCurrentTab] = useState<TabName>('messages');
@@ -117,7 +123,7 @@ export function App({
     refresh: refreshTask,
   } = useTask({
     taskId: effectiveTaskId,
-    taskConfig: config?.taskManagement,
+    taskConfig: currentConfig?.taskManagement,
   });
 
   const {
@@ -235,6 +241,14 @@ export function App({
     }
   }, [sessionDir, archiveDir, startRalph]);
 
+  // Auto-start Ralph after project selection (when triggered via 'S' with no project)
+  useEffect(() => {
+    if (pendingStartAfterProjectSelect && activeProject && !isProjectPickerOpen) {
+      setPendingStartAfterProjectSelect(false);
+      handleStartRalph();
+    }
+  }, [pendingStartAfterProjectSelect, activeProject, isProjectPickerOpen, handleStartRalph]);
+
   // Interrupt mode handlers
   const handleEnterInterruptMode = useCallback(() => {
     setIsInterruptMode(true);
@@ -291,12 +305,27 @@ export function App({
 
   const handleCloseProjectPicker = useCallback(() => {
     setIsProjectPickerOpen(false);
+    // Clear the pending start flag if user closes without selecting
+    setPendingStartAfterProjectSelect(false);
   }, []);
 
   const handleSelectProject = useCallback((project: ProjectInfo) => {
     setActiveProject(project);
     setIsProjectPickerOpen(false);
-  }, []);
+
+    // Reload config with project-specific settings merged in
+    // This ensures settings from .ralph/projects/<name>/settings.json are applied
+    try {
+      const updatedConfig = loadConfig(projectRoot, {}, project.name);
+      setCurrentConfig(updatedConfig);
+    } catch (err) {
+      // Log error but don't block project selection
+      process.stderr.write(`Warning: Failed to load project config: ${err instanceof Error ? err.message : String(err)}\n`);
+    }
+
+    // Note: If pendingStartAfterProjectSelect is true, the useEffect below
+    // will trigger the start once the activeProject state has been set
+  }, [projectRoot]);
 
   const handleSelectSession = useCallback(
     async (session: SessionInfo) => {
@@ -485,6 +514,12 @@ export function App({
 
     // Start Ralph (when not running)
     if (input === 's' && !isRalphRunning && !isRalphStarting) {
+      // If no project is selected, show project picker first
+      if (!activeProject) {
+        setPendingStartAfterProjectSelect(true);
+        setIsProjectPickerOpen(true);
+        return;
+      }
       handleStartRalph();
       return;
     }
@@ -569,7 +604,7 @@ export function App({
             <StartScreen
               height={contentHeight}
               width={terminalColumns}
-              taskConfig={config?.taskManagement}
+              taskConfig={currentConfig?.taskManagement}
               activeProject={activeProject}
             />
           );

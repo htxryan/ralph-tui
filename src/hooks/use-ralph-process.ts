@@ -127,10 +127,10 @@ export function useRalphProcess(
       return;
     }
 
-    // Check if orchestrate.md exists (required for the loop)
-    const orchestratePath = path.join(userDataDir, 'orchestrate.md');
+    // Check if orchestrate.md exists (bundled with the package, not in user data)
+    const orchestratePath = path.join(packageDir, 'prompts', 'orchestrate.md');
     if (!fs.existsSync(orchestratePath)) {
-      setError(new Error(`Orchestration prompt not found: ${orchestratePath}\n\nRun 'ralph init' to set up your project.`));
+      setError(new Error(`Orchestration prompt not found: ${orchestratePath}\n\nThis may indicate the package was not installed correctly.`));
       setIsStarting(false);
       return;
     }

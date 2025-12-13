@@ -2,7 +2,7 @@
   "taskManagement": {
     "provider": "github-issues",
     "providerConfig": {
-      "labelFilter": "ralph"
+      "in_progress_status": "in-progress"
     }
   },
   "variables": {
