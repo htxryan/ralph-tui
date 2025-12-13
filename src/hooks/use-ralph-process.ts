@@ -364,6 +364,22 @@ export function useRalphProcess(
         '--add-dir', '.',
       ];
 
+      // Add disallowed-tools to restrict Read tool on non-active project directories
+      const projectsDir = path.join(userDataDir, 'projects');
+      if (fs.existsSync(projectsDir)) {
+        const projectDirents = fs.readdirSync(projectsDir, { withFileTypes: true })
+          .filter(dirent => dirent.isDirectory());
+        
+        for (const dirent of projectDirents) {
+          // Skip the current active project
+          if (dirent.name !== projectName) {
+            // Disallow Read tool on this project directory
+            const projectPath = path.join(projectsDir, dirent.name);
+            claudeArgs.push('--disallowedTools', `Read(${projectPath}/*)`);
+          }
+        }
+      }
+
       // Spawn claude in detached mode
       // Use reject: false to prevent ExecaError from being thrown on process termination
       // We handle all exit codes gracefully in the .then() handler below

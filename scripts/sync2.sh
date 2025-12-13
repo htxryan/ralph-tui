@@ -124,13 +124,29 @@ run_claude() {
         inject_user_event "$prompt_text"
     fi
 
-    local run_cmd='claude -p \
+    # Build disallowed-tools argument to restrict Read tool on non-active project directories
+    local disallow_args=""
+    if [ -d "$RALPH_DIR/projects" ]; then
+        for project_dir in "$RALPH_DIR/projects"/*; do
+            if [ -d "$project_dir" ]; then
+                local project_name=$(basename "$project_dir")
+                # Skip the current active project
+                if [ "$project_name" != "$RALPH_PROJECT" ]; then
+                    # Disallow Read tool on this project directory
+                    disallow_args="$disallow_args --disallowedTools \"Read($project_dir/*)\""
+                fi
+            fi
+        done
+    fi
+
+    local run_cmd="claude -p \
         --output-format=stream-json \
         --verbose \
         --dangerously-skip-permissions \
-        --add-dir . | \
-        tee -a "$LOG_FILE" | \
-        uv run --no-project "$SCRIPT_DIR/visualize.py" --debug'
+        --add-dir . \
+        $disallow_args | \
+        tee -a \"\$LOG_FILE\" | \
+        uv run --no-project \"\$SCRIPT_DIR/visualize.py\" --debug"
 
     if [ "$timeout_seconds" -gt 0 ]; then
         if command -v timeout &> /dev/null; then
