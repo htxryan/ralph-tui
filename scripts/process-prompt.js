@@ -13,6 +13,7 @@
 import { readFileSync, existsSync } from 'fs';
 import { dirname, join, resolve } from 'path';
 import { fileURLToPath } from 'url';
+import { processFileWithIncludes } from './process-includes.js';
 
 // Get script directory to find provider templates
 const __filename = fileURLToPath(import.meta.url);
@@ -109,7 +110,12 @@ function processTemplate(templatePath, settingsPath, projectName, projectSetting
     process.exit(1);
   }
 
-  let template = readFileSync(templatePath, 'utf-8');
+  // Determine repo root (parent of .ralph directory)
+  const ralphDir = dirname(settingsPath);
+  const repoRoot = dirname(ralphDir);
+
+  // Process includes first (before any other processing)
+  let template = processFileWithIncludes(templatePath, repoRoot);
 
   // Replace provider instructions placeholder if present
   if (template.includes('{{!TASK_MANAGER_INSTRUCTIONS}}')) {
