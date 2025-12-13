@@ -4,8 +4,6 @@
   },
   "variables": {
     "target_branch": "develop",
-    "docs": "`./.ai-docs/design/product-brief.md` and `./.ai-docs/design/game-rules.md`",
-    "in_progress_status": "In-Progress",
-    "complete_status": "Done"
+    "docs": "`./.ai-docs/design/product-brief.md` and `./.ai-docs/design/game-rules.md`"
   }
 }

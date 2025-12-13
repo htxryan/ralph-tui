@@ -1,8 +1,5 @@
 {
   "task_management": {
-    "provider_config": {
-      "label_filter": "ralph-dev"
-    }
   },
   "variables": {
   }

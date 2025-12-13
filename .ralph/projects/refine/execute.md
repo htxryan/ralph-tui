@@ -2,10 +2,40 @@
 
 **Trigger**: You are in refine mode with a task to analyze and enhance
 
+---
+
+## CRITICAL CONSTRAINT
+
+> **ONLY work with issues that have the `ralph` label.**
+>
+> - You MUST verify the issue has the `ralph` label before ANY action
+> - NEVER read, modify, or interact with issues without the `ralph` label
+> - If an assigned issue lacks the `ralph` label, STOP and EXIT immediately
+> - This constraint applies to ALL operations: reading, commenting, status changes, etc.
+
+---
+
+## Status Flow
+
+```
+Backlog → Refining → Refined
+```
+
+- **Backlog**: Issues awaiting refinement (source)
+- **Refining**: Issue currently being analyzed and enhanced (work-in-progress)
+- **Refined**: Issue fully refined and ready for development (complete)
+
 ## Path Overview
 
 ```mermaid
 flowchart TD
+    START([Start]) --> CHECK{Has 'ralph' label?}
+    CHECK -->|No| ABORT([STOP - EXIT immediately])
+    CHECK -->|Yes| PICK[0. Pick issue from Backlog]
+    PICK --> MOVE_WIP[Move to Refining status]
+
+    MOVE_WIP --> A1
+
     subgraph analysis[1. Issue Analysis]
         A1[1.1 Read the issue]
         A2[1.2 Understand requirements]
@@ -26,17 +56,39 @@ flowchart TD
         C1 --> C2 --> C3 --> C4 --> C5
     end
 
-    D1[3.1 Mark as ready]
+    D1[3.1 Already well-defined]
 
-    C5 --> FINISH([4. EXIT])
-    D1 --> FINISH
+    C5 --> MOVE_DONE[Move to Refined status]
+    D1 --> MOVE_DONE
+
+    MOVE_DONE --> FINISH([4. EXIT])
 
     style analysis fill:#e1f5fe,stroke:#01579b
     style refinement fill:#e8f5e9,stroke:#2e7d32
     style FINISH fill:#ffebee,stroke:#c62828
+    style ABORT fill:#ffcdd2,stroke:#b71c1c
+    style CHECK fill:#fff9c4,stroke:#f57f17
+    style MOVE_WIP fill:#fff3e0,stroke:#e65100
+    style MOVE_DONE fill:#e8f5e9,stroke:#2e7d32
 ```
 
 ## Steps
+
+### 0. Verify Label and Start Issue
+
+0.1. **Verify `ralph` Label (MANDATORY)**
+   - Check that the assigned issue has the `ralph` label
+   - If the label is NOT present: **STOP immediately and EXIT**
+   - Do NOT proceed with any other steps if the label is missing
+   - This check is non-negotiable and must be performed first
+
+0.2. **Select Issue from Backlog**
+   - Pick the assigned issue (should already be in "Backlog" status)
+   - Verify it needs refinement
+
+0.3. **Move to Refining Status**
+   - Update the issue status from "Backlog" to "Refining"
+   - This signals that refinement work is in progress
 
 ### 1. Issue Analysis
 
@@ -78,13 +130,18 @@ flowchart TD
 
 2.5. **Update the Issue**
    - Add a comment with the refined details
-   - Update labels as appropriate (e.g., add "ready-for-dev")
    - Link any related issues
+   - **Do NOT remove the `ralph` label** - it must remain on the issue
 
 ### 3. Mark as Ready
 
-3.1. If the issue was already well-defined, simply confirm it's ready for development and add appropriate labels.
+3.1. If the issue was already well-defined, confirm it's ready for development.
 
-### 4. Exit
+### 4. Complete and Exit
 
-Close the task and EXIT.
+4.1. **Move to Refined Status**
+   - Update the issue status from "Refining" to "Refined"
+   - This signals the issue is fully refined and ready for development
+
+4.2. **Exit**
+   - Close the task and EXIT
