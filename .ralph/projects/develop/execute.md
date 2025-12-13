@@ -20,10 +20,10 @@
 Use the "Ralph TUI" GitHub Project for tracking issue status.
 
 ```
-Refined → In Progress → Done
+Backlog → In Progress → Done
 ```
 
-- **Refined**: Issues that have been refined and are ready for development (source)
+- **Backlog**: Issues that have been refined and are ready for development (source)
 - **In Progress**: Issue currently being implemented (work-in-progress)
 - **Done**: Issue completed with PR merged (complete)
 
@@ -111,7 +111,7 @@ Get your bearings and understand the project.
 ### 2. Plan
 
 2.1. **Move to In Progress Status**
-   - Update the issue status from "Refined" to "In Progress"
+   - Update the issue status from "Backlog" to "In Progress"
    - This signals that development work has begun
    - **Do NOT remove the `ralph` label** - it must remain on the issue
 

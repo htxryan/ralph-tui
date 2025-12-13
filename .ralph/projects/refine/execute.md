@@ -20,10 +20,10 @@
 Use the "Ralph TUI" GitHub Project for tracking issue status.
 
 ```
-Backlog → Refining → Refined
+Idea → Refining → Refined
 ```
 
-- **Backlog**: Issues awaiting refinement (source)
+- **Idea**: Issues awaiting refinement (source)
 - **Refining**: Issue currently being analyzed and enhanced (work-in-progress)
 - **Refined**: Issue fully refined and ready for development (complete)
 
@@ -33,7 +33,7 @@ Backlog → Refining → Refined
 flowchart TD
     START([Start]) --> CHECK{Has 'ralph' label?}
     CHECK -->|No| ABORT([STOP - EXIT immediately])
-    CHECK -->|Yes| PICK[0. Pick issue from Backlog]
+    CHECK -->|Yes| PICK[0. Pick issue from Idea column]
     PICK --> MOVE_WIP[Move to Refining status]
 
     MOVE_WIP --> A1
@@ -84,12 +84,12 @@ flowchart TD
    - Do NOT proceed with any other steps if the label is missing
    - This check is non-negotiable and must be performed first
 
-0.2. **Select Issue from Backlog**
-   - Pick the assigned issue (should already be in "Backlog" status)
+0.2. **Select Issue from Idea**
+   - Pick the assigned issue (should already be in "Idea" status)
    - Verify it needs refinement
 
 0.3. **Move to Refining Status**
-   - Update the issue status from "Backlog" to "Refining"
+   - Update the issue status from "Idea" to "Refining"
    - This signals that refinement work is in progress
 
 ### 1. Issue Analysis
