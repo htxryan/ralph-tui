@@ -26,17 +26,12 @@ Each item will be refined in parallel (max 5 concurrent) using the refine.sh wor
 ```
 Then stop and wait for correct input.
 
-## CRITICAL: AUTONOMOUS EXECUTION - NEVER ASK QUESTIONS
+@.claude/.partials/autonomous-execution.md
 
-**You MUST complete this command autonomously without asking clarifying questions.**
-
-- **NEVER** ask the user questions during execution
-- **NEVER** pause and wait for user input or confirmation
-- **ALWAYS** parse the input list and proceed with refinement
-- **ALWAYS** produce a complete results summary at the end
-- If a task description is ambiguous, use it as-is
-- If task ID generation produces duplicates, append a number suffix
-- Getting stuck waiting for user input is UNACCEPTABLE - always move forward
+**Additional rules for batch processing:**
+- If task ID generation produces duplicates, append `-2`, `-3`, etc.
+- Parse the input list and proceed with ALL tasks
+- Produce a comprehensive results summary at the end
 
 ## Process Overview
 
@@ -44,7 +39,7 @@ Then stop and wait for correct input.
 2. Generate a unique task ID for each description
 3. Execute refine.sh for each task with **max 5 concurrent** processes
 4. Track success/failure status for each task
-5. Report final results with Vibe Kanban references
+5. Report final results with GitHub Issue references
 
 ## Step 1: Parse Input List
 
@@ -70,24 +65,13 @@ Task two
 
 For each line, strip the list marker (if present) and trim whitespace.
 
-## Step 2: Generate Task IDs
+@.claude/.partials/task-id-generation.md
 
-For each task description, generate a task ID by:
+## Step 2: Execute with Concurrency Control
 
-1. Convert to lowercase
-2. Replace spaces and special characters with hyphens
-3. Remove consecutive hyphens
-4. Truncate to 50 characters max
-5. If duplicate, append `-2`, `-3`, etc.
+@.claude/.partials/refine-script-phases.md
 
-Example transformations:
-- "Add dark mode to the TUI" → `add-dark-mode-to-the-tui`
-- "Fix bug #123 in parser" → `fix-bug-123-in-parser`
-- "Implement user auth (OAuth 2.0)" → `implement-user-auth-oauth-2-0`
-
-## Step 3: Execute with Concurrency Control
-
-Run the refinement workflow using the `refine-many.sh` script located at `.claude/tools/refine-many.sh`.
+For batch processing, use the `refine-many.sh` script at `.claude/tools/refine-many.sh`.
 
 **Create a tasks file** with one task per line in the format: `task-id|Task description here`
 
@@ -112,16 +96,16 @@ The `refine-many.sh` script handles:
 - Success/failure tracking for each task
 - Summary output when complete
 
-## Step 4: Collect Results
+## Step 3: Collect Results
 
 After all tasks complete, read each result file to determine:
 
-1. **Success**: The task completed and was captured to Vibe Kanban
+1. **Success**: The task completed and was captured to a GitHub Issue
 2. **Failure**: The task failed at some step - capture the error reason
 
-For successful tasks, check the Vibe Kanban MCP to get the task details.
+For successful tasks, check the GitHub Issue URL in the output to view full task details.
 
-## Step 5: Generate Final Report
+## Step 4: Generate Final Report
 
 Present a comprehensive summary:
 
@@ -179,7 +163,7 @@ If a task fails:
 - Log the error details to `<results-dir>/<task-id>.log`
 - Continue with remaining tasks
 - Include failure in final report
-- Do NOT retry automatically (user can re-run individual tasks with `/refine:many` on just the failed items)
+- Do NOT retry automatically (user can re-run individual tasks with `/refine:single` or `/refine:many` on just the failed items)
 
 ## Example Execution
 
@@ -220,16 +204,4 @@ If a task fails:
    | `fix-memory-leak-in-jsonl-parser` | Fix memory leak in JSONL parser | Research phase timed out |
    ```
 
-## Workflow Integration
-
-This command is part of the refinement workflow:
-
-- `/refine:research_codebase <task-id>` - Research single task
-- `/refine:create_plan <task-id>` - Create plan for single task
-- `/refine:capture <task-id>` - Capture single task to Vibe Kanban
-- **`/refine:many`** - Batch process multiple tasks in parallel
-
-The `refine.sh` script orchestrates the single-task workflow:
-`.claude/tools/refine.sh <task-id> <description>`
-
-This `/refine:many` command orchestrates multiple parallel executions of that script.
+@.claude/.partials/workflow-commands.md

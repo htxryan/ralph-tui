@@ -1,6 +1,6 @@
 # Ralph Configuration
 
-Ralph uses a layered configuration system that loads settings from multiple sources. This allows you to set global defaults, per-project settings, and local overrides that aren't committed to version control.
+Ralph uses a layered configuration system that loads settings from multiple sources. This allows you to set global defaults, per-project settings, active project overrides, and local settings that aren't committed to version control.
 
 ## Configuration Precedence
 
@@ -8,9 +8,10 @@ Settings are loaded and merged in the following order (lowest to highest priorit
 
 1. **Built-in defaults** - Sensible defaults shipped with Ralph
 2. **Global user config** - Your personal defaults across all projects
-3. **Project settings** - Shared team configuration checked into the repo
-4. **Local overrides** - Personal overrides not committed to git
-5. **CLI arguments** - Flags passed when running Ralph
+3. **Project settings** - Shared team configuration (`.ralph/settings.json`)
+4. **Active project settings** - Settings for the currently selected project (`.ralph/projects/<name>/settings.json`)
+5. **Local overrides** - Personal overrides not committed to git
+6. **CLI arguments** - Flags passed when running Ralph
 
 Higher priority sources override lower ones. Nested objects are merged recursively, while arrays are replaced entirely.
 
@@ -33,6 +34,16 @@ Shared configuration for your team, checked into version control:
 ```
 .ralph/settings.json
 ```
+
+### Active Project Settings
+
+Configuration specific to the selected project (execution mode):
+
+```
+.ralph/projects/<name>/settings.json
+```
+
+See [Projects](./projects.md) for details on creating and managing projects.
 
 ### Local Overrides
 
@@ -68,13 +79,17 @@ Personal overrides that should NOT be committed (add to `.gitignore`):
   },
   "paths": {
     "archiveDir": ".ralph/archive",
-    "promptsDir": ".ralph/prompts",
-    "planningDir": ".ralph/planning"
+    "promptsDir": ".ralph/prompts"
   },
-  "taskManagement": {
-    "provider": "vibe-kanban",
-    "autoInstall": true,
-    "providerConfig": {}
+  "task_management": {
+    "provider": "github-issues",
+    "auto_install": true,
+    "provider_config": {
+      "label_filter": "ralph"
+    }
+  },
+  "variables": {
+    "target_branch": "main"
   }
 }
 ```
@@ -112,7 +127,42 @@ Personal overrides that should NOT be committed (add to `.gitignore`):
 |-------|------|---------|-------------|
 | `archiveDir` | string | `".ralph/archive"` | Directory for archived sessions |
 | `promptsDir` | string | `".ralph/prompts"` | Directory for prompt templates |
-| `planningDir` | string | `".ralph/planning"` | Directory for planning files |
+
+### Template Variables
+
+The `variables` field defines key-value pairs that are substituted into prompt templates at runtime.
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `variables` | object | `{}` | Key-value pairs for template substitution |
+
+Variables can be defined at both the global level (`.ralph/settings.json`) and project level (`.ralph/projects/<name>/settings.json`). Project-level variables override global ones.
+
+**Example:**
+
+```json
+{
+  "variables": {
+    "target_branch": "main",
+    "require_tests": "true"
+  }
+}
+```
+
+Use variables in `execute.md` with `{{variable_name}}` syntax:
+
+```markdown
+### 3. Implement
+
+3.1. Create a feature branch from `{{target_branch}}`
+```
+
+**Built-in variables:**
+
+| Variable | Description |
+|----------|-------------|
+| `{{execute_path}}` | Path to the active project's execute.md file |
+| `{{assignment_path}}` | Path to the active project's assignment.json file |
 
 ### Task Management Configuration
 
@@ -120,31 +170,44 @@ Ralph supports pluggable task management backends through adapters. Configure wh
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| `provider` | string | `"vibe-kanban"` | Task backend: `vibe-kanban`, `jira`, `linear`, `beads`, or `github-issues` |
-| `autoInstall` | boolean | `true` | Auto-install Vibe Kanban if not available (only applies to vibe-kanban) |
-| `providerConfig` | object | `{}` | Provider-specific configuration (see below) |
+| `provider` | string | `"github-issues"` | Task backend: `github-issues`, `vibe-kanban`, `jira`, `linear`, or `beads` |
+| `auto_install` | boolean | `true` | Auto-install Vibe Kanban if not available (only applies to vibe-kanban) |
+| `provider_config` | object | `{}` | Provider-specific configuration (see below) |
 
 #### Supported Providers
 
 | Provider | Status | Description |
 |----------|--------|-------------|
-| `vibe-kanban` | **Implemented** | MCP-based local task management (default) |
+| `github-issues` | **Implemented** | GitHub Issues integration (default) |
+| `vibe-kanban` | **Implemented** | MCP-based local task management |
 | `jira` | Planned | Atlassian Jira integration |
 | `linear` | Planned | Linear.app integration |
 | `beads` | Planned | Git-native CLI tool (bd) |
-| `github-issues` | Planned | GitHub Issues integration |
 
 #### Provider-Specific Configuration
 
-Each provider may have additional configuration options in `providerConfig`:
+Each provider may have additional configuration options in `provider_config`:
+
+**GitHub Issues:**
+```json
+{
+  "task_management": {
+    "provider": "github-issues",
+    "provider_config": {
+      "github_repo": "owner/repo",
+      "label_filter": "ralph"
+    }
+  }
+}
+```
 
 **Vibe Kanban:**
 ```json
 {
-  "taskManagement": {
+  "task_management": {
     "provider": "vibe-kanban",
-    "providerConfig": {
-      "vibeKanbanProjectId": "uuid-of-project"
+    "provider_config": {
+      "vibe_kanban_project_id": "uuid-of-project"
     }
   }
 }
@@ -153,12 +216,12 @@ Each provider may have additional configuration options in `providerConfig`:
 **Jira** (planned):
 ```json
 {
-  "taskManagement": {
+  "task_management": {
     "provider": "jira",
-    "providerConfig": {
-      "jiraHost": "https://yourcompany.atlassian.net",
-      "jiraProject": "PROJ",
-      "jiraApiToken": "your-api-token"
+    "provider_config": {
+      "jira_host": "https://yourcompany.atlassian.net",
+      "jira_project": "PROJ",
+      "jira_api_token": "your-api-token"
     }
   }
 }
@@ -167,28 +230,40 @@ Each provider may have additional configuration options in `providerConfig`:
 **Linear** (planned):
 ```json
 {
-  "taskManagement": {
+  "task_management": {
     "provider": "linear",
-    "providerConfig": {
-      "linearTeam": "team-id",
-      "linearApiKey": "your-api-key"
+    "provider_config": {
+      "linear_team": "team-id",
+      "linear_api_key": "your-api-key"
     }
   }
 }
 ```
 
-**GitHub Issues** (planned):
+## Project-Specific Configuration
+
+Each project in `.ralph/projects/<name>/` can have its own `settings.json`:
+
 ```json
 {
-  "taskManagement": {
-    "provider": "github-issues",
-    "providerConfig": {
-      "githubRepo": "owner/repo",
-      "githubToken": "your-github-token"
-    }
+  "displayName": "Bug Fix",
+  "description": "Quick bug fixes with minimal ceremony",
+  "variables": {
+    "target_branch": "main",
+    "skip_tests": "false"
   }
 }
 ```
+
+### Project Settings Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `displayName` | string | Human-readable name shown in project picker |
+| `description` | string | Brief description of the project's purpose |
+| `variables` | object | Template variables (overrides global variables) |
+
+Project settings merge with global settings, with project values taking precedence.
 
 ## CLI Options
 
@@ -235,13 +310,36 @@ Create `.ralph/settings.json` in your project:
     "type": "claude-code",
     "args": ["--model", "claude-sonnet-4-20250514"]
   },
-  "process": {
-    "startupTimeout": 60000
+  "task_management": {
+    "provider": "github-issues",
+    "provider_config": {
+      "label_filter": "ralph"
+    }
+  },
+  "variables": {
+    "target_branch": "main"
   }
 }
 ```
 
-This sets a longer startup timeout and passes extra args to the agent for everyone on the team.
+This configures the agent, task management, and sets a default target branch for everyone on the team.
+
+### Example: Project-Specific Variables
+
+Create `.ralph/projects/hotfix/settings.json`:
+
+```json
+{
+  "displayName": "Hotfix",
+  "description": "Emergency fixes targeting production",
+  "variables": {
+    "target_branch": "production",
+    "skip_review": "true"
+  }
+}
+```
+
+When the "Hotfix" project is selected, these variables override global ones.
 
 ### Example: Local Overrides
 
@@ -272,6 +370,9 @@ Add to your `.gitignore`:
 .ralph/claude_output.jsonl
 .ralph/claude.lock
 .ralph/archive/
+
+# Ralph project assignment files (runtime, per-project)
+.ralph/projects/*/assignment.json
 ```
 
 ## Deep Merge Behavior
@@ -321,3 +422,9 @@ Example error:
 Error: Configuration validation failed: Invalid configuration for 'agent.type': must be one of: claude-code, codex, opencode, kiro, custom
 Check your config files or CLI options for invalid values.
 ```
+
+## See Also
+
+- [Projects](./projects.md) - Creating and managing projects
+- [Task Adapters](./task-adapters.md) - Task management providers
+- [ralph init](./commands/init.md) - Initialize Ralph in a project

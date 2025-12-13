@@ -3,6 +3,7 @@ import { Box, Text } from 'ink';
 import { colors } from '../lib/colors.js';
 import { type TaskManagementConfig } from '../lib/task-adapters/types.js';
 import { getProviderDisplayName } from '../lib/task-adapters/factory.js';
+import { ProjectInfo } from '../hooks/use-projects.js';
 
 // Big bubble-letter RALPH ASCII art
 const RALPH_ASCII = `
@@ -49,6 +50,8 @@ export interface StartScreenProps {
   width?: number;
   /** Task management configuration for display */
   taskConfig?: TaskManagementConfig;
+  /** Active project (if selected) */
+  activeProject?: ProjectInfo | null;
 }
 
 /**
@@ -58,12 +61,12 @@ function getTaskManagerInfo(config?: TaskManagementConfig): string | null {
   if (!config) return null;
 
   const providerName = getProviderDisplayName(config.provider);
-  const providerConfig = config.providerConfig;
+  const providerConfig = config.provider_config;
 
   switch (config.provider) {
     case 'github-issues': {
-      const repo = providerConfig?.githubRepo;
-      const label = providerConfig?.labelFilter;
+      const repo = providerConfig?.github_repo;
+      const label = providerConfig?.label_filter;
       if (repo) {
         const labelInfo = label ? ` (label: ${label})` : '';
         return `${providerName}: ${repo}${labelInfo}`;
@@ -72,22 +75,22 @@ function getTaskManagerInfo(config?: TaskManagementConfig): string | null {
       return `${providerName}${labelInfo}`;
     }
     case 'vibe-kanban': {
-      const projectId = providerConfig?.vibeKanbanProjectId;
+      const projectId = providerConfig?.vibe_kanban_project_id;
       if (projectId) {
         return `${providerName}: ${projectId}`;
       }
       return `${providerName} (auto-detect project)`;
     }
     case 'jira': {
-      const host = providerConfig?.jiraHost;
-      const project = providerConfig?.jiraProject;
+      const host = providerConfig?.jira_host;
+      const project = providerConfig?.jira_project;
       if (host && project) {
         return `${providerName}: ${project} @ ${host}`;
       }
       return providerName;
     }
     case 'linear': {
-      const team = providerConfig?.linearTeam;
+      const team = providerConfig?.linear_team;
       if (team) {
         return `${providerName}: ${team}`;
       }
@@ -102,6 +105,7 @@ export function StartScreen({
   height = 30,
   width = 100,
   taskConfig,
+  activeProject,
 }: StartScreenProps): React.ReactElement {
   // Pick a random tagline (stable for component lifetime)
   const [tagline] = React.useState(
@@ -172,14 +176,33 @@ export function StartScreen({
         </Text>
       </Box>
 
-      {/* Task Manager Info */}
-      {taskConfig && (
-        <Box marginTop={1}>
-          <Text color={colors.dimmed}>
-            Task Manager: <Text color={colors.selected}>{getTaskManagerInfo(taskConfig)}</Text>
-          </Text>
-        </Box>
-      )}
+      {/* Project and Task Manager Info */}
+      <Box marginTop={1} flexDirection="column" alignItems="center">
+        {activeProject && (
+          <Box>
+            <Text color={colors.dimmed}>
+              Project: <Text color={colors.subagent} bold>{activeProject.displayName || activeProject.name}</Text>
+            </Text>
+          </Box>
+        )}
+        {!activeProject && (
+          <Box>
+            <Text color={colors.dimmed}>
+              Project: <Text color={colors.error}>None selected</Text>
+              <Text color={colors.dimmed}> - Press </Text>
+              <Text color={colors.selected} bold>J</Text>
+              <Text color={colors.dimmed}> to select</Text>
+            </Text>
+          </Box>
+        )}
+        {taskConfig && (
+          <Box>
+            <Text color={colors.dimmed}>
+              Task Manager: <Text color={colors.selected}>{getTaskManagerInfo(taskConfig)}</Text>
+            </Text>
+          </Box>
+        )}
+      </Box>
     </Box>
   );
 }

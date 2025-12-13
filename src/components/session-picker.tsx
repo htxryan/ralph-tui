@@ -36,24 +36,61 @@ const PADDING = 1;
 
 /**
  * Parse a session filename to extract timestamp
- * Format: claude_output.YYYYMMDD_HHMMSS_mmm.jsonl
+ * Current format: <timestamp>.jsonl where timestamp is YYYYMMDDHHmmss (14 digits)
+ * Legacy format 1: claude_output.YYYYMMDDHHmmss.jsonl
+ * Legacy format 2: claude_output.YYYYMMDD_HHMMSS_mmm.jsonl (with underscores and milliseconds)
  */
 function parseSessionTimestamp(filename: string): Date | null {
-  const match = filename.match(/\.(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})(\d{2})_(\d{3})\.jsonl$/);
-  if (!match) return null;
+  // Try current format first: just timestamp (14 digits)
+  const currentMatch = filename.match(/^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})\.jsonl$/);
+  if (currentMatch) {
+    const [, year, month, day, hours, minutes, seconds] = currentMatch;
+    return new Date(
+      Date.UTC(
+        parseInt(year!, 10),
+        parseInt(month!, 10) - 1,
+        parseInt(day!, 10),
+        parseInt(hours!, 10),
+        parseInt(minutes!, 10),
+        parseInt(seconds!, 10)
+      )
+    );
+  }
 
-  const [, year, month, day, hours, minutes, seconds, millis] = match;
-  return new Date(
-    Date.UTC(
-      parseInt(year!, 10),
-      parseInt(month!, 10) - 1,
-      parseInt(day!, 10),
-      parseInt(hours!, 10),
-      parseInt(minutes!, 10),
-      parseInt(seconds!, 10),
-      parseInt(millis!, 10)
-    )
-  );
+  // Try legacy format 1: claude_output.YYYYMMDDHHmmss.jsonl
+  const legacyMatch1 = filename.match(/\.(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})\.jsonl$/);
+  if (legacyMatch1) {
+    const [, year, month, day, hours, minutes, seconds] = legacyMatch1;
+    return new Date(
+      Date.UTC(
+        parseInt(year!, 10),
+        parseInt(month!, 10) - 1,
+        parseInt(day!, 10),
+        parseInt(hours!, 10),
+        parseInt(minutes!, 10),
+        parseInt(seconds!, 10)
+      )
+    );
+  }
+
+  // Try legacy format 2: YYYYMMDD_HHMMSS_mmm (with underscores and milliseconds)
+  const legacyMatch2 = filename.match(/\.(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})(\d{2})_(\d{3})\.jsonl$/);
+  if (legacyMatch2) {
+    const [, year, month, day, hours, minutes, seconds, millis] = legacyMatch2;
+    return new Date(
+      Date.UTC(
+        parseInt(year!, 10),
+        parseInt(month!, 10) - 1,
+        parseInt(day!, 10),
+        parseInt(hours!, 10),
+        parseInt(minutes!, 10),
+        parseInt(seconds!, 10),
+        parseInt(millis!, 10)
+      )
+    );
+  }
+
+  return null;
 }
 
 /**
@@ -112,53 +149,111 @@ export function SessionPicker({
   const sessions = useMemo((): SessionInfo[] => {
     const result: SessionInfo[] = [];
 
-    // The live session file path (not necessarily what we're viewing)
-    const liveSessionPath = path.join(sessionDir, 'claude_output.jsonl');
-
-    // Option 1: NEW SESSION (creates fresh empty session)
+    // Option 1: NEW SESSION (creates fresh timestamped session)
     result.push({
       type: 'new',
-      filePath: liveSessionPath,
+      filePath: sessionDir, // Will be replaced with timestamped path when selected
       displayName: '+ NEW SESSION',
     });
 
-    // Option 2: Live session (if it exists and has content)
-    // Only show this if we're not currently viewing it AND it has content
-    // (avoids confusing duplicate when viewing an archived session)
-    const liveExists = fs.existsSync(liveSessionPath);
-    if (liveExists) {
-      const stats = fs.statSync(liveSessionPath);
-      if (stats.size > 0) {
-        result.push({
-          type: 'current',
-          filePath: liveSessionPath,
-          displayName: 'Live Session',
-          sizeBytes: stats.size,
-        });
+    // List all timestamped session files from the project's claude_output folder
+    // Sessions are stored in sessionDir/claude_output/<timestamp>.jsonl
+    const claudeOutputDir = path.join(sessionDir, 'claude_output');
+    if (fs.existsSync(claudeOutputDir)) {
+      try {
+        const files = fs.readdirSync(claudeOutputDir)
+          .filter(f => f.endsWith('.jsonl'))
+          .filter(f => parseSessionTimestamp(f) !== null) // Only include files with valid timestamps
+          .sort()
+          .reverse(); // Most recent first
+
+        for (const filename of files) {
+          const filePath = path.join(claudeOutputDir, filename);
+          const timestamp = parseSessionTimestamp(filename);
+          let sizeBytes: number | undefined;
+
+          try {
+            const stats = fs.statSync(filePath);
+            sizeBytes = stats.size;
+          } catch {
+            // Ignore errors reading file stats
+          }
+
+          result.push({
+            type: 'archived', // All timestamped sessions use 'archived' type for display
+            filePath,
+            displayName: timestamp ? formatSessionDate(timestamp) : filename,
+            timestamp: timestamp ?? undefined,
+            sizeBytes,
+          });
+        }
+      } catch {
+        // Ignore errors reading directory
       }
     }
 
-    // Archived sessions
-    const archivedFiles = listArchivedSessions(archiveDir);
-    for (const filename of archivedFiles) {
-      const filePath = path.join(archiveDir, filename);
-      const timestamp = parseSessionTimestamp(filename);
-      let sizeBytes: number | undefined;
-
+    // Also check legacy locations for backwards compatibility
+    // 1. Legacy: sessionDir directly (claude_output.*.jsonl files)
+    if (fs.existsSync(sessionDir)) {
       try {
-        const stats = fs.statSync(filePath);
-        sizeBytes = stats.size;
-      } catch {
-        // Ignore errors reading file stats
-      }
+        const legacyFiles = fs.readdirSync(sessionDir)
+          .filter(f => f.startsWith('claude_output.') && f.endsWith('.jsonl'))
+          .filter(f => parseSessionTimestamp(f) !== null)
+          .sort()
+          .reverse();
 
-      result.push({
-        type: 'archived',
-        filePath,
-        displayName: timestamp ? formatSessionDate(timestamp) : filename,
-        timestamp: timestamp ?? undefined,
-        sizeBytes,
-      });
+        for (const filename of legacyFiles) {
+          const filePath = path.join(sessionDir, filename);
+          const timestamp = parseSessionTimestamp(filename);
+          let sizeBytes: number | undefined;
+
+          try {
+            const stats = fs.statSync(filePath);
+            sizeBytes = stats.size;
+          } catch {
+            // Ignore errors
+          }
+
+          result.push({
+            type: 'archived',
+            filePath,
+            displayName: timestamp ? formatSessionDate(timestamp) : filename,
+            timestamp: timestamp ?? undefined,
+            sizeBytes,
+          });
+        }
+      } catch {
+        // Ignore errors
+      }
+    }
+
+    // 2. Legacy archive directory
+    if (archiveDir !== sessionDir && fs.existsSync(archiveDir)) {
+      try {
+        const archivedFiles = listArchivedSessions(archiveDir);
+        for (const filename of archivedFiles) {
+          const filePath = path.join(archiveDir, filename);
+          const timestamp = parseSessionTimestamp(filename);
+          let sizeBytes: number | undefined;
+
+          try {
+            const stats = fs.statSync(filePath);
+            sizeBytes = stats.size;
+          } catch {
+            // Ignore errors reading file stats
+          }
+
+          result.push({
+            type: 'archived',
+            filePath,
+            displayName: timestamp ? formatSessionDate(timestamp) : filename,
+            timestamp: timestamp ?? undefined,
+            sizeBytes,
+          });
+        }
+      } catch {
+        // Ignore errors reading archive directory
+      }
     }
 
     return result;
@@ -282,13 +377,12 @@ export function SessionPicker({
           case 'new':
             typeIndicator = '+';
             break;
-          case 'current':
-            typeIndicator = isCurrentlyViewed ? '▶' : '○';
-            break;
           case 'archived':
-            // Show "▶" for currently viewed archived session, otherwise folder icon
-            typeIndicator = isCurrentlyViewed ? '▶' : '📁';
+            // Show "▶" for currently viewed session, otherwise clock icon
+            typeIndicator = isCurrentlyViewed ? '▶' : '🕐';
             break;
+          default:
+            typeIndicator = '○';
         }
 
         // Build the full line content for width calculation

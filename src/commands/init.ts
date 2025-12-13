@@ -2,9 +2,11 @@
  * ralph init command
  *
  * Creates the .ralph/ directory structure in a project, including:
- * - settings.json (empty or pre-configured with agent)
- * - orchestrate.md (orchestration prompt)
- * - workflows/ directory with workflow files
+ * - settings.json (configured with task management)
+ * - projects/default/ directory with execute.md and settings.json
+ *
+ * Note: orchestrate.md is bundled with the package and read at runtime,
+ * not copied to the user's project.
  */
 
 import * as fs from 'fs';
@@ -64,13 +66,13 @@ interface FileToCreate {
 // ============================================================================
 
 /**
- * Load a template file from the templates directory
+ * Load a template file from the .ralph-templates directory
  *
  * Templates are bundled with the npm package and loaded at runtime.
  * Falls back to empty string if template file is not found.
  */
 function loadTemplate(templateName: string): string {
-  const templatePath = path.join(PACKAGE_ROOT, 'templates', templateName);
+  const templatePath = path.join(PACKAGE_ROOT, '.ralph-templates', templateName);
   try {
     if (fs.existsSync(templatePath)) {
       return fs.readFileSync(templatePath, 'utf-8');
@@ -82,10 +84,17 @@ function loadTemplate(templateName: string): string {
 }
 
 /**
- * Get the path to the templates directory
+ * Get the path to the .ralph-templates directory (for init)
  */
 export function getTemplatesDir(): string {
-  return path.join(PACKAGE_ROOT, 'templates');
+  return path.join(PACKAGE_ROOT, '.ralph-templates');
+}
+
+/**
+ * Get the path to the templates directory (for providers, etc.)
+ */
+export function getProvidersDir(): string {
+  return path.join(PACKAGE_ROOT, 'templates', 'providers');
 }
 
 /**
@@ -101,7 +110,7 @@ export function getPromptsDir(): string {
 
 const VALID_AGENT_TYPES: AgentType[] = ['claude-code', 'codex', 'opencode', 'kiro', 'custom'];
 const VALID_TASK_PROVIDERS: TaskProvider[] = ['vibe-kanban', 'github-issues', 'jira', 'linear', 'beads'];
-const DEFAULT_TASK_PROVIDER: TaskProvider = 'vibe-kanban';
+const DEFAULT_TASK_PROVIDER: TaskProvider = 'github-issues';
 
 // ============================================================================
 // Gitignore Suggestions
@@ -124,18 +133,6 @@ const GITIGNORE_SUGGESTIONS = [
 // ============================================================================
 
 /**
- * Workflow files to create as examples
- */
-const WORKFLOW_FILES = [
-  '01-feature-branch-incomplete',
-  '02-feature-branch-pr-ready',
-  '03-pr-pipeline-fix',
-  '04-cd-pipeline-fix',
-  '05-resume-in-progress',
-  '06-new-work',
-];
-
-/**
  * Determine the task provider from options, existing settings, or default
  */
 function determineProvider(projectRoot: string, options: InitOptions): TaskProvider {
@@ -150,8 +147,8 @@ function determineProvider(projectRoot: string, options: InitOptions): TaskProvi
     if (fs.existsSync(settingsPath)) {
       const content = fs.readFileSync(settingsPath, 'utf-8');
       const settings = JSON.parse(content);
-      if (settings.taskManagement?.provider && VALID_TASK_PROVIDERS.includes(settings.taskManagement.provider)) {
-        return settings.taskManagement.provider as TaskProvider;
+      if (settings.task_management?.provider && VALID_TASK_PROVIDERS.includes(settings.task_management.provider)) {
+        return settings.task_management.provider as TaskProvider;
       }
     }
   } catch {
@@ -178,11 +175,14 @@ function getFilesToCreate(projectRoot: string, options: InitOptions): FileToCrea
     settingsObj.agent = { type: options.agent };
   }
 
-  // Always include taskManagement config with the determined provider
-  settingsObj.taskManagement = {
+  // Always include task_management config with the determined provider
+  settingsObj.task_management = {
     provider: provider,
-    ...(provider === 'github-issues' ? { providerConfig: { labelFilter: 'ralph' } } : {}),
+    ...(provider === 'github-issues' ? { provider_config: { label_filter: 'ralph' } } : {}),
   };
+
+  // Add empty variables object for user customization
+  settingsObj.variables = {};
 
   const settingsContent = JSON.stringify(settingsObj, null, 2);
 
@@ -192,21 +192,19 @@ function getFilesToCreate(projectRoot: string, options: InitOptions): FileToCrea
     description: 'Configuration file',
   });
 
-  // orchestrate.md - template with placeholder (processed at runtime by sync2.sh)
+  // projects/default/settings.json - project-specific settings
   files.push({
-    relativePath: '.ralph/orchestrate.md',
-    content: loadTemplate('orchestrate.md'),
-    description: 'Orchestration prompt template',
+    relativePath: '.ralph/projects/default/settings.json',
+    content: loadTemplate('projects/default/settings.json'),
+    description: 'Default project settings',
   });
 
-  // workflows/*.md - workflow files
-  for (const workflow of WORKFLOW_FILES) {
-    files.push({
-      relativePath: `.ralph/workflows/${workflow}.md`,
-      content: loadTemplate(`workflows/${workflow}.md`),
-      description: `Workflow: ${workflow}`,
-    });
-  }
+  // projects/default/execute.md - execution workflow
+  files.push({
+    relativePath: '.ralph/projects/default/execute.md',
+    content: loadTemplate('projects/default/execute.md'),
+    description: 'Default execution workflow',
+  });
 
   return files;
 }
@@ -323,9 +321,10 @@ export function formatInitOutput(result: InitResult, options: InitOptions = {}):
 
     // Next steps
     lines.push('Next steps:');
-    lines.push('  1. Review and customize the files in .ralph/orchestrate.md and .ralph/workflows/');
-    lines.push('  2. Add the suggested entries to your .gitignore');
-    lines.push('  3. Run `ralph` to start monitoring');
+    lines.push('  1. Review and customize .ralph/projects/default/execute.md');
+    lines.push('  2. Configure variables in .ralph/settings.json or .ralph/projects/default/settings.json');
+    lines.push('  3. Add the suggested entries to your .gitignore');
+    lines.push('  4. Run `ralph` to start monitoring');
     lines.push('');
     lines.push('Ralph initialized successfully!');
   } else {

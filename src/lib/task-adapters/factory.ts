@@ -73,7 +73,7 @@ export async function createTaskAdapter(
 
     if (!available) {
       // Handle Vibe Kanban auto-install if configured
-      if (config.provider === 'vibe-kanban' && config.autoInstall) {
+      if (config.provider === 'vibe-kanban' && config.auto_install) {
         const installResult = await attemptVibeKanbanInstall();
         if (installResult.success) {
           // Retry after install
@@ -82,7 +82,7 @@ export async function createTaskAdapter(
           if (nowAvailable) {
             return {
               adapter,
-              autoInstallAttempted: true,
+              auto_install_attempted: true,
             };
           }
         }
@@ -90,7 +90,7 @@ export async function createTaskAdapter(
         return {
           adapter: null,
           error: installResult.error || 'Vibe Kanban installation failed',
-          autoInstallAttempted: true,
+          auto_install_attempted: true,
         };
       }
 

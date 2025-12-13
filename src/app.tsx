@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { Box, useApp, useInput } from 'ink';
 import * as path from 'path';
 import * as fs from 'fs';
@@ -11,9 +11,9 @@ import {
   MessageFilterType,
   ALL_MESSAGE_FILTER_TYPES,
 } from './lib/types.js';
-import { type RalphConfig } from './lib/config.js';
+import { type RalphConfig, loadConfig } from './lib/config.js';
 import { calculateSessionStats, getMessageFilterType } from './lib/parser.js';
-import { archiveCurrentSession } from './lib/archive.js';
+// Archive is no longer needed - sessions are timestamped automatically
 import { getContextualShortcuts, getAllShortcutsForDialog } from './lib/shortcuts.js';
 import { useJSONLStream } from './hooks/use-jsonl-stream.js';
 import { useTask } from './hooks/use-task.js';
@@ -21,6 +21,7 @@ import { useAssignment } from './hooks/use-assignment.js';
 import { useClaudeCodeTodos } from './hooks/use-claude-code-todos.js';
 import { useRalphProcess } from './hooks/use-ralph-process.js';
 import { useTerminalSize } from './hooks/use-terminal-size.js';
+import { useProjects, ProjectInfo } from './hooks/use-projects.js';
 import { Header } from './components/header.js';
 import { TabBar } from './components/tab-bar.js';
 import { Footer } from './components/footer.js';
@@ -36,6 +37,7 @@ import { SessionPicker, SessionInfo } from './components/session-picker.js';
 import { ShortcutsDialog } from './components/shortcuts-dialog.js';
 import { StartScreen } from './components/start-screen.js';
 import { FilterDialog } from './components/messages/filter-dialog.js';
+import { ProjectPicker } from './components/project-picker.js';
 
 export interface AppProps {
   jsonlPath: string;
@@ -57,21 +59,45 @@ export function App({
   const [currentJsonlPath, setCurrentJsonlPath] = useState(jsonlPath);
   const [isSessionPickerOpen, setIsSessionPickerOpen] = useState(false);
 
-  // Compute session and archive directories from the ORIGINAL jsonlPath prop
-  // (not currentJsonlPath). These are the canonical directories that don't change
-  // when switching to archived sessions. This ensures the session picker always
-  // shows the full archive list, even when viewing an archived session.
-  const sessionDir = useMemo(() => path.dirname(jsonlPath), [jsonlPath]);
-  // Project root is the parent of the .ralph directory (sessionDir)
-  const projectRoot = useMemo(() => path.dirname(sessionDir), [sessionDir]);
-  // Use config.paths.archiveDir if available, otherwise fall back to default
-  const archiveDir = useMemo(() => {
-    if (config?.paths?.archiveDir) {
-      // archiveDir from config is relative to project root
-      return path.resolve(projectRoot, config.paths.archiveDir);
+  // Project state - manage which project (execution mode) is active
+  const [activeProject, setActiveProject] = useState<ProjectInfo | null>(null);
+  const [isProjectPickerOpen, setIsProjectPickerOpen] = useState(false);
+  // Track if we should auto-start Ralph after project selection
+  const [pendingStartAfterProjectSelect, setPendingStartAfterProjectSelect] = useState(false);
+
+  // Config state - starts with the initial config and gets updated when project is selected
+  // This allows project-specific settings to be merged in after project selection
+  const [currentConfig, setCurrentConfig] = useState<RalphConfig | undefined>(config);
+
+  // Compute base .ralph directory by finding it in the jsonlPath
+  // jsonlPath is now: .ralph/projects/<name>/claude_output.xxx.jsonl
+  // We need to find the .ralph directory regardless of nesting depth
+  const ralphDir = useMemo(() => {
+    let dir = path.dirname(jsonlPath);
+    // Walk up until we find the .ralph directory
+    while (dir && !dir.endsWith('.ralph') && dir !== path.dirname(dir)) {
+      dir = path.dirname(dir);
     }
-    return path.join(sessionDir, 'archive');
-  }, [sessionDir, projectRoot, config?.paths?.archiveDir]);
+    // If we didn't find .ralph, fall back to assuming jsonlPath is in .ralph directly
+    if (!dir.endsWith('.ralph')) {
+      dir = path.dirname(jsonlPath);
+    }
+    return dir;
+  }, [jsonlPath]);
+
+  // Project root is the parent of the .ralph directory
+  const projectRoot = useMemo(() => path.dirname(ralphDir), [ralphDir]);
+
+  // Session directory is project-specific: .ralph/projects/<name>/
+  // Sessions are stored directly here with timestamps, no separate archive needed
+  const sessionDir = useMemo(() => {
+    const projectName = activeProject?.name || 'default';
+    return path.join(ralphDir, 'projects', projectName);
+  }, [ralphDir, activeProject?.name]);
+
+  // Archive dir now points to session dir since sessions are already timestamped
+  // This is for backwards compatibility with the session picker
+  const archiveDir = useMemo(() => sessionDir, [sessionDir]);
 
   // App state
   const [currentTab, setCurrentTab] = useState<TabName>('messages');
@@ -90,7 +116,10 @@ export function App({
   const { rows: terminalRows, columns: terminalColumns } = useTerminalSize();
 
   // Data hooks
-  const { assignment } = useAssignment({ basePath: projectRoot });
+  const { assignment } = useAssignment({
+    basePath: projectRoot,
+    activeProjectName: activeProject?.name,
+  });
   const effectiveTaskId = providedIssueId || assignment?.task_id || null;
 
   const {
@@ -108,7 +137,7 @@ export function App({
     refresh: refreshTask,
   } = useTask({
     taskId: effectiveTaskId,
-    taskConfig: config?.taskManagement,
+    taskConfig: currentConfig?.task_management,
   });
 
   const {
@@ -119,16 +148,33 @@ export function App({
     refresh: refreshTodos,
   } = useClaudeCodeTodos();
 
+  // Projects hook
+  const {
+    projects,
+    isLoading: isLoadingProjects,
+  } = useProjects({ basePath: projectRoot });
+
+  // Callback when a new log file is created by starting/resuming Ralph
+  const handleLogFileCreated = useCallback((logFilePath: string) => {
+    setCurrentJsonlPath(logFilePath);
+    // Reset session start index since this is a fresh file
+    setSessionStartIndex(0);
+  }, []);
+
   const {
     isStarting: isRalphStarting,
     isRunning: isRalphRunning,
     isStopping: isRalphStopping,
     isResuming: isRalphResuming,
     error: ralphError,
+    currentLogFile,
     start: startRalph,
     stop: stopRalph,
     resume: resumeRalph,
-  } = useRalphProcess();
+  } = useRalphProcess({
+    activeProjectName: activeProject?.name,
+    onLogFileCreated: handleLogFileCreated,
+  });
 
   // Interrupt mode state
   const [isInterruptMode, setIsInterruptMode] = useState(false);
@@ -191,34 +237,19 @@ export function App({
     refreshTodos();
   }, [refreshStream, refreshTask, refreshTodos]);
 
-  // Wrapper for starting Ralph that archives the current session and starts fresh
-  const handleStartRalph = useCallback(async () => {
-    try {
-      // Archive current session if it has content, then create fresh file
-      // This ensures each Ralph run starts with a clean slate (no "previous session" box)
-      const defaultPath = path.join(sessionDir, 'claude_output.jsonl');
+  // Wrapper for starting Ralph - sessions are now automatically timestamped
+  // The onLogFileCreated callback handles updating currentJsonlPath and sessionStartIndex
+  const handleStartRalph = useCallback(() => {
+    startRalph();
+  }, [startRalph]);
 
-      await archiveCurrentSession(defaultPath, archiveDir);
-
-      // Create fresh empty file
-      const dir = path.dirname(defaultPath);
-      if (!fs.existsSync(dir)) {
-        fs.mkdirSync(dir, { recursive: true });
-      }
-      fs.writeFileSync(defaultPath, '', 'utf-8');
-
-      // Update the path (this will trigger useJSONLStream to reset)
-      setCurrentJsonlPath(defaultPath);
-      // Set session start index to 0 since we're starting with a fresh file
-      // This ensures stats are calculated from the beginning of the session
-      setSessionStartIndex(0);
-
-      // Start Ralph
-      startRalph();
-    } catch {
-      // Error handling is done in useRalphProcess
+  // Auto-start Ralph after project selection (when triggered via 'S' with no project)
+  useEffect(() => {
+    if (pendingStartAfterProjectSelect && activeProject && !isProjectPickerOpen) {
+      setPendingStartAfterProjectSelect(false);
+      handleStartRalph();
     }
-  }, [sessionDir, archiveDir, startRalph]);
+  }, [pendingStartAfterProjectSelect, activeProject, isProjectPickerOpen, handleStartRalph]);
 
   // Interrupt mode handlers
   const handleEnterInterruptMode = useCallback(() => {
@@ -269,27 +300,61 @@ export function App({
     setIsFilterDialogOpen(false);
   }, []);
 
+  // Project picker handlers
+  const handleOpenProjectPicker = useCallback(() => {
+    setIsProjectPickerOpen(true);
+  }, []);
+
+  const handleCloseProjectPicker = useCallback(() => {
+    setIsProjectPickerOpen(false);
+    // Clear the pending start flag if user closes without selecting
+    setPendingStartAfterProjectSelect(false);
+  }, []);
+
+  const handleSelectProject = useCallback((project: ProjectInfo) => {
+    setActiveProject(project);
+    setIsProjectPickerOpen(false);
+
+    // Reload config with project-specific settings merged in
+    // This ensures settings from .ralph/projects/<name>/settings.json are applied
+    try {
+      const updatedConfig = loadConfig(projectRoot, {}, project.name);
+      setCurrentConfig(updatedConfig);
+    } catch (err) {
+      // Log error but don't block project selection
+      process.stderr.write(`Warning: Failed to load project config: ${err instanceof Error ? err.message : String(err)}\n`);
+    }
+
+    // Note: If pendingStartAfterProjectSelect is true, the useEffect below
+    // will trigger the start once the activeProject state has been set
+  }, [projectRoot]);
+
   const handleSelectSession = useCallback(
     async (session: SessionInfo) => {
       setIsSessionPickerOpen(false);
 
       if (session.type === 'new') {
-        // Archive current session if it has content, then create fresh file
-        const defaultPath = path.join(sessionDir, 'claude_output.jsonl');
-        await archiveCurrentSession(defaultPath, archiveDir);
+        // Create a new timestamped session file in the claude_output folder
+        const now = new Date();
+        const timestamp = now.toISOString()
+          .replace(/[-:T]/g, '')
+          .slice(0, 14); // YYYYMMDDHHmmss
+        const claudeOutputDir = path.join(sessionDir, 'claude_output');
+        const newPath = path.join(claudeOutputDir, `${timestamp}.jsonl`);
 
-        // Create fresh empty file
-        const dir = path.dirname(defaultPath);
-        if (!fs.existsSync(dir)) {
-          fs.mkdirSync(dir, { recursive: true });
+        // Ensure claude_output directory exists
+        if (!fs.existsSync(claudeOutputDir)) {
+          fs.mkdirSync(claudeOutputDir, { recursive: true });
         }
-        fs.writeFileSync(defaultPath, '', 'utf-8');
 
-        setCurrentJsonlPath(defaultPath);
+        // Create empty file
+        fs.writeFileSync(newPath, '', 'utf-8');
+
+        setCurrentJsonlPath(newPath);
         // Set to 0 for new session (fresh file)
         setSessionStartIndex(0);
       } else {
-        // Load the selected session (current or archived)
+        // Load the selected session
         setCurrentJsonlPath(session.filePath);
         setSessionStartIndex(undefined);
       }
@@ -300,7 +365,7 @@ export function App({
       setSelectedMessage(null);
       setSelectedError(null);
     },
-    [sessionDir, archiveDir]
+    [sessionDir]
   );
 
   // Calculate session-scoped stats (only current session, not previous sessions)
@@ -386,9 +451,9 @@ export function App({
       // For other keys, continue processing below
     }
 
-    // When in interrupt mode, session picker, or filter dialog is open, don't handle any global shortcuts
+    // When in interrupt mode, session picker, project picker, or filter dialog is open, don't handle any global shortcuts
     // Those components handle their own input
-    if (isInterruptMode || isSessionPickerOpen || isFilterDialogOpen) {
+    if (isInterruptMode || isSessionPickerOpen || isProjectPickerOpen || isFilterDialogOpen) {
       return;
     }
 
@@ -456,6 +521,12 @@ export function App({
 
     // Start Ralph (when not running)
     if (input === 's' && !isRalphRunning && !isRalphStarting) {
+      // If no project is selected, show project picker first
+      if (!activeProject) {
+        setPendingStartAfterProjectSelect(true);
+        setIsProjectPickerOpen(true);
+        return;
+      }
       handleStartRalph();
       return;
     }
@@ -481,6 +552,12 @@ export function App({
     // Open filter dialog (only on messages tab in main view)
     if (input === 'f' && currentTab === 'messages' && currentView === 'main') {
       handleOpenFilterDialog();
+      return;
+    }
+
+    // Open project picker
+    if (input === 'j') {
+      handleOpenProjectPicker();
       return;
     }
   });
@@ -534,7 +611,8 @@ export function App({
             <StartScreen
               height={contentHeight}
               width={terminalColumns}
-              taskConfig={config?.taskManagement}
+              taskConfig={currentConfig?.task_management}
+              activeProject={activeProject}
             />
           );
         }
@@ -614,6 +692,7 @@ export function App({
         isRalphRunning={isRalphRunning}
         assignment={assignment}
         ralphError={ralphError}
+        activeProject={activeProject}
       />
 
       {/* Tab Bar - hide when in detail views */}
@@ -699,6 +778,26 @@ export function App({
             onClose={handleCloseFilterDialog}
             width={Math.min(60, terminalColumns - 4)}
             messageCounts={messageCounts}
+          />
+        </Box>
+      )}
+
+      {/* Project Picker Overlay */}
+      {isProjectPickerOpen && (
+        <Box
+          position="absolute"
+          width="100%"
+          height="100%"
+          justifyContent="center"
+          alignItems="center"
+        >
+          <ProjectPicker
+            projects={projects}
+            activeProject={activeProject}
+            onSelectProject={handleSelectProject}
+            onClose={handleCloseProjectPicker}
+            width={Math.min(60, terminalColumns - 4)}
+            maxHeight={Math.min(20, terminalRows - 4)}
           />
         </Box>
       )}

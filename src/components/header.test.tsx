@@ -40,10 +40,11 @@ describe('Header', () => {
     expect(lastFrame()).toContain('Running - Orchestrator');
   });
 
-  it('displays workflow name when provided', () => {
+  it('displays executing status when next_step is provided', () => {
     const assignment: Assignment = {
-      workflow: '.ralph/workflows/01-new-work.md',
-      task_id: undefined
+      task_id: 'ISSUE-123',
+      next_step: 'Implement the feature',
+      pull_request_url: null
     };
 
     const { lastFrame } = render(
@@ -55,7 +56,7 @@ describe('Header', () => {
       />
     );
 
-    expect(lastFrame()).toContain('Running - New Work');
+    expect(lastFrame()).toContain('Running - Executing');
   });
 
   it('displays task information when provided', () => {

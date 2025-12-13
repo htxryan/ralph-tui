@@ -60,8 +60,8 @@ export class GitHubIssuesAdapter extends BaseTaskAdapter {
     super(config);
 
     // Parse owner/repo from config if provided
-    if (config.providerConfig?.githubRepo) {
-      const parts = config.providerConfig.githubRepo.split('/');
+    if (config.provider_config?.github_repo) {
+      const parts = config.provider_config.github_repo.split('/');
       if (parts.length === 2) {
         this.owner = parts[0];
         this.repo = parts[1];
@@ -69,7 +69,7 @@ export class GitHubIssuesAdapter extends BaseTaskAdapter {
     }
 
     // Set up label filter: default to 'ralph', allow explicit null/empty to disable
-    const labelConfig = config.providerConfig?.labelFilter;
+    const labelConfig = config.provider_config?.label_filter;
     if (labelConfig === null || labelConfig === '') {
       this.labelFilter = null;
     } else if (labelConfig !== undefined) {

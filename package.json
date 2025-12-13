@@ -44,6 +44,7 @@
     "prompts",
     "scripts",
     "templates",
+    ".ralph-templates",
     "README.md",
     "LICENSE"
   ],

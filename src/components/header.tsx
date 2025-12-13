@@ -2,8 +2,9 @@ import React from 'react';
 import { Box, Text } from 'ink';
 import { colors, icons } from '../lib/colors.js';
 import { Assignment, KanbanTask, SessionStats } from '../lib/types.js';
-import { formatTokens, formatDuration, extractWorkflowName } from '../lib/parser.js';
+import { formatTokens, formatDuration } from '../lib/parser.js';
 import { Spinner } from './common/spinner.js';
+import { ProjectInfo } from '../hooks/use-projects.js';
 
 /**
  * Check if a date is valid
@@ -45,6 +46,8 @@ export interface HeaderProps {
   assignment?: Assignment | null;
   /** Error from Ralph process (start/stop/resume failures) */
   ralphError?: Error | null;
+  /** Currently active project */
+  activeProject?: ProjectInfo | null;
 }
 
 export function Header({
@@ -55,6 +58,7 @@ export function Header({
   isRalphRunning = false,
   assignment = null,
   ralphError = null,
+  activeProject = null,
 }: HeaderProps): React.ReactElement {
   // Combine errors - ralphError takes precedence for display
   const displayError = ralphError || error;
@@ -63,16 +67,15 @@ export function Header({
 
   // Compute dynamic status text:
   // - Error: Show "Error"
-  // - Running + no workflow: "Running - Orchestrator"
-  // - Running + workflow: "Running - <workflow name>"
+  // - Running + no next_step: "Running - Orchestrator"
+  // - Running + next_step: "Running - Executing"
   // - Idle: "Idle"
   let statusText = 'Idle';
   if (displayError) {
     statusText = 'Error';
   } else if (isRalphRunning) {
-    const workflowName = extractWorkflowName(assignment?.workflow);
-    if (workflowName) {
-      statusText = `Running - ${workflowName}`;
+    if (assignment?.next_step) {
+      statusText = 'Running - Executing';
     } else {
       statusText = 'Running - Orchestrator';
     }
@@ -105,6 +108,14 @@ export function Header({
           </Text>
           <Text color={colors.dimmed}> | </Text>
           <Text color={statusColor}>{statusText}</Text>
+          {activeProject && (
+            <>
+              <Text color={colors.dimmed}> | </Text>
+              <Text color={colors.subagent}>
+                {activeProject.displayName || activeProject.name}
+              </Text>
+            </>
+          )}
         </Box>
 
         {/* Token counter */}

@@ -19,12 +19,21 @@ ralph-tui/
 │   ├── lib/                     # Utilities, types, parser
 │   └── test/                    # Tests (unit, integration, e2e)
 │
-├── templates/                   # Default templates for `ralph init`
-│   ├── orchestrate.md           # Orchestration prompt
-│   └── workflows/               # Workflow files with YAML frontmatter
+├── .ralph-templates/            # Default templates for `ralph init`
+│   ├── settings.json            # Default settings
+│   └── projects/
+│       └── default/
+│           ├── settings.json    # Default project settings
+│           └── execute.md       # Default execution workflow
 │
-├── prompts/                     # Prompt templates
+├── prompts/                     # Bundled prompt templates (not copied)
+│   ├── orchestrate.md           # Orchestration prompt
 │   └── resume.md                # Resume prompt
+│
+├── templates/                   # Provider-specific templates
+│   └── providers/               # Task provider prompts
+│       ├── github-issues.md
+│       └── vibe-kanban.md
 │
 ├── scripts/                     # Runtime scripts (for autonomous loops)
 │   ├── ralph.sh                 # Main autonomous loop
@@ -41,9 +50,15 @@ ralph-tui/
 ├── .github/workflows/           # CI/CD pipelines
 │
 └── .ralph/                      # RUNTIME ONLY (gitignored)
+    ├── settings.json            # Project configuration
     ├── claude_output.jsonl      # Session logs
     ├── claude.lock              # Lock file
-    └── archive/                 # Archived sessions
+    ├── archive/                 # Archived sessions
+    └── projects/                # User project definitions
+        └── <name>/
+            ├── settings.json    # Project-specific settings
+            ├── execute.md       # Project execution workflow
+            └── assignment.json  # Current task assignment (runtime)
 ```
 
 ## Development Commands
@@ -89,6 +104,7 @@ pnpm typecheck        # TypeScript type checking only
 1. **Stream Processing**: JSONL file → chokidar watch → parse → React state (`useJSONLStream` hook)
 2. **Subagent Tracking**: Messages with `parent_tool_use_id` are collected into parent ToolCall's `subagentMessages` array
 3. **Process Management**: Lock file + PID tracking for Start/Stop/Resume (`useRalphProcess` hook)
+4. **Project Selection**: Users select a project (execution mode) at startup; the active project's `execute.md` defines the workflow (`useProjects` hook, `ProjectPicker` component)
 
 ### Component Structure
 
@@ -105,11 +121,13 @@ src/
 ├── hooks/               # React hooks
 │   ├── use-jsonl-stream.ts    # Real-time JSONL file tailing
 │   ├── use-ralph-process.ts   # Process lifecycle management
+│   ├── use-projects.ts        # Project discovery and selection
 │   ├── use-keyboard.ts        # Keyboard input handling
 │   └── ...
 └── lib/                 # Utilities
     ├── types.ts         # All TypeScript interfaces
     ├── parser.ts        # JSONL parsing, stats calculation
+    ├── template.ts      # Template variable substitution
     └── ...
 ```
 
@@ -120,6 +138,8 @@ src/
 - `ToolCall` - Tool invocation with status, result, subagent data
 - `SessionStats` - Token counts, timing, error counts
 - `TabName` - 'messages' | 'task' | 'todos' | 'errors' | 'stats'
+- `Assignment` - Current task assignment with `task_id`, `next_step`, `pull_request_url`
+- `ProjectInfo` (hooks/use-projects.ts) - Project metadata: name, path, displayName, description
 
 ## Testing Patterns
 
@@ -141,4 +161,4 @@ Test files are co-located with components (`*.test.tsx`) or in `src/test/` for i
 
 ## Work Tracking
 
-This project uses Vibe Kanban for task tracking instead of markdown TODOs. Use the Vibe Kanban MCP server to manage tasks.
+This project uses GitHub Issues for task tracking instead of markdown TODOs. Use the `github-operator` Task subagent (which will in turn use the GitHub CLI (`gh`)) to manage tasks.

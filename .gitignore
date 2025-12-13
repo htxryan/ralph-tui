@@ -22,9 +22,6 @@ debug-*.js
 # typescript
 *.tsbuildinfo
 
-# Ralph runtime artifacts (created during autonomous execution)
-.ralph/
-
 # Test output
 test-results/
 playwright-report/
@@ -34,3 +31,7 @@ sample/
 data
 trace
 planning/
+
+
+# Ralph
+.ralph/archive/

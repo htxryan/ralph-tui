@@ -42,7 +42,8 @@ describe('init command', () => {
 
       expect(result.success).toBe(true);
       expect(fs.existsSync(path.join(tempDir, '.ralph'))).toBe(true);
-      expect(fs.existsSync(path.join(tempDir, '.ralph/workflows'))).toBe(true);
+      expect(fs.existsSync(path.join(tempDir, '.ralph/projects'))).toBe(true);
+      expect(fs.existsSync(path.join(tempDir, '.ralph/projects/default'))).toBe(true);
     });
 
     it('creates settings.json with default task management config', () => {
@@ -52,54 +53,49 @@ describe('init command', () => {
       expect(fs.existsSync(settingsPath)).toBe(true);
 
       const content = fs.readFileSync(settingsPath, 'utf-8');
-      expect(JSON.parse(content)).toEqual({
-        taskManagement: {
-          provider: 'vibe-kanban',
+      const settings = JSON.parse(content);
+      expect(settings.task_management).toEqual({
+        provider: 'github-issues',
+        provider_config: {
+          label_filter: 'ralph',
         },
       });
+      expect(settings.variables).toEqual({});
     });
 
-    it('creates workflows directory', () => {
+    it('creates projects/default directory', () => {
       runInit(tempDir);
 
-      expect(fs.existsSync(path.join(tempDir, '.ralph/workflows'))).toBe(true);
+      expect(fs.existsSync(path.join(tempDir, '.ralph/projects/default'))).toBe(true);
     });
 
-    it('creates orchestrate.md with content', () => {
+    it('creates projects/default/execute.md with content', () => {
       runInit(tempDir);
 
-      const filePath = path.join(tempDir, '.ralph/orchestrate.md');
+      const filePath = path.join(tempDir, '.ralph/projects/default/execute.md');
       expect(fs.existsSync(filePath)).toBe(true);
 
       const content = fs.readFileSync(filePath, 'utf-8');
-      expect(content).toContain('Workflow Selection');
+      expect(content).toContain('Workflow');
     });
 
-    it('creates workflow files', () => {
+    it('creates projects/default/settings.json with content', () => {
       runInit(tempDir);
 
-      const workflowFiles = [
-        '01-feature-branch-incomplete.md',
-        '02-feature-branch-pr-ready.md',
-        '03-pr-pipeline-fix.md',
-        '04-cd-pipeline-fix.md',
-        '05-resume-in-progress.md',
-        '06-new-work.md',
-      ];
+      const filePath = path.join(tempDir, '.ralph/projects/default/settings.json');
+      expect(fs.existsSync(filePath)).toBe(true);
 
-      for (const file of workflowFiles) {
-        const filePath = path.join(tempDir, '.ralph/workflows', file);
-        expect(fs.existsSync(filePath)).toBe(true);
-      }
+      const content = fs.readFileSync(filePath, 'utf-8');
+      const settings = JSON.parse(content);
+      expect(settings.display_name).toBe('Default');
     });
 
     it('returns list of created files', () => {
       const result = runInit(tempDir);
 
       expect(result.created).toContain('.ralph/settings.json');
-      expect(result.created).toContain('.ralph/orchestrate.md');
-      expect(result.created).toContain('.ralph/workflows/01-feature-branch-incomplete.md');
-      expect(result.created).toContain('.ralph/workflows/06-new-work.md');
+      expect(result.created).toContain('.ralph/projects/default/settings.json');
+      expect(result.created).toContain('.ralph/projects/default/execute.md');
     });
 
     it('returns gitignore suggestions', () => {
@@ -137,17 +133,17 @@ describe('init command', () => {
       expect(JSON.parse(content)).toEqual({ custom: true });
     });
 
-    it('does not overwrite existing workflow files', () => {
-      const workflowPath = path.join(tempDir, '.ralph/workflows/01-feature-branch-incomplete.md');
-      fs.mkdirSync(path.dirname(workflowPath), { recursive: true });
-      fs.writeFileSync(workflowPath, 'My custom workflow', 'utf-8');
+    it('does not overwrite existing project files', () => {
+      const executePath = path.join(tempDir, '.ralph/projects/default/execute.md');
+      fs.mkdirSync(path.dirname(executePath), { recursive: true });
+      fs.writeFileSync(executePath, 'My custom workflow', 'utf-8');
 
       const result = runInit(tempDir);
 
       expect(result.success).toBe(true);
-      expect(result.skipped).toContain('.ralph/workflows/01-feature-branch-incomplete.md');
+      expect(result.skipped).toContain('.ralph/projects/default/execute.md');
 
-      const content = fs.readFileSync(workflowPath, 'utf-8');
+      const content = fs.readFileSync(executePath, 'utf-8');
       expect(content).toBe('My custom workflow');
     });
 
@@ -161,8 +157,8 @@ describe('init command', () => {
       // settings.json skipped
       expect(result.skipped).toContain('.ralph/settings.json');
       // Other files created
-      expect(result.created).toContain('.ralph/orchestrate.md');
-      expect(result.created).toContain('.ralph/workflows/01-feature-branch-incomplete.md');
+      expect(result.created).toContain('.ralph/projects/default/settings.json');
+      expect(result.created).toContain('.ralph/projects/default/execute.md');
     });
 
     it('running init twice is idempotent', () => {
@@ -172,9 +168,9 @@ describe('init command', () => {
       expect(result1.success).toBe(true);
       expect(result2.success).toBe(true);
 
-      // Second run should skip all files (8 files total)
+      // Second run should skip all files (3 files total)
       expect(result2.created.length).toBe(0);
-      expect(result2.skipped.length).toBe(8);
+      expect(result2.skipped.length).toBe(3);
     });
   });
 
@@ -265,7 +261,7 @@ describe('init command', () => {
       const result = runInit(tempDir, { dryRun: true });
 
       expect(result.success).toBe(true);
-      expect(result.created.length).toBe(8);
+      expect(result.created.length).toBe(3);
       expect(fs.existsSync(path.join(tempDir, '.ralph'))).toBe(false);
     });
 
@@ -273,8 +269,8 @@ describe('init command', () => {
       const result = runInit(tempDir, { dryRun: true });
 
       expect(result.created).toContain('.ralph/settings.json');
-      expect(result.created).toContain('.ralph/orchestrate.md');
-      expect(result.created).toContain('.ralph/workflows/01-feature-branch-incomplete.md');
+      expect(result.created).toContain('.ralph/projects/default/settings.json');
+      expect(result.created).toContain('.ralph/projects/default/execute.md');
     });
 
     it('still returns gitignore suggestions', () => {
@@ -301,22 +297,24 @@ describe('init command', () => {
       expect(result.skipped).not.toContain('.ralph/settings.json');
 
       const content = fs.readFileSync(settingsPath, 'utf-8');
-      expect(JSON.parse(content)).toEqual({
-        taskManagement: { provider: 'vibe-kanban' },
+      const settings = JSON.parse(content);
+      expect(settings.task_management).toEqual({
+        provider: 'github-issues',
+        provider_config: { label_filter: 'ralph' },
       });
     });
 
-    it('overwrites existing workflow files', () => {
-      const workflowPath = path.join(tempDir, '.ralph/workflows/01-feature-branch-incomplete.md');
-      fs.mkdirSync(path.dirname(workflowPath), { recursive: true });
-      fs.writeFileSync(workflowPath, 'Old content', 'utf-8');
+    it('overwrites existing project files', () => {
+      const executePath = path.join(tempDir, '.ralph/projects/default/execute.md');
+      fs.mkdirSync(path.dirname(executePath), { recursive: true });
+      fs.writeFileSync(executePath, 'Old content', 'utf-8');
 
       const result = runInit(tempDir, { force: true });
 
-      expect(result.created).toContain('.ralph/workflows/01-feature-branch-incomplete.md');
+      expect(result.created).toContain('.ralph/projects/default/execute.md');
 
-      const content = fs.readFileSync(workflowPath, 'utf-8');
-      expect(content).toContain('Feature Branch');
+      const content = fs.readFileSync(executePath, 'utf-8');
+      expect(content).toContain('Workflow');
     });
 
     it('works with --agent option', () => {
@@ -327,9 +325,11 @@ describe('init command', () => {
       runInit(tempDir, { force: true, agent: 'codex' });
 
       const content = fs.readFileSync(settingsPath, 'utf-8');
-      expect(JSON.parse(content)).toEqual({
-        agent: { type: 'codex' },
-        taskManagement: { provider: 'vibe-kanban' },
+      const settings = JSON.parse(content);
+      expect(settings.agent).toEqual({ type: 'codex' });
+      expect(settings.task_management).toEqual({
+        provider: 'github-issues',
+        provider_config: { label_filter: 'ralph' },
       });
     });
   });
@@ -368,7 +368,7 @@ describe('init command', () => {
       const result: InitResult = {
         success: true,
         projectRoot: tempDir,
-        created: ['.ralph/settings.json', '.ralph/orchestrate.md'],
+        created: ['.ralph/settings.json', '.ralph/projects/default/execute.md'],
         skipped: [],
         gitignoreSuggestions: [],
       };
@@ -377,7 +377,7 @@ describe('init command', () => {
 
       expect(output).toContain('Created:');
       expect(output).toContain('.ralph/settings.json');
-      expect(output).toContain('.ralph/orchestrate.md');
+      expect(output).toContain('.ralph/projects/default/execute.md');
     });
 
     it('includes skipped files in output', () => {

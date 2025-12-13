@@ -10,7 +10,7 @@ ralph init [options]
 
 ## Description
 
-The `init` command creates the `.ralph/` directory structure in your project, setting up the configuration files and prompt templates needed for Ralph to operate.
+The `init` command creates the `.ralph/` directory structure in your project, setting up the configuration files and execution templates needed for Ralph to operate.
 
 This is typically the first command you run when setting up Ralph in a new project.
 
@@ -18,42 +18,51 @@ This is typically the first command you run when setting up Ralph in a new proje
 
 ```
 .ralph/
-├── settings.json                              # Configuration file (empty by default)
-├── orchestrate.md                             # Orchestration prompt
-└── workflows/
-    ├── 01-feature-branch-incomplete.md
-    ├── 02-feature-branch-pr-ready.md
-    ├── 03-pr-pipeline-fix.md
-    ├── 04-cd-pipeline-fix.md
-    ├── 05-resume-in-progress.md
-    └── 06-new-work.md
+├── settings.json                              # Configuration file
+└── projects/
+    └── default/
+        ├── settings.json                      # Project-specific settings
+        └── execute.md                         # Execution workflow
 ```
 
 ### settings.json
 
-The main configuration file for Ralph. Created as an empty JSON object `{}` by default, which means Ralph will use its built-in defaults. You can customize this file to:
+The main configuration file for Ralph. Created with default task management settings:
+
+```json
+{
+  "task_management": {
+    "provider": "github-issues",
+    "provider_config": {
+      "label_filter": "ralph"
+    }
+  },
+  "variables": {}
+}
+```
+
+You can customize this file to:
 
 - Configure which AI agent to use
-- Adjust display settings
-- Set custom paths
-- Configure process timeouts
+- Set task management provider (GitHub Issues, Linear, Jira, etc.)
+- Define template variables for prompt substitution
+- Adjust display settings and custom paths
 
 See [Configuration](../configuration.md) for details.
 
-### Orchestration & Workflow Files
+### Projects Directory
 
-Ralph uses an orchestration-based approach with multiple workflow paths:
+Ralph uses a **project-based** approach where each "project" represents a different execution mode or workflow:
 
-- **orchestrate.md**: Orchestration prompt that determines which workflow to execute based on project state (branch, PRs, pipelines, tasks).
-- **workflows/*.md**: Workflow files for different scenarios:
-  - Feature branch with incomplete work
-  - Feature branch ready to merge
-  - PR pipeline fixes
-  - CD pipeline fixes
-  - Resuming in-progress work
-  - Starting new work
+- **projects/default/** - The default project created by `ralph init`
+  - **execute.md** - The execution workflow that defines how tasks are completed
+  - **settings.json** - Project-specific settings and variables
 
-Each workflow file includes YAML frontmatter with metadata like `name`, `condition`, `description`, `priority`, and `goal`. See [Workflows](../workflows.md) for the full schema.
+You can create additional projects for different workflows (e.g., `bug-fix`, `refactor`, `docs`) by copying the `default` directory.
+
+### Bundled Orchestration
+
+The orchestration prompt (`orchestrate.md`) is bundled with the Ralph package and **not copied** to your project. This ensures you always get the latest orchestration logic when upgrading Ralph. Template variables like `{{execute_path}}` are substituted at runtime.
 
 ## Options
 
@@ -80,7 +89,14 @@ This creates `settings.json` with:
 {
   "agent": {
     "type": "claude-code"
-  }
+  },
+  "task_management": {
+    "provider": "github-issues",
+    "provider_config": {
+      "label_filter": "ralph"
+    }
+  },
+  "variables": {}
 }
 ```
 
@@ -103,13 +119,8 @@ Initializing Ralph in /path/to/project
 
 Would create:
   .ralph/settings.json
-  .ralph/orchestrate.md
-  .ralph/workflows/01-feature-branch-incomplete.md
-  .ralph/workflows/02-feature-branch-pr-ready.md
-  .ralph/workflows/03-pr-pipeline-fix.md
-  .ralph/workflows/04-cd-pipeline-fix.md
-  .ralph/workflows/05-resume-in-progress.md
-  .ralph/workflows/06-new-work.md
+  .ralph/projects/default/settings.json
+  .ralph/projects/default/execute.md
 
 Suggested .gitignore additions:
   # Ralph - Local settings (user-specific overrides)
@@ -120,9 +131,10 @@ Suggested .gitignore additions:
   .ralph/claude.lock
 
 Next steps:
-  1. Review and customize the files in .ralph/orchestrate.md and .ralph/workflows/
-  2. Add the suggested entries to your .gitignore
-  3. Run `ralph` to start monitoring
+  1. Review and customize .ralph/projects/default/execute.md
+  2. Configure variables in .ralph/settings.json or .ralph/projects/default/settings.json
+  3. Add the suggested entries to your .gitignore
+  4. Run `ralph` to start monitoring
 
 Ralph initialized successfully!
 ```
@@ -204,13 +216,38 @@ ralph init --agent codex --dry-run
 
 After running `ralph init`:
 
-1. **Review the orchestration and workflow files** in `.ralph/orchestrate.md` and `.ralph/workflows/`
-2. **Customize workflows** by editing the workflow files to match your project's needs
+1. **Review the execution workflow** in `.ralph/projects/default/execute.md`
+2. **Configure variables** in `.ralph/settings.json` (e.g., `target_branch`)
 3. **Update .gitignore** with the suggested entries
 4. **Start Ralph** by running `ralph` in your project directory
+5. **Select a project** by pressing `J` in the TUI to open the project picker
+
+## Creating Additional Projects
+
+To create a new project (execution mode):
+
+1. Copy the `default` directory:
+   ```bash
+   cp -r .ralph/projects/default .ralph/projects/bug-fix
+   ```
+
+2. Edit `.ralph/projects/bug-fix/settings.json` to customize:
+   ```json
+   {
+     "displayName": "Bug Fix",
+     "description": "Workflow optimized for bug fixes",
+     "variables": {
+       "target_branch": "main"
+     }
+   }
+   ```
+
+3. Customize `.ralph/projects/bug-fix/execute.md` for your bug-fix workflow
+
+4. Select the project in the TUI using `J`
 
 ## See Also
 
 - [Configuration](../configuration.md) - Detailed configuration options
-- [Workflows](../workflows.md) - Workflow file format and schema
+- [Projects](../projects.md) - Project structure and customization
 - [Getting Started](../getting-started.md) - Quick start guide

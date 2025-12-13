@@ -171,10 +171,10 @@ export interface TaskManagementConfig {
   provider: TaskProvider;
 
   /** Auto-install Vibe Kanban if no provider configured and it's not available */
-  autoInstall: boolean;
+  auto_install: boolean;
 
   /** Provider-specific configuration */
-  providerConfig?: ProviderConfig;
+  provider_config?: ProviderConfig;
 }
 
 /**
@@ -182,25 +182,25 @@ export interface TaskManagementConfig {
  */
 export interface ProviderConfig {
   // Vibe Kanban
-  vibeKanbanProjectId?: string;
+  vibe_kanban_project_id?: string;
 
   // Jira
-  jiraHost?: string;
-  jiraProject?: string;
-  jiraApiToken?: string;
+  jira_host?: string;
+  jira_project?: string;
+  jira_api_token?: string;
 
   // Linear
-  linearTeam?: string;
-  linearApiKey?: string;
+  linear_team?: string;
+  linear_api_key?: string;
 
   // GitHub Issues
-  githubRepo?: string;
-  githubToken?: string;
+  github_repo?: string;
+  github_token?: string;
   /** Filter issues by label. Defaults to 'ralph'. Set to null or '' to disable filtering. */
-  labelFilter?: string | null;
+  label_filter?: string | null;
 
   // Beads (bd CLI)
-  beadsBinaryPath?: string;
+  beads_binary_path?: string;
 }
 
 /**
@@ -208,7 +208,7 @@ export interface ProviderConfig {
  */
 export const DEFAULT_TASK_MANAGEMENT_CONFIG: TaskManagementConfig = {
   provider: 'vibe-kanban',
-  autoInstall: true,
+  auto_install: true,
 };
 
 // ============================================================================
@@ -224,5 +224,5 @@ export interface AdapterCreateResult {
   /** Error message if creation failed */
   error?: string;
   /** Whether auto-install was attempted */
-  autoInstallAttempted?: boolean;
+  auto_install_attempted?: boolean;
 }

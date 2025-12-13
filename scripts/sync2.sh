@@ -19,12 +19,34 @@ export SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="${RALPH_PROJECT_DIR:-$(pwd)}"
 RALPH_DIR="$PROJECT_DIR/.ralph"
 
+# Active project - can be set via environment or defaults to "default"
+RALPH_PROJECT="${RALPH_PROJECT:-default}"
+RALPH_PROJECT_DIR_PATH="$RALPH_DIR/projects/$RALPH_PROJECT"
+
 # File paths - user data in .ralph/, scripts from package
-export ORCHESTRATE_PROMPT="$RALPH_DIR/orchestrate.md"
+# Orchestrate prompt is now bundled with the package (not copied to .ralph/)
+export ORCHESTRATE_PROMPT="$SCRIPT_DIR/../prompts/orchestrate.md"
 export ORCHESTRATE_SETTINGS="$RALPH_DIR/settings.json"
-export ASSIGNMENT_FILE="$RALPH_DIR/planning/assignment.json"
-export LOG_FILE="$RALPH_DIR/claude_output.jsonl"
 export PROCESS_PROMPT_SCRIPT="$SCRIPT_DIR/process-prompt.js"
+
+# Log file path - one timestamped file per sync2 execution in the project's claude_output folder
+# Format: <timestamp>.jsonl where timestamp is YYYYMMDDHHmmss (sortable by filename)
+# All phases (orchestrate + execute) within a single sync2.sh run share this file
+generate_log_file_path() {
+    local timestamp
+    timestamp=$(date -u "+%Y%m%d%H%M%S")
+    echo "$RALPH_PROJECT_DIR_PATH/claude_output/${timestamp}.jsonl"
+}
+
+# Generate the session log file at script start
+# Can be overridden via RALPH_LOG_FILE env var (e.g., from TUI)
+export LOG_FILE="${RALPH_LOG_FILE:-$(generate_log_file_path)}"
+
+# Project-specific paths
+export EXECUTE_PATH="$RALPH_PROJECT_DIR_PATH/execute.md"
+export PROJECT_SETTINGS="$RALPH_PROJECT_DIR_PATH/settings.json"
+# Assignment file is now per-project (moved from .ralph/assignment.json)
+export ASSIGNMENT_FILE="$RALPH_PROJECT_DIR_PATH/assignment.json"
 
 # Optional timeout (in seconds). Set to 0 for no timeout.
 # Default: 2 hours (7200 seconds)
@@ -62,10 +84,12 @@ error() {
 }
 
 # Process the orchestrate.md template by injecting provider-specific instructions
+# and substituting template variables like {{execute_path}}
 # Reads settings.json to determine provider, then injects the appropriate instructions
 process_orchestrate_prompt() {
     if [ -f "$PROCESS_PROMPT_SCRIPT" ]; then
-        node "$PROCESS_PROMPT_SCRIPT" "$ORCHESTRATE_PROMPT" "$ORCHESTRATE_SETTINGS"
+        # Pass orchestrate prompt, settings, and project info to the processor
+        node "$PROCESS_PROMPT_SCRIPT" "$ORCHESTRATE_PROMPT" "$ORCHESTRATE_SETTINGS" "$RALPH_PROJECT" "$PROJECT_SETTINGS"
     else
         # Fallback to raw template if processor not available
         cat "$ORCHESTRATE_PROMPT"
@@ -89,6 +113,7 @@ inject_user_event() {
 }
 
 # Run Claude with a given prompt (piped via stdin)
+# Uses the session's LOG_FILE (set at script start)
 # The prompt is also injected into the JSONL log as a synthetic user event
 run_claude() {
     local timeout_seconds="$1"
@@ -121,21 +146,29 @@ run_claude() {
     fi
 }
 
-# Validate assignment.json schema
+# Check if assignment.json exists (used to detect "no work available" vs validation failure)
+# Returns 0 if file exists, 1 if not
+assignment_exists() {
+    [ -f "$1" ]
+}
+
+# Validate assignment.json schema (new format with next_step)
 # Sets VALIDATION_ERROR with the error message if validation fails
 # Returns 0 on success, 1 on failure
+# NOTE: Only call this AFTER confirming the file exists with assignment_exists()
 validate_assignment() {
     local file="$1"
     VALIDATION_ERROR=""
 
-    # Check file exists
+    # Check file exists (should already be confirmed, but double-check)
     if [ ! -f "$file" ]; then
         VALIDATION_ERROR="Assignment file not found: $file
 
 The orchestration process must create this file with the following JSON structure:
 {
-  \"workflow\": \".ralph/workflows/[XX-workflow-name].md\",
-  \"task_id\": \"<project-name>-<issue-id>\"
+  \"task_id\": \"<task-identifier>\",
+  \"next_step\": \"<description of next step>\",
+  \"pull_request_url\": null
 }
 
 Please ensure the file is written to: $file"
@@ -156,31 +189,19 @@ $file_content
 
 Expected JSON structure:
 {
-  \"workflow\": \".ralph/workflows/[XX-workflow-name].md\",
-  \"task_id\": \"<project-name>-<issue-id>\"
+  \"task_id\": \"<task-identifier>\",
+  \"next_step\": \"<description of next step>\",
+  \"pull_request_url\": null
 }"
         return 1
     fi
 
-    # Check for required fields
-    local workflow
+    # Check for required fields (new schema)
     local task_id
+    local next_step
 
-    workflow=$(jq -r '.workflow // empty' "$file")
     task_id=$(jq -r '.task_id // empty' "$file")
-
-    if [ -z "$workflow" ]; then
-        local file_content
-        file_content=$(cat "$file")
-        VALIDATION_ERROR="Assignment file missing required field: 'workflow'
-
-Current file contents:
-$file_content
-
-The 'workflow' field must contain the relative path to a workflow file, e.g.:
-  \".ralph/workflows/01-feature-branch-incomplete.md\""
-        return 1
-    fi
+    next_step=$(jq -r '.next_step // empty' "$file")
 
     if [ -z "$task_id" ]; then
         local file_content
@@ -190,36 +211,25 @@ The 'workflow' field must contain the relative path to a workflow file, e.g.:
 Current file contents:
 $file_content
 
-The 'task_id' field must contain a valid task ID, e.g.:
-  \"background-assassins-abc\""
+The 'task_id' field must contain a valid task identifier."
         return 1
     fi
 
-    # Validate workflow file exists
-    local workflow_path="$PROJECT_DIR/$workflow"
-    if [ ! -f "$workflow_path" ]; then
-        local available_workflows
-        available_workflows=$(ls -1 "$PROJECT_DIR/.ralph/workflows/"*.md 2>/dev/null | sed "s|$PROJECT_DIR/||g" || echo "[no workflows found]")
-        VALIDATION_ERROR="Workflow file not found: $workflow_path
+    if [ -z "$next_step" ]; then
+        local file_content
+        file_content=$(cat "$file")
+        VALIDATION_ERROR="Assignment file missing required field: 'next_step'
 
-The 'workflow' field value '$workflow' does not point to an existing file.
+Current file contents:
+$file_content
 
-Available workflow files:
-$available_workflows"
-        return 1
-    fi
-
-    # Validate task_id format (either full ID with hyphen or short 3-char code)
-    if [[ ! "$task_id" =~ -[a-zA-Z0-9]+$ && ! "$task_id" =~ ^[a-zA-Z0-9]{3}$ ]]; then
-        VALIDATION_ERROR="Invalid task_id format: '$task_id'
-
-The 'task_id' field must be a valid task ID."
+The 'next_step' field must describe the next action to take in the workflow."
         return 1
     fi
 
     log "Assignment validated successfully"
-    log "  Workflow: $workflow"
     log "  Task ID: $task_id"
+    log "  Next Step: $next_step"
 
     return 0
 }
@@ -230,8 +240,13 @@ The 'task_id' field must be a valid task ID."
 
 cd "$PROJECT_DIR"
 
+# Ensure project directory and claude_output subfolder exist for log file
+mkdir -p "$RALPH_PROJECT_DIR_PATH/claude_output"
+
 log "Starting two-phase orchestration"
 log "Working directory: $PROJECT_DIR"
+log "Active project: $RALPH_PROJECT"
+log "Log file: $LOG_FILE"
 log "Max orchestration attempts: $MAX_ORCHESTRATION_ATTEMPTS"
 
 # ----------------------------------------------------------------------------
@@ -239,14 +254,22 @@ log "Max orchestration attempts: $MAX_ORCHESTRATION_ATTEMPTS"
 # ----------------------------------------------------------------------------
 
 log_phase "Phase 0: Cleanup"
+log "Active project: $RALPH_PROJECT"
 
-# Ensure planning directory exists
-mkdir -p "$RALPH_DIR/planning"
+# Ensure .ralph directory exists
+mkdir -p "$RALPH_DIR"
 
 # Delete existing assignment file if present
 if [ -f "$ASSIGNMENT_FILE" ]; then
     log "Removing existing assignment file: $ASSIGNMENT_FILE"
     rm -f "$ASSIGNMENT_FILE"
+fi
+
+# Verify execute.md exists for the active project
+if [ ! -f "$EXECUTE_PATH" ]; then
+    error "Execute file not found for project '$RALPH_PROJECT': $EXECUTE_PATH"
+    error "Please run 'ralph init' or create .ralph/projects/$RALPH_PROJECT/execute.md"
+    exit 1
 fi
 
 # ----------------------------------------------------------------------------
@@ -275,6 +298,7 @@ log "Timeout per orchestration attempt: ${orchestrate_timeout}s"
 attempt=1
 VALIDATION_ERROR=""
 PREVIOUS_ERROR=""
+NO_WORK_AVAILABLE=false
 
 while [ $attempt -le $MAX_ORCHESTRATION_ATTEMPTS ]; do
     log_attempt "Orchestration attempt $attempt of $MAX_ORCHESTRATION_ATTEMPTS"
@@ -300,11 +324,11 @@ $PREVIOUS_ERROR
 ## Instructions
 
 Please re-read the orchestrate.md instructions below and ensure you:
-1. Create the assignment file at the correct path: ./.ralph/planning/assignment.json
+1. Create the assignment file at the correct project-specific path
 2. Use valid JSON syntax
-3. Include both required fields: 'workflow' and 'task_id'
-4. Use a valid workflow path that exists
-5. Use a valid task ID
+3. Include required fields: 'task_id', 'next_step', 'pull_request_url'
+4. Use a valid task ID from the task management system
+5. Specify the next execution step clearly
 
 ---
 
@@ -341,7 +365,18 @@ This may indicate an internal error. Please try again and ensure:
         continue
     fi
 
-    # Validate the assignment file
+    # Claude exited successfully (exit code 0)
+    # Check if assignment.json exists - absence means "no work available"
+    if ! assignment_exists "$ASSIGNMENT_FILE"; then
+        # No assignment file = no work available (intentional, not an error)
+        log "Orchestration completed: No work available"
+        log "  No tasks found in the source status."
+        log "  The harness will retry orchestration after a delay."
+        NO_WORK_AVAILABLE=true
+        break
+    fi
+
+    # Assignment file exists - validate its contents
     if validate_assignment "$ASSIGNMENT_FILE"; then
         log "Orchestration succeeded on attempt $attempt"
         break
@@ -352,7 +387,24 @@ This may indicate an internal error. Please try again and ensure:
     fi
 done
 
-# Check if we exhausted all attempts
+# ----------------------------------------------------------------------------
+# Handle: No Work Available
+# ----------------------------------------------------------------------------
+# If orchestration determined no work is available, exit cleanly.
+# The main loop (ralph.sh) will sleep and retry orchestration later.
+
+if [ "$NO_WORK_AVAILABLE" = true ]; then
+    log_phase "No Work Available"
+    log "No tasks are currently available in the source status."
+    log "Exiting cleanly. The harness will retry after the configured delay."
+    exit 0
+fi
+
+# ----------------------------------------------------------------------------
+# Handle: Orchestration Exhausted All Attempts
+# ----------------------------------------------------------------------------
+
+# Check if we exhausted all attempts without success
 if [ $attempt -gt $MAX_ORCHESTRATION_ATTEMPTS ]; then
     error "============================================================"
     error "FATAL: Orchestration failed after $MAX_ORCHESTRATION_ATTEMPTS attempts"
@@ -370,14 +422,15 @@ if [ $attempt -gt $MAX_ORCHESTRATION_ATTEMPTS ]; then
     error ""
     error "Expected JSON structure:"
     error '  {'
-    error '    "workflow": ".ralph/workflows/[XX-workflow-name].md",'
-    error '    "task_id": "beads-XXXXXXXXX"'
+    error '    "task_id": "<task-identifier>",'
+    error '    "next_step": "<description of next step>",'
+    error '    "pull_request_url": null'
     error '  }'
     error ""
     error "Please check:"
     error "  1. The orchestrate.md prompt is correctly formatted"
     error "  2. Claude has permission to write files"
-    error "  3. The .ralph/planning/ directory exists and is writable"
+    error "  3. The .ralph/ directory exists and is writable"
     error "  4. Tasks can be created/listed"
     error ""
     error "============================================================"
@@ -385,29 +438,35 @@ if [ $attempt -gt $MAX_ORCHESTRATION_ATTEMPTS ]; then
 fi
 
 # Extract values from validated assignment
-WORKFLOW=$(jq -r '.workflow' "$ASSIGNMENT_FILE")
 TASK_ID=$(jq -r '.task_id' "$ASSIGNMENT_FILE")
-WORKFLOW_PATH="$PROJECT_DIR/$WORKFLOW"
+NEXT_STEP=$(jq -r '.next_step' "$ASSIGNMENT_FILE")
 
 log "Assignment ready:"
-log "  Workflow: $WORKFLOW"
 log "  Task ID: $TASK_ID"
+log "  Next Step: $NEXT_STEP"
 
 # ----------------------------------------------------------------------------
 # PHASE 2: Workflow Execution
 # ----------------------------------------------------------------------------
 
 log_phase "Phase 2: Workflow Execution"
+log "Project: $RALPH_PROJECT"
 
-# Read the workflow file content
-WORKFLOW_CONTENT=$(cat "$WORKFLOW_PATH")
+# Read the execute.md file content
+EXECUTE_CONTENT=$(cat "$EXECUTE_PATH")
 
 # Build the prompt for workflow execution
-WORKFLOW_PROMPT="Execute the workflow below for task #${TASK_ID}:
+WORKFLOW_PROMPT="Execute the workflow below for task #${TASK_ID}.
 
-${WORKFLOW_CONTENT}"
+## Starting Point
 
-log "Executing workflow: $WORKFLOW"
+${NEXT_STEP}
+
+## Execution Workflow
+
+${EXECUTE_CONTENT}"
+
+log "Executing workflow: $EXECUTE_PATH"
 log "For task: $TASK_ID"
 
 # Calculate remaining timeout for workflow execution
@@ -437,7 +496,7 @@ fi
 log_phase "Complete"
 log "Two-phase orchestration completed successfully"
 log "  Orchestration attempts: $attempt"
-log "  Workflow executed: $WORKFLOW"
+log "  Project: $RALPH_PROJECT"
 log "  Task: $TASK_ID"
 
 exit 0

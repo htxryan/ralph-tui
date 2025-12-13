@@ -38,8 +38,8 @@ describe('task-adapters/types', () => {
       expect(DEFAULT_TASK_MANAGEMENT_CONFIG.provider).toBe('vibe-kanban');
     });
 
-    it('has autoInstall enabled by default', () => {
-      expect(DEFAULT_TASK_MANAGEMENT_CONFIG.autoInstall).toBe(true);
+    it('has auto_install enabled by default', () => {
+      expect(DEFAULT_TASK_MANAGEMENT_CONFIG.auto_install).toBe(true);
     });
   });
 });
@@ -280,7 +280,7 @@ describe('task-adapters/factory', () => {
     it('returns error for unavailable adapter', async () => {
       const result = await createTaskAdapter({
         provider: 'vibe-kanban',
-        autoInstall: false,
+        auto_install: false,
       });
       expect(result.adapter).toBeNull();
       expect(result.error).toBeDefined();
@@ -289,14 +289,14 @@ describe('task-adapters/factory', () => {
     it('creates stub adapters for unimplemented providers', async () => {
       const jiraResult = await createTaskAdapter({
         provider: 'jira',
-        autoInstall: false,
+        auto_install: false,
       });
       expect(jiraResult.adapter).toBeNull();
       expect(jiraResult.error).toContain('not available');
 
       const linearResult = await createTaskAdapter({
         provider: 'linear',
-        autoInstall: false,
+        auto_install: false,
       });
       expect(linearResult.adapter).toBeNull();
       expect(linearResult.error).toContain('not available');
@@ -318,7 +318,7 @@ describe('task-adapters/vibe-kanban-adapter', () => {
     global.fetch = fetchMock;
     adapter = new VibeKanbanAdapter({
       provider: 'vibe-kanban',
-      autoInstall: false,
+      auto_install: false,
     });
   });
 
@@ -523,15 +523,15 @@ describe('task-adapters/vibe-kanban-adapter', () => {
 // Config Integration Tests
 // =============================================================================
 
-describe('config/taskManagement', () => {
+describe('config/task_management', () => {
 
-  describe('validateConfig with taskManagement', () => {
-    it('accepts valid taskManagement config', () => {
+  describe('validateConfig with task_management', () => {
+    it('accepts valid task_management config', () => {
       const config = {
         ...DEFAULT_CONFIG,
-        taskManagement: {
+        task_management: {
           provider: 'vibe-kanban' as TaskProvider,
-          autoInstall: true,
+          auto_install: true,
         },
       };
       expect(() => validateConfig(config)).not.toThrow();
@@ -549,9 +549,9 @@ describe('config/taskManagement', () => {
       for (const provider of providers) {
         const config = {
           ...DEFAULT_CONFIG,
-          taskManagement: {
+          task_management: {
             provider,
-            autoInstall: false,
+            auto_install: false,
           },
         };
         expect(() => validateConfig(config)).not.toThrow();
@@ -561,31 +561,31 @@ describe('config/taskManagement', () => {
     it('rejects invalid provider', () => {
       const config = {
         ...DEFAULT_CONFIG,
-        taskManagement: {
+        task_management: {
           provider: 'invalid-provider' as TaskProvider,
-          autoInstall: true,
+          auto_install: true,
         },
       };
       expect(() => validateConfig(config)).toThrow(ConfigValidationError);
     });
 
-    it('rejects non-boolean autoInstall', () => {
+    it('rejects non-boolean auto_install', () => {
       const config = {
         ...DEFAULT_CONFIG,
-        taskManagement: {
+        task_management: {
           provider: 'vibe-kanban' as TaskProvider,
-          autoInstall: 'yes' as unknown as boolean,
+          auto_install: 'yes' as unknown as boolean,
         },
       };
       expect(() => validateConfig(config)).toThrow(ConfigValidationError);
     });
   });
 
-  describe('DEFAULT_CONFIG includes taskManagement', () => {
-    it('has taskManagement with default values', () => {
-      expect(DEFAULT_CONFIG.taskManagement).toBeDefined();
-      expect(DEFAULT_CONFIG.taskManagement.provider).toBe('vibe-kanban');
-      expect(DEFAULT_CONFIG.taskManagement.autoInstall).toBe(true);
+  describe('DEFAULT_CONFIG includes task_management', () => {
+    it('has task_management with default values', () => {
+      expect(DEFAULT_CONFIG.task_management).toBeDefined();
+      expect(DEFAULT_CONFIG.task_management.provider).toBe('vibe-kanban');
+      expect(DEFAULT_CONFIG.task_management.auto_install).toBe(true);
     });
   });
 });
@@ -601,7 +601,7 @@ describe('task-adapters/github-issues-adapter', () => {
     it('has correct name', () => {
       adapter = new GitHubIssuesAdapter({
         provider: 'github-issues',
-        autoInstall: false,
+        auto_install: false,
       });
       expect(adapter.name).toBe('github-issues');
     });
@@ -609,9 +609,9 @@ describe('task-adapters/github-issues-adapter', () => {
     it('parses owner/repo from config', async () => {
       adapter = new GitHubIssuesAdapter({
         provider: 'github-issues',
-        autoInstall: false,
-        providerConfig: {
-          githubRepo: 'owner/repo',
+        auto_install: false,
+        provider_config: {
+          github_repo: 'owner/repo',
         },
       });
       // Initialization will fail without gh CLI, but config should be parsed
@@ -622,7 +622,7 @@ describe('task-adapters/github-issues-adapter', () => {
     it('defaults to ralph label filter', () => {
       adapter = new GitHubIssuesAdapter({
         provider: 'github-issues',
-        autoInstall: false,
+        auto_install: false,
       });
       // Label filter is private, but we can test behavior indirectly
       expect(adapter.name).toBe('github-issues');
@@ -631,9 +631,9 @@ describe('task-adapters/github-issues-adapter', () => {
     it('accepts custom label filter', () => {
       adapter = new GitHubIssuesAdapter({
         provider: 'github-issues',
-        autoInstall: false,
-        providerConfig: {
-          labelFilter: 'custom-label',
+        auto_install: false,
+        provider_config: {
+          label_filter: 'custom-label',
         },
       });
       expect(adapter.name).toBe('github-issues');
@@ -642,9 +642,9 @@ describe('task-adapters/github-issues-adapter', () => {
     it('accepts null label filter to disable filtering', () => {
       adapter = new GitHubIssuesAdapter({
         provider: 'github-issues',
-        autoInstall: false,
-        providerConfig: {
-          labelFilter: null,
+        auto_install: false,
+        provider_config: {
+          label_filter: null,
         },
       });
       expect(adapter.name).toBe('github-issues');
@@ -653,9 +653,9 @@ describe('task-adapters/github-issues-adapter', () => {
     it('accepts empty string label filter to disable filtering', () => {
       adapter = new GitHubIssuesAdapter({
         provider: 'github-issues',
-        autoInstall: false,
-        providerConfig: {
-          labelFilter: '',
+        auto_install: false,
+        provider_config: {
+          label_filter: '',
         },
       });
       expect(adapter.name).toBe('github-issues');
@@ -666,7 +666,7 @@ describe('task-adapters/github-issues-adapter', () => {
     it('returns false when gh CLI is not available', async () => {
       adapter = new GitHubIssuesAdapter({
         provider: 'github-issues',
-        autoInstall: false,
+        auto_install: false,
       });
       await adapter.initialize();
       // Since gh CLI may not be available in test environment
@@ -680,7 +680,7 @@ describe('task-adapters/github-issues-adapter', () => {
     it('initializes without throwing', async () => {
       adapter = new GitHubIssuesAdapter({
         provider: 'github-issues',
-        autoInstall: false,
+        auto_install: false,
       });
       await expect(adapter.initialize()).resolves.not.toThrow();
     });
@@ -688,7 +688,7 @@ describe('task-adapters/github-issues-adapter', () => {
     it('does not re-initialize if already initialized', async () => {
       adapter = new GitHubIssuesAdapter({
         provider: 'github-issues',
-        autoInstall: false,
+        auto_install: false,
       });
       await adapter.initialize();
       await adapter.initialize(); // Should not throw
@@ -699,7 +699,7 @@ describe('task-adapters/github-issues-adapter', () => {
     it('returns empty array or issues based on environment', async () => {
       adapter = new GitHubIssuesAdapter({
         provider: 'github-issues',
-        autoInstall: false,
+        auto_install: false,
       });
       await adapter.initialize();
       const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
@@ -717,7 +717,7 @@ describe('task-adapters/github-issues-adapter', () => {
     it('returns null when not configured', async () => {
       adapter = new GitHubIssuesAdapter({
         provider: 'github-issues',
-        autoInstall: false,
+        auto_install: false,
       });
       await adapter.initialize();
       const task = await adapter.getTask('#123');
@@ -731,9 +731,9 @@ describe('task-adapters/github-issues-adapter', () => {
       // When gh CLI is available, the adapter auto-detects the repo
       adapter = new GitHubIssuesAdapter({
         provider: 'github-issues',
-        autoInstall: false,
-        providerConfig: {
-          githubRepo: '', // Explicitly no repo
+        auto_install: false,
+        provider_config: {
+          github_repo: '', // Explicitly no repo
         },
       });
       await adapter.initialize();
@@ -750,9 +750,9 @@ describe('task-adapters/github-issues-adapter', () => {
       // This test only applies when gh CLI is not available
       adapter = new GitHubIssuesAdapter({
         provider: 'github-issues',
-        autoInstall: false,
-        providerConfig: {
-          githubRepo: '', // Explicitly no repo
+        auto_install: false,
+        provider_config: {
+          github_repo: '', // Explicitly no repo
         },
       });
       await adapter.initialize();

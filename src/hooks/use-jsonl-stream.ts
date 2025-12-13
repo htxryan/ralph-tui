@@ -189,8 +189,10 @@ export function useJSONLStream(options: UseJSONLStreamOptions): UseJSONLStreamRe
   const readFile = useCallback(() => {
     try {
       if (!fs.existsSync(filePath)) {
-        setError(new Error(`File not found: ${filePath}`));
+        // File doesn't exist yet - this is normal for new sessions
+        // Just return empty state, no error. The file will be created when Ralph starts.
         setIsLoading(false);
+        setError(null);
         return;
       }
 

@@ -1,0 +1,7 @@
+{
+  "display_name": "Default",
+  "description": "Default execution workflow for feature development",
+  "variables": {
+    "target_branch": "main"
+  }
+}

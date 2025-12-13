@@ -101,13 +101,26 @@ interface KanbanTask {
 
 ### In Configuration
 
-Set the provider in your Ralph configuration:
+Set the provider in your Ralph configuration (`.ralph/settings.json` or `.ralph/projects/<name>/settings.json`):
 
 ```json
 {
-  "taskManagement": {
+  "task_management": {
+    "provider": "github-issues",
+    "provider_config": {
+      "label_filter": "ralph"
+    }
+  }
+}
+```
+
+The default provider is `github-issues`. For Vibe Kanban:
+
+```json
+{
+  "task_management": {
     "provider": "vibe-kanban",
-    "autoInstall": true
+    "auto_install": true
   }
 }
 ```
@@ -124,7 +137,7 @@ function MyComponent() {
     taskId: 'task-123',
     taskConfig: {
       provider: 'vibe-kanban',
-      autoInstall: true,
+      auto_install: true,
     },
   });
 
@@ -146,7 +159,7 @@ import { createTaskAdapter } from './lib/task-adapters/index.js';
 
 const result = await createTaskAdapter({
   provider: 'vibe-kanban',
-  autoInstall: false,
+  auto_install: false,
 });
 
 if (result.adapter) {
@@ -368,7 +381,7 @@ The factory wraps adapter creation in try/catch and returns an `AdapterCreateRes
 interface AdapterCreateResult {
   adapter: TaskAdapter | null;
   error?: string;
-  autoInstallAttempted?: boolean;
+  auto_install_attempted?: boolean;
 }
 ```
 

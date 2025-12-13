@@ -8,6 +8,7 @@ import * as fs from 'fs';
 vi.mock('fs', () => ({
   existsSync: vi.fn(),
   statSync: vi.fn(),
+  readdirSync: vi.fn(),
 }));
 
 // Mock archive module
@@ -27,6 +28,7 @@ describe('SessionPicker', () => {
     // Default mock implementations
     (fs.existsSync as ReturnType<typeof vi.fn>).mockReturnValue(false);
     (fs.statSync as ReturnType<typeof vi.fn>).mockReturnValue({ size: 0 });
+    (fs.readdirSync as ReturnType<typeof vi.fn>).mockReturnValue([]);
   });
 
   describe('rendering', () => {
@@ -72,13 +74,15 @@ describe('SessionPicker', () => {
       expect(lastFrame()).toContain('NEW SESSION');
     });
 
-    it('shows Live Session when it exists and has content', () => {
+    it('shows timestamped sessions when they exist', () => {
       (fs.existsSync as ReturnType<typeof vi.fn>).mockReturnValue(true);
       (fs.statSync as ReturnType<typeof vi.fn>).mockReturnValue({ size: 1000 });
+      // Mock a timestamped session file in claude_output directory
+      (fs.readdirSync as ReturnType<typeof vi.fn>).mockReturnValue(['20241215120000.jsonl']);
 
       const { lastFrame } = render(
         <SessionPicker
-          currentFilePath="/test/sessions/claude_output.jsonl"
+          currentFilePath="/test/sessions/claude_output/20241215120000.jsonl"
           sessionDir="/test/sessions"
           archiveDir="/test/sessions/archive"
           onSelectSession={mockOnSelectSession}
@@ -86,7 +90,8 @@ describe('SessionPicker', () => {
         />
       );
 
-      expect(lastFrame()).toContain('Live Session');
+      // Should show at least 2 sessions (NEW SESSION + the timestamped session)
+      expect(lastFrame()).toContain('2 sessions');
     });
 
     it('shows footer shortcuts', () => {
@@ -200,13 +205,15 @@ describe('SessionPicker', () => {
   });
 
   describe('file size display', () => {
-    it('shows file size for live session', () => {
+    it('shows file size for sessions', () => {
       (fs.existsSync as ReturnType<typeof vi.fn>).mockReturnValue(true);
       (fs.statSync as ReturnType<typeof vi.fn>).mockReturnValue({ size: 2048 }); // 2KB
+      // Mock a timestamped session file that will have a file size
+      (fs.readdirSync as ReturnType<typeof vi.fn>).mockReturnValue(['20241215120000.jsonl']);
 
       const { lastFrame } = render(
         <SessionPicker
-          currentFilePath="/test/sessions/claude_output.jsonl"
+          currentFilePath="/test/sessions/claude_output/20241215120000.jsonl"
           sessionDir="/test/sessions"
           archiveDir="/test/sessions/archive"
           onSelectSession={mockOnSelectSession}

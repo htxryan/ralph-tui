@@ -1,18 +1,12 @@
-# Capture to Vibe Kanban
+# Capture to GitHub Issues
 
-You are tasked with capturing the task definition, research, and implementation plan from a task's directory and creating a comprehensive Vibe Kanban issue with ALL the detail preserved.
+You are tasked with capturing the task definition, research, and implementation plan from a task's directory and creating a comprehensive GitHub Issue with ALL the detail preserved.
 
-## CRITICAL: AUTONOMOUS EXECUTION - NEVER ASK QUESTIONS
+@.claude/.partials/autonomous-execution.md
 
-**You MUST complete this command autonomously without asking clarifying questions.**
-
-- **NEVER** ask the user questions during execution
-- **NEVER** pause and wait for user input or confirmation
-- **ALWAYS** make your best judgment when decisions arise
-- **ALWAYS** produce a valid Vibe Kanban issue as output
+**Additional rules for capture:**
 - If something is ambiguous about formatting or structure, make a reasonable choice
-- The user will critique your output AFTER you produce it - do not pre-emptively ask for guidance
-- Getting stuck waiting for user input is UNACCEPTABLE - always move forward
+- Produce a valid GitHub Issue as output
 
 ## Arguments
 
@@ -35,9 +29,11 @@ This will:
 1. Read: .ai-docs/thoughts/plans/<task-id>/task.md (required - the task definition)
 2. Read: .ai-docs/thoughts/plans/<task-id>/research.md (optional - codebase research)
 3. Read: .ai-docs/thoughts/plans/<task-id>/plan.md (required - implementation plan)
-4. Create a Vibe Kanban issue with full content
+4. Create a GitHub Issue with full content
 ```
 Then stop and wait for correct input.
+
+@.claude/.partials/plans-directory-structure.md
 
 ## Process
 
@@ -88,9 +84,9 @@ From the frontmatter of the documents, extract:
 
 The topic and other details belong in the issue body.
 
-### Step 4: Create Vibe Kanban Issue
+### Step 4: Create GitHub Issue
 
-Use the Vibe Kanban MCP tools to create a new issue following the template below.
+Use the GitHub CLI (`gh`) to create a new issue following the template below.
 
 **CRITICAL**: Do NOT truncate ANY content. The entire task, research, and plan must be captured in the issue.
 
@@ -98,7 +94,7 @@ Use the Vibe Kanban MCP tools to create a new issue following the template below
 
 ## Issue Template
 
-Use this exact structure when creating the Vibe Kanban issue:
+Use this exact structure when creating the GitHub Issue:
 
 **Issue Title**: `<task_id>`
 - Just the raw task_id string
@@ -192,36 +188,56 @@ Found relevant code...
 
 ---
 
-**Using Vibe Kanban MCP Tools:**
+**Using GitHub CLI:**
 
-Use the appropriate Vibe Kanban MCP tool to create the issue. The tool should be something like:
-- `mcp_vibekanban_create_issue` or similar
-- `mcp_vibe_create_task` or similar
+Use the `gh issue create` command via Bash to create the issue:
 
-Call the tool with:
-- **title**: `<task_id>` (just the raw task_id string - no brackets, no topic)
-- **description/body**: The full markdown content constructed above (topic is the heading in the body)
-- **labels/tags**: Any relevant tags from the documents
+```bash
+gh issue create --title "<task_id>" --body "$(cat <<'EOF'
+<full markdown content constructed above>
+EOF
+)"
+```
 
-If you're unsure which Vibe Kanban MCP tool to use, list available MCP tools first to find the correct one.
+Alternatively, if the body is very large, write it to a temporary file first:
+
+```bash
+# Write body to temp file
+cat > /tmp/issue-body.md <<'EOF'
+<full markdown content>
+EOF
+
+# Create issue from file
+gh issue create --title "<task_id>" --body-file /tmp/issue-body.md
+
+# Clean up
+rm /tmp/issue-body.md
+```
+
+If the repository has labels that match the tags from the documents, you can add them:
+
+```bash
+gh issue create --title "<task_id>" --body-file /tmp/issue-body.md --label "enhancement" --label "planning"
+```
 
 ### Step 5: Confirm Success
 
 After creating the issue, respond with:
 ```
-Successfully captured task to Vibe Kanban!
+Successfully captured task to GitHub Issues!
 
 Issue: <task_id>
 Topic: <topic>
+URL: <issue_url from gh output>
 Source files:
 - .ai-docs/thoughts/plans/<task_id>/task.md
 - .ai-docs/thoughts/plans/<task_id>/research.md (if present)
 - .ai-docs/thoughts/plans/<task_id>/plan.md
 
-The full task definition, research, and plan content has been preserved in the Vibe Kanban issue.
+The full task definition, research, and plan content has been preserved in the GitHub Issue.
 ```
 
-Include any link or identifier for the created issue if available from the tool response.
+Include the issue URL from the `gh issue create` command output.
 
 ## Important Guidelines
 
@@ -237,15 +253,13 @@ Include any link or identifier for the created issue if available from the tool 
    - The issue template uses H1 for topic and H2 for sections (Task, Research, Plan)
    - Content from source files must have headers adjusted to fit logically within H2 sections
    - **Remove redundant top-level H1s** from source files if they duplicate the section header
-     - e.g., Remove `# Research: Topic` from research.md since it's under `## Research`
-     - e.g., Remove `# Implementation Plan` from plan.md since it's under `## Plan`
-   - **Shift remaining headers down** so they nest properly under the H2 section:
-     - H1 → H3, H2 → H4, H3 → H5, etc.
+   - **Shift remaining headers down** so they nest properly under the H2 section
    - Preserve all other formatting: code blocks, lists, bold, etc.
 
 3. **Error Handling**:
-   - If MCP tool call fails, report the error clearly
-   - Suggest troubleshooting steps (check MCP server is running, etc.)
+   - If `gh issue create` fails, report the error clearly
+   - Common issues: not authenticated (`gh auth login`), not in a git repo, no remote configured
+   - Suggest troubleshooting steps
 
 4. **Read Files First**:
    - Always read all files completely before constructing the issue
@@ -261,14 +275,7 @@ Include any link or identifier for the created issue if available from the tool 
    - No brackets, no topic text, no other content in the title
    - The topic appears as a heading in the issue body
 
-## Workflow Context
-
-This command is part of the refinement workflow:
-1. `/refine/research_codebase <task-id>` - Research and document (reads task.md, creates research.md)
-2. `/refine/create_plan <task-id>` - Create implementation plan (reads task.md + research.md, creates plan.md)
-3. **`/refine/capture <task-id>`** - Capture to Vibe Kanban issue (this command)
-
-The capture step is the final step that takes all the detailed work from task definition, research, and planning and creates a trackable issue in Vibe Kanban for implementation tracking.
+@.claude/.partials/workflow-commands.md
 
 ## Example
 
@@ -280,20 +287,20 @@ Assistant: Reading task, research, and plan files for task my-feature...
 [Reads .ai-docs/thoughts/plans/my-feature/research.md]
 [Reads .ai-docs/thoughts/plans/my-feature/plan.md]
 
-Creating Vibe Kanban issue with full content...
+Creating GitHub Issue with full content...
 
-[Calls Vibe Kanban MCP tool to create issue with:]
-  - title: "my-feature"
-  - body: [full content with "# Add dark mode support" as heading]
+[Writes body to /tmp/issue-body.md]
+[Runs: gh issue create --title "my-feature" --body-file /tmp/issue-body.md]
 
-Successfully captured task to Vibe Kanban!
+Successfully captured task to GitHub Issues!
 
 Issue: my-feature
 Topic: Add dark mode support
+URL: https://github.com/owner/repo/issues/42
 Source files:
 - .ai-docs/thoughts/plans/my-feature/task.md
 - .ai-docs/thoughts/plans/my-feature/research.md
 - .ai-docs/thoughts/plans/my-feature/plan.md
 
-The full task definition, research, and plan content has been preserved in the Vibe Kanban issue.
+The full task definition, research, and plan content has been preserved in the GitHub Issue.
 ```
