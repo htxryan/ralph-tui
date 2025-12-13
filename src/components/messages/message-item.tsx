@@ -110,8 +110,8 @@ export function MessageItem({
     }
   }
 
-  // Override color for incomplete tool calls (yellow dot)
-  const dotColor = hasIncompleteToolCalls ? colors.pending : typeColor;
+  // Use the original type color for the icon (no override for incomplete tools)
+  const dotColor = typeColor;
 
   // Truncate text to single line
   const textLine = message.text
@@ -125,12 +125,10 @@ export function MessageItem({
   const hint = isSelected ? ' [Enter]' : '';
 
   // Colors based on selection and completion state
-  // Border: yellow when incomplete (and not selected), green when selected, gray otherwise
+  // Border: green when selected, gray otherwise (no special color for in-progress)
   const borderColor = isSelected
     ? colors.selected
-    : hasIncompleteToolCalls
-      ? colors.pending
-      : colors.border;
+    : colors.border;
 
   // Header label color - keep original type color regardless of selection
   // Selection is indicated by border color change only
@@ -164,6 +162,14 @@ export function MessageItem({
           </>
         )}
         <Text color={colors.dimmed}>  {formatTime(message.timestamp)}</Text>
+        {hasIncompleteToolCalls && (
+          <>
+            <Text> </Text>
+            <Text backgroundColor="yellow" color="black">
+              {' '}⚠ IN PROGRESS ⚠{' '}
+            </Text>
+          </>
+        )}
         {durationMs !== undefined && durationMs >= 0 && (
           <Text color={colors.dimmed}> ({formatMessageDuration(durationMs)})</Text>
         )}
