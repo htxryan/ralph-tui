@@ -55,7 +55,7 @@ function determineProvider(settingsPath) {
     if (existsSync(settingsPath)) {
       const content = readFileSync(settingsPath, 'utf-8');
       const settings = JSON.parse(content);
-      const provider = settings.taskManagement?.provider;
+      const provider = settings.task_management?.provider;
 
       if (provider && VALID_PROVIDERS.includes(provider)) {
         return provider;

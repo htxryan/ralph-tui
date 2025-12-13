@@ -253,9 +253,9 @@ interface UseProjectsResult {
 **New Types:**
 ```typescript
 interface ProjectConfig {
-  taskManagement?: Partial<TaskManagementConfig>;
+  task_management?: Partial<TaskManagementConfig>;
   variables?: Record<string, string>;  // NEW: Template variables
-  displayName?: string;                 // Human-readable project name
+  display_name?: string;                 // Human-readable project name
   description?: string;                 // Project description
 }
 ```

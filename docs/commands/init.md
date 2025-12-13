@@ -31,10 +31,10 @@ The main configuration file for Ralph. Created with default task management sett
 
 ```json
 {
-  "taskManagement": {
+  "task_management": {
     "provider": "github-issues",
-    "providerConfig": {
-      "labelFilter": "ralph"
+    "provider_config": {
+      "label_filter": "ralph"
     }
   },
   "variables": {}
@@ -90,10 +90,10 @@ This creates `settings.json` with:
   "agent": {
     "type": "claude-code"
   },
-  "taskManagement": {
+  "task_management": {
     "provider": "github-issues",
-    "providerConfig": {
-      "labelFilter": "ralph"
+    "provider_config": {
+      "label_filter": "ralph"
     }
   },
   "variables": {}

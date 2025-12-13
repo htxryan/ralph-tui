@@ -17,6 +17,8 @@
 
 ## Status Flow
 
+Use the "Ralph TUI" GitHub Project for tracking issue status.
+
 ```
 Backlog → Refining → Refined
 ```

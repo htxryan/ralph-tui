@@ -1,6 +1,6 @@
 ## Task Manager: GitHub Issues
 
-Use the `gh` CLI for all task management operations. Issues are filtered by the label specified in `.ralph/settings.json` under `taskManagement.providerConfig.labelFilter` (default: `"ralph"`).
+Use the `gh` CLI for all task management operations. Issues are filtered by the label specified in `.ralph/settings.json` under `task_management.provider_config.label_filter` (default: `"ralph"`).
 
 ### Commands Reference
 
@@ -17,7 +17,7 @@ Use the `gh` CLI for all task management operations. Issues are filtered by the 
 
 ### Repository Discovery
 
-The `gh` CLI auto-detects the repository from the git remote. If `taskManagement.providerConfig.githubRepo` is set in settings.json, use that `owner/repo` explicitly with `--repo owner/repo`.
+The `gh` CLI auto-detects the repository from the git remote. If `task_management.provider_config.github_repo` is set in settings.json, use that `owner/repo` explicitly with `--repo owner/repo`.
 
 ### Status Mapping
 
@@ -66,14 +66,14 @@ gh issue close <number>
 
 ### Label Configuration
 
-The default label filter is `"ralph"`. To use all issues without filtering, set `labelFilter` to `null` or `""` in settings.json:
+The default label filter is `"ralph"`. To use all issues without filtering, set `label_filter` to `null` or `""` in settings.json:
 
 ```json
 {
-  "taskManagement": {
+  "task_management": {
     "provider": "github-issues",
-    "providerConfig": {
-      "labelFilter": null
+    "provider_config": {
+      "label_filter": null
     }
   }
 }

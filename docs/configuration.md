@@ -81,11 +81,11 @@ Personal overrides that should NOT be committed (add to `.gitignore`):
     "archiveDir": ".ralph/archive",
     "promptsDir": ".ralph/prompts"
   },
-  "taskManagement": {
+  "task_management": {
     "provider": "github-issues",
-    "autoInstall": true,
-    "providerConfig": {
-      "labelFilter": "ralph"
+    "auto_install": true,
+    "provider_config": {
+      "label_filter": "ralph"
     }
   },
   "variables": {
@@ -171,8 +171,8 @@ Ralph supports pluggable task management backends through adapters. Configure wh
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
 | `provider` | string | `"github-issues"` | Task backend: `github-issues`, `vibe-kanban`, `jira`, `linear`, or `beads` |
-| `autoInstall` | boolean | `true` | Auto-install Vibe Kanban if not available (only applies to vibe-kanban) |
-| `providerConfig` | object | `{}` | Provider-specific configuration (see below) |
+| `auto_install` | boolean | `true` | Auto-install Vibe Kanban if not available (only applies to vibe-kanban) |
+| `provider_config` | object | `{}` | Provider-specific configuration (see below) |
 
 #### Supported Providers
 
@@ -186,16 +186,16 @@ Ralph supports pluggable task management backends through adapters. Configure wh
 
 #### Provider-Specific Configuration
 
-Each provider may have additional configuration options in `providerConfig`:
+Each provider may have additional configuration options in `provider_config`:
 
 **GitHub Issues:**
 ```json
 {
-  "taskManagement": {
+  "task_management": {
     "provider": "github-issues",
-    "providerConfig": {
-      "githubRepo": "owner/repo",
-      "labelFilter": "ralph"
+    "provider_config": {
+      "github_repo": "owner/repo",
+      "label_filter": "ralph"
     }
   }
 }
@@ -204,10 +204,10 @@ Each provider may have additional configuration options in `providerConfig`:
 **Vibe Kanban:**
 ```json
 {
-  "taskManagement": {
+  "task_management": {
     "provider": "vibe-kanban",
-    "providerConfig": {
-      "vibeKanbanProjectId": "uuid-of-project"
+    "provider_config": {
+      "vibe_kanban_project_id": "uuid-of-project"
     }
   }
 }
@@ -216,12 +216,12 @@ Each provider may have additional configuration options in `providerConfig`:
 **Jira** (planned):
 ```json
 {
-  "taskManagement": {
+  "task_management": {
     "provider": "jira",
-    "providerConfig": {
-      "jiraHost": "https://yourcompany.atlassian.net",
-      "jiraProject": "PROJ",
-      "jiraApiToken": "your-api-token"
+    "provider_config": {
+      "jira_host": "https://yourcompany.atlassian.net",
+      "jira_project": "PROJ",
+      "jira_api_token": "your-api-token"
     }
   }
 }
@@ -230,11 +230,11 @@ Each provider may have additional configuration options in `providerConfig`:
 **Linear** (planned):
 ```json
 {
-  "taskManagement": {
+  "task_management": {
     "provider": "linear",
-    "providerConfig": {
-      "linearTeam": "team-id",
-      "linearApiKey": "your-api-key"
+    "provider_config": {
+      "linear_team": "team-id",
+      "linear_api_key": "your-api-key"
     }
   }
 }
@@ -310,10 +310,10 @@ Create `.ralph/settings.json` in your project:
     "type": "claude-code",
     "args": ["--model", "claude-sonnet-4-20250514"]
   },
-  "taskManagement": {
+  "task_management": {
     "provider": "github-issues",
-    "providerConfig": {
-      "labelFilter": "ralph"
+    "provider_config": {
+      "label_filter": "ralph"
     }
   },
   "variables": {
