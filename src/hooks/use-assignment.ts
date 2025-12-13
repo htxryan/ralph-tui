@@ -6,6 +6,8 @@ import { Assignment, LegacyAssignment } from '../lib/types.js';
 
 export interface UseAssignmentOptions {
   basePath?: string;
+  /** Active project name - assignment.json is stored per-project */
+  activeProjectName?: string;
 }
 
 export interface UseAssignmentResult {
@@ -40,11 +42,18 @@ function convertLegacyAssignment(legacy: LegacyAssignment): Assignment | null {
 }
 
 export function useAssignment(options: UseAssignmentOptions = {}): UseAssignmentResult {
-  const { basePath = process.cwd() } = options;
-  // New path: .ralph/assignment.json (moved from .ralph/planning/assignment.json)
-  const assignmentPath = path.join(basePath, '.ralph', 'assignment.json');
-  // Legacy path for backwards compatibility
-  const legacyPath = path.join(basePath, '.ralph', 'planning', 'assignment.json');
+  const { basePath = process.cwd(), activeProjectName } = options;
+
+  // Project-specific path: .ralph/projects/<project>/assignment.json
+  // Falls back to 'default' project if no project specified
+  const projectName = activeProjectName || 'default';
+  const assignmentPath = path.join(basePath, '.ralph', 'projects', projectName, 'assignment.json');
+
+  // Legacy paths for backwards compatibility (checked in order):
+  // 1. Old root path: .ralph/assignment.json
+  // 2. Very old path: .ralph/planning/assignment.json
+  const legacyRootPath = path.join(basePath, '.ralph', 'assignment.json');
+  const legacyPlanningPath = path.join(basePath, '.ralph', 'planning', 'assignment.json');
 
   const [assignment, setAssignment] = useState<Assignment | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -53,16 +62,20 @@ export function useAssignment(options: UseAssignmentOptions = {}): UseAssignment
 
   const readAssignment = useCallback(() => {
     try {
-      // Try new path first
-      let filePath = assignmentPath;
+      // Try paths in order of preference:
+      // 1. Project-specific path (new)
+      // 2. Root .ralph/assignment.json (legacy)
+      // 3. .ralph/planning/assignment.json (very old legacy)
       let content: string | null = null;
 
       if (fs.existsSync(assignmentPath)) {
         content = fs.readFileSync(assignmentPath, 'utf-8');
-      } else if (fs.existsSync(legacyPath)) {
-        // Fall back to legacy path
-        filePath = legacyPath;
-        content = fs.readFileSync(legacyPath, 'utf-8');
+      } else if (fs.existsSync(legacyRootPath)) {
+        // Fall back to old root path
+        content = fs.readFileSync(legacyRootPath, 'utf-8');
+      } else if (fs.existsSync(legacyPlanningPath)) {
+        // Fall back to very old planning path
+        content = fs.readFileSync(legacyPlanningPath, 'utf-8');
       }
 
       if (content === null) {
@@ -89,7 +102,7 @@ export function useAssignment(options: UseAssignmentOptions = {}): UseAssignment
     } finally {
       setIsLoading(false);
     }
-  }, [assignmentPath, legacyPath]);
+  }, [assignmentPath, legacyRootPath, legacyPlanningPath]);
 
   const refresh = useCallback(() => {
     setIsLoading(true);
@@ -99,16 +112,20 @@ export function useAssignment(options: UseAssignmentOptions = {}): UseAssignment
   useEffect(() => {
     readAssignment();
 
-    // Watch both new and legacy paths for changes
+    // Watch all assignment paths for changes (new project-specific + legacy paths)
     const pathsToWatch: string[] = [];
-    const newDirPath = path.dirname(assignmentPath);
-    const legacyDirPath = path.dirname(legacyPath);
+    const projectDirPath = path.dirname(assignmentPath);
+    const legacyRootDirPath = path.dirname(legacyRootPath);
+    const legacyPlanningDirPath = path.dirname(legacyPlanningPath);
 
-    if (fs.existsSync(newDirPath)) {
+    if (fs.existsSync(projectDirPath)) {
       pathsToWatch.push(assignmentPath);
     }
-    if (fs.existsSync(legacyDirPath)) {
-      pathsToWatch.push(legacyPath);
+    if (fs.existsSync(legacyRootDirPath)) {
+      pathsToWatch.push(legacyRootPath);
+    }
+    if (fs.existsSync(legacyPlanningDirPath)) {
+      pathsToWatch.push(legacyPlanningPath);
     }
 
     if (pathsToWatch.length > 0) {
@@ -120,7 +137,7 @@ export function useAssignment(options: UseAssignmentOptions = {}): UseAssignment
       watcherRef.current.on('change', readAssignment);
       watcherRef.current.on('add', readAssignment);
       watcherRef.current.on('unlink', () => {
-        // Re-read to check if the other path exists
+        // Re-read to check if another path exists
         readAssignment();
       });
     }
@@ -130,7 +147,7 @@ export function useAssignment(options: UseAssignmentOptions = {}): UseAssignment
         watcherRef.current.close();
       }
     };
-  }, [assignmentPath, legacyPath, readAssignment]);
+  }, [assignmentPath, legacyRootPath, legacyPlanningPath, readAssignment]);
 
   return {
     assignment,

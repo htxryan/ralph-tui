@@ -96,7 +96,10 @@ export function App({
   const { rows: terminalRows, columns: terminalColumns } = useTerminalSize();
 
   // Data hooks
-  const { assignment } = useAssignment({ basePath: projectRoot });
+  const { assignment } = useAssignment({
+    basePath: projectRoot,
+    activeProjectName: activeProject?.name,
+  });
   const effectiveTaskId = providedIssueId || assignment?.task_id || null;
 
   const {

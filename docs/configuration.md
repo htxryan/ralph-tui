@@ -162,6 +162,7 @@ Use variables in `execute.md` with `{{variable_name}}` syntax:
 | Variable | Description |
 |----------|-------------|
 | `{{execute_path}}` | Path to the active project's execute.md file |
+| `{{assignment_path}}` | Path to the active project's assignment.json file |
 
 ### Task Management Configuration
 
@@ -368,8 +369,10 @@ Add to your `.gitignore`:
 # Ralph runtime files
 .ralph/claude_output.jsonl
 .ralph/claude.lock
-.ralph/assignment.json
 .ralph/archive/
+
+# Ralph project assignment files (runtime, per-project)
+.ralph/projects/*/assignment.json
 ```
 
 ## Deep Merge Behavior

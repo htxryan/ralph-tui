@@ -96,8 +96,8 @@ export interface TaskComment {
 /**
  * Assignment schema - tracks the current work assignment
  *
- * This file is created at .ralph/assignment.json during orchestration
- * and updated throughout the execution workflow.
+ * This file is created at .ralph/projects/<project>/assignment.json during orchestration
+ * and updated throughout the execution workflow. Each project has its own assignment file.
  */
 export interface Assignment {
   /** The task identifier from the task management system */
@@ -106,8 +106,6 @@ export interface Assignment {
   next_step: string;
   /** URL of the pull request once created, null otherwise */
   pull_request_url: string | null;
-  /** Work log entries (optional) */
-  work_log?: string[];
 }
 
 /**

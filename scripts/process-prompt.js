@@ -138,6 +138,7 @@ function processTemplate(templatePath, settingsPath, projectName, projectSetting
   // Add special built-in variables
   if (projectName) {
     allVariables['execute_path'] = `.ralph/projects/${projectName}/execute.md`;
+    allVariables['assignment_path'] = `.ralph/projects/${projectName}/assignment.json`;
   }
 
   // Substitute template variables

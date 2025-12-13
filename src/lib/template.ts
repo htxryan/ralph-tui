@@ -17,6 +17,8 @@ const VARIABLE_PATTERN = /\{\{([^}]+)\}\}/g;
 export const SPECIAL_VARIABLES = {
   /** Path to the active project's execute.md file */
   EXECUTE_PATH: 'execute_path',
+  /** Path to the active project's assignment.json file */
+  ASSIGNMENT_PATH: 'assignment_path',
 } as const;
 
 export interface SubstituteOptions {
@@ -68,6 +70,7 @@ export function substituteVariables(
   // Add special variables
   if (activeProjectName) {
     allVariables[SPECIAL_VARIABLES.EXECUTE_PATH] = `.ralph/projects/${activeProjectName}/execute.md`;
+    allVariables[SPECIAL_VARIABLES.ASSIGNMENT_PATH] = `.ralph/projects/${activeProjectName}/assignment.json`;
   }
 
   return template.replace(VARIABLE_PATTERN, (match, variableName: string) => {

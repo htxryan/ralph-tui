@@ -57,7 +57,8 @@ ralph-tui/
     └── projects/                # User project definitions
         └── <name>/
             ├── settings.json    # Project-specific settings
-            └── execute.md       # Project execution workflow
+            ├── execute.md       # Project execution workflow
+            └── assignment.json  # Current task assignment (runtime)
 ```
 
 ## Development Commands
@@ -103,6 +104,7 @@ pnpm typecheck        # TypeScript type checking only
 1. **Stream Processing**: JSONL file → chokidar watch → parse → React state (`useJSONLStream` hook)
 2. **Subagent Tracking**: Messages with `parent_tool_use_id` are collected into parent ToolCall's `subagentMessages` array
 3. **Process Management**: Lock file + PID tracking for Start/Stop/Resume (`useRalphProcess` hook)
+4. **Project Selection**: Users select a project (execution mode) at startup; the active project's `execute.md` defines the workflow (`useProjects` hook, `ProjectPicker` component)
 
 ### Component Structure
 
@@ -119,11 +121,13 @@ src/
 ├── hooks/               # React hooks
 │   ├── use-jsonl-stream.ts    # Real-time JSONL file tailing
 │   ├── use-ralph-process.ts   # Process lifecycle management
+│   ├── use-projects.ts        # Project discovery and selection
 │   ├── use-keyboard.ts        # Keyboard input handling
 │   └── ...
 └── lib/                 # Utilities
     ├── types.ts         # All TypeScript interfaces
     ├── parser.ts        # JSONL parsing, stats calculation
+    ├── template.ts      # Template variable substitution
     └── ...
 ```
 
@@ -134,6 +138,8 @@ src/
 - `ToolCall` - Tool invocation with status, result, subagent data
 - `SessionStats` - Token counts, timing, error counts
 - `TabName` - 'messages' | 'task' | 'todos' | 'errors' | 'stats'
+- `Assignment` - Current task assignment with `task_id`, `next_step`, `pull_request_url`
+- `ProjectInfo` (hooks/use-projects.ts) - Project metadata: name, path, displayName, description
 
 ## Testing Patterns
 

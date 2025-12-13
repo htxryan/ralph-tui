@@ -27,14 +27,14 @@ RALPH_PROJECT_DIR_PATH="$RALPH_DIR/projects/$RALPH_PROJECT"
 # Orchestrate prompt is now bundled with the package (not copied to .ralph/)
 export ORCHESTRATE_PROMPT="$SCRIPT_DIR/../prompts/orchestrate.md"
 export ORCHESTRATE_SETTINGS="$RALPH_DIR/settings.json"
-# Assignment file moved from .ralph/planning/ to .ralph/
-export ASSIGNMENT_FILE="$RALPH_DIR/assignment.json"
 export LOG_FILE="$RALPH_DIR/claude_output.jsonl"
 export PROCESS_PROMPT_SCRIPT="$SCRIPT_DIR/process-prompt.js"
 
 # Project-specific paths
 export EXECUTE_PATH="$RALPH_PROJECT_DIR_PATH/execute.md"
 export PROJECT_SETTINGS="$RALPH_PROJECT_DIR_PATH/settings.json"
+# Assignment file is now per-project (moved from .ralph/assignment.json)
+export ASSIGNMENT_FILE="$RALPH_PROJECT_DIR_PATH/assignment.json"
 
 # Optional timeout (in seconds). Set to 0 for no timeout.
 # Default: 2 hours (7200 seconds)
@@ -298,11 +298,11 @@ $PREVIOUS_ERROR
 ## Instructions
 
 Please re-read the orchestrate.md instructions below and ensure you:
-1. Create the assignment file at the correct path: ./.ralph/planning/assignment.json
+1. Create the assignment file at the correct project-specific path
 2. Use valid JSON syntax
-3. Include both required fields: 'workflow' and 'task_id'
-4. Use a valid workflow path that exists
-5. Use a valid task ID
+3. Include required fields: 'task_id', 'next_step', 'pull_request_url'
+4. Use a valid task ID from the task management system
+5. Specify the next execution step clearly
 
 ---
 

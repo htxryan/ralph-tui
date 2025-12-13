@@ -16,18 +16,22 @@ When you start Ralph, you can select which project to use via the project picker
 ```
 .ralph/
 ├── settings.json              # Global settings
-├── assignment.json            # Current task assignment (runtime)
 └── projects/
     ├── default/
     │   ├── settings.json      # Project settings
-    │   └── execute.md         # Execution workflow
+    │   ├── execute.md         # Execution workflow
+    │   └── assignment.json    # Current task assignment (runtime)
     ├── bug-fix/
     │   ├── settings.json
-    │   └── execute.md
+    │   ├── execute.md
+    │   └── assignment.json
     └── refactor/
         ├── settings.json
-        └── execute.md
+        ├── execute.md
+        └── assignment.json
 ```
+
+Each project has its own `assignment.json` file to track the current task assignment, allowing you to work on different tasks in different projects simultaneously.
 
 ## The Default Project
 
