@@ -13,7 +13,7 @@ import {
 } from './lib/types.js';
 import { type RalphConfig, loadConfig } from './lib/config.js';
 import { calculateSessionStats, getMessageFilterType } from './lib/parser.js';
-import { archiveCurrentSession } from './lib/archive.js';
+// Archive is no longer needed - sessions are timestamped automatically
 import { getContextualShortcuts, getAllShortcutsForDialog } from './lib/shortcuts.js';
 import { useJSONLStream } from './hooks/use-jsonl-stream.js';
 import { useTask } from './hooks/use-task.js';
@@ -69,21 +69,35 @@ export function App({
   // This allows project-specific settings to be merged in after project selection
   const [currentConfig, setCurrentConfig] = useState<RalphConfig | undefined>(config);
 
-  // Compute session and archive directories from the ORIGINAL jsonlPath prop
-  // (not currentJsonlPath). These are the canonical directories that don't change
-  // when switching to archived sessions. This ensures the session picker always
-  // shows the full archive list, even when viewing an archived session.
-  const sessionDir = useMemo(() => path.dirname(jsonlPath), [jsonlPath]);
-  // Project root is the parent of the .ralph directory (sessionDir)
-  const projectRoot = useMemo(() => path.dirname(sessionDir), [sessionDir]);
-  // Use currentConfig.paths.archiveDir if available, otherwise fall back to default
-  const archiveDir = useMemo(() => {
-    if (currentConfig?.paths?.archiveDir) {
-      // archiveDir from config is relative to project root
-      return path.resolve(projectRoot, currentConfig.paths.archiveDir);
+  // Compute base .ralph directory by finding it in the jsonlPath
+  // jsonlPath is now: .ralph/projects/<name>/claude_output.xxx.jsonl
+  // We need to find the .ralph directory regardless of nesting depth
+  const ralphDir = useMemo(() => {
+    let dir = path.dirname(jsonlPath);
+    // Walk up until we find the .ralph directory
+    while (dir && !dir.endsWith('.ralph') && dir !== path.dirname(dir)) {
+      dir = path.dirname(dir);
     }
-    return path.join(sessionDir, 'archive');
-  }, [sessionDir, projectRoot, currentConfig?.paths?.archiveDir]);
+    // If we didn't find .ralph, fall back to assuming jsonlPath is in .ralph directly
+    if (!dir.endsWith('.ralph')) {
+      dir = path.dirname(jsonlPath);
+    }
+    return dir;
+  }, [jsonlPath]);
+
+  // Project root is the parent of the .ralph directory
+  const projectRoot = useMemo(() => path.dirname(ralphDir), [ralphDir]);
+
+  // Session directory is project-specific: .ralph/projects/<name>/
+  // Sessions are stored directly here with timestamps, no separate archive needed
+  const sessionDir = useMemo(() => {
+    const projectName = activeProject?.name || 'default';
+    return path.join(ralphDir, 'projects', projectName);
+  }, [ralphDir, activeProject?.name]);
+
+  // Archive dir now points to session dir since sessions are already timestamped
+  // This is for backwards compatibility with the session picker
+  const archiveDir = useMemo(() => sessionDir, [sessionDir]);
 
   // App state
   const [currentTab, setCurrentTab] = useState<TabName>('messages');
@@ -140,16 +154,27 @@ export function App({
     isLoading: isLoadingProjects,
   } = useProjects({ basePath: projectRoot });
 
+  // Callback when a new log file is created by starting/resuming Ralph
+  const handleLogFileCreated = useCallback((logFilePath: string) => {
+    setCurrentJsonlPath(logFilePath);
+    // Reset session start index since this is a fresh file
+    setSessionStartIndex(0);
+  }, []);
+
   const {
     isStarting: isRalphStarting,
     isRunning: isRalphRunning,
     isStopping: isRalphStopping,
     isResuming: isRalphResuming,
     error: ralphError,
+    currentLogFile,
     start: startRalph,
     stop: stopRalph,
     resume: resumeRalph,
-  } = useRalphProcess({ activeProjectName: activeProject?.name });
+  } = useRalphProcess({
+    activeProjectName: activeProject?.name,
+    onLogFileCreated: handleLogFileCreated,
+  });
 
   // Interrupt mode state
   const [isInterruptMode, setIsInterruptMode] = useState(false);
@@ -212,34 +237,11 @@ export function App({
     refreshTodos();
   }, [refreshStream, refreshTask, refreshTodos]);
 
-  // Wrapper for starting Ralph that archives the current session and starts fresh
-  const handleStartRalph = useCallback(async () => {
-    try {
-      // Archive current session if it has content, then create fresh file
-      // This ensures each Ralph run starts with a clean slate (no "previous session" box)
-      const defaultPath = path.join(sessionDir, 'claude_output.jsonl');
-
-      await archiveCurrentSession(defaultPath, archiveDir);
-
-      // Create fresh empty file
-      const dir = path.dirname(defaultPath);
-      if (!fs.existsSync(dir)) {
-        fs.mkdirSync(dir, { recursive: true });
-      }
-      fs.writeFileSync(defaultPath, '', 'utf-8');
-
-      // Update the path (this will trigger useJSONLStream to reset)
-      setCurrentJsonlPath(defaultPath);
-      // Set session start index to 0 since we're starting with a fresh file
-      // This ensures stats are calculated from the beginning of the session
-      setSessionStartIndex(0);
-
-      // Start Ralph
-      startRalph();
-    } catch {
-      // Error handling is done in useRalphProcess
-    }
-  }, [sessionDir, archiveDir, startRalph]);
+  // Wrapper for starting Ralph - sessions are now automatically timestamped
+  // The onLogFileCreated callback handles updating currentJsonlPath and sessionStartIndex
+  const handleStartRalph = useCallback(() => {
+    startRalph();
+  }, [startRalph]);
 
   // Auto-start Ralph after project selection (when triggered via 'S' with no project)
   useEffect(() => {
@@ -332,22 +334,27 @@ export function App({
       setIsSessionPickerOpen(false);
 
       if (session.type === 'new') {
-        // Archive current session if it has content, then create fresh file
-        const defaultPath = path.join(sessionDir, 'claude_output.jsonl');
-        await archiveCurrentSession(defaultPath, archiveDir);
+        // Create a new timestamped session file in the claude_output folder
+        const now = new Date();
+        const timestamp = now.toISOString()
+          .replace(/[-:T]/g, '')
+          .slice(0, 14); // YYYYMMDDHHmmss
+        const claudeOutputDir = path.join(sessionDir, 'claude_output');
+        const newPath = path.join(claudeOutputDir, `${timestamp}.jsonl`);
 
-        // Create fresh empty file
-        const dir = path.dirname(defaultPath);
-        if (!fs.existsSync(dir)) {
-          fs.mkdirSync(dir, { recursive: true });
+        // Ensure claude_output directory exists
+        if (!fs.existsSync(claudeOutputDir)) {
+          fs.mkdirSync(claudeOutputDir, { recursive: true });
         }
-        fs.writeFileSync(defaultPath, '', 'utf-8');
 
-        setCurrentJsonlPath(defaultPath);
+        // Create empty file
+        fs.writeFileSync(newPath, '', 'utf-8');
+
+        setCurrentJsonlPath(newPath);
         // Set to 0 for new session (fresh file)
         setSessionStartIndex(0);
       } else {
-        // Load the selected session (current or archived)
+        // Load the selected session
         setCurrentJsonlPath(session.filePath);
         setSessionStartIndex(undefined);
       }
@@ -358,7 +365,7 @@ export function App({
       setSelectedMessage(null);
       setSelectedError(null);
     },
-    [sessionDir, archiveDir]
+    [sessionDir]
   );
 
   // Calculate session-scoped stats (only current session, not previous sessions)

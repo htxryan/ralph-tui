@@ -27,8 +27,20 @@ RALPH_PROJECT_DIR_PATH="$RALPH_DIR/projects/$RALPH_PROJECT"
 # Orchestrate prompt is now bundled with the package (not copied to .ralph/)
 export ORCHESTRATE_PROMPT="$SCRIPT_DIR/../prompts/orchestrate.md"
 export ORCHESTRATE_SETTINGS="$RALPH_DIR/settings.json"
-export LOG_FILE="$RALPH_DIR/claude_output.jsonl"
 export PROCESS_PROMPT_SCRIPT="$SCRIPT_DIR/process-prompt.js"
+
+# Log file path - one timestamped file per sync2 execution in the project's claude_output folder
+# Format: <timestamp>.jsonl where timestamp is YYYYMMDDHHmmss (sortable by filename)
+# All phases (orchestrate + execute) within a single sync2.sh run share this file
+generate_log_file_path() {
+    local timestamp
+    timestamp=$(date -u "+%Y%m%d%H%M%S")
+    echo "$RALPH_PROJECT_DIR_PATH/claude_output/${timestamp}.jsonl"
+}
+
+# Generate the session log file at script start
+# Can be overridden via RALPH_LOG_FILE env var (e.g., from TUI)
+export LOG_FILE="${RALPH_LOG_FILE:-$(generate_log_file_path)}"
 
 # Project-specific paths
 export EXECUTE_PATH="$RALPH_PROJECT_DIR_PATH/execute.md"
@@ -101,6 +113,7 @@ inject_user_event() {
 }
 
 # Run Claude with a given prompt (piped via stdin)
+# Uses the session's LOG_FILE (set at script start)
 # The prompt is also injected into the JSONL log as a synthetic user event
 run_claude() {
     local timeout_seconds="$1"
@@ -133,14 +146,21 @@ run_claude() {
     fi
 }
 
+# Check if assignment.json exists (used to detect "no work available" vs validation failure)
+# Returns 0 if file exists, 1 if not
+assignment_exists() {
+    [ -f "$1" ]
+}
+
 # Validate assignment.json schema (new format with next_step)
 # Sets VALIDATION_ERROR with the error message if validation fails
 # Returns 0 on success, 1 on failure
+# NOTE: Only call this AFTER confirming the file exists with assignment_exists()
 validate_assignment() {
     local file="$1"
     VALIDATION_ERROR=""
 
-    # Check file exists
+    # Check file exists (should already be confirmed, but double-check)
     if [ ! -f "$file" ]; then
         VALIDATION_ERROR="Assignment file not found: $file
 
@@ -220,8 +240,13 @@ The 'next_step' field must describe the next action to take in the workflow."
 
 cd "$PROJECT_DIR"
 
+# Ensure project directory and claude_output subfolder exist for log file
+mkdir -p "$RALPH_PROJECT_DIR_PATH/claude_output"
+
 log "Starting two-phase orchestration"
 log "Working directory: $PROJECT_DIR"
+log "Active project: $RALPH_PROJECT"
+log "Log file: $LOG_FILE"
 log "Max orchestration attempts: $MAX_ORCHESTRATION_ATTEMPTS"
 
 # ----------------------------------------------------------------------------
@@ -273,6 +298,7 @@ log "Timeout per orchestration attempt: ${orchestrate_timeout}s"
 attempt=1
 VALIDATION_ERROR=""
 PREVIOUS_ERROR=""
+NO_WORK_AVAILABLE=false
 
 while [ $attempt -le $MAX_ORCHESTRATION_ATTEMPTS ]; do
     log_attempt "Orchestration attempt $attempt of $MAX_ORCHESTRATION_ATTEMPTS"
@@ -339,7 +365,18 @@ This may indicate an internal error. Please try again and ensure:
         continue
     fi
 
-    # Validate the assignment file
+    # Claude exited successfully (exit code 0)
+    # Check if assignment.json exists - absence means "no work available"
+    if ! assignment_exists "$ASSIGNMENT_FILE"; then
+        # No assignment file = no work available (intentional, not an error)
+        log "Orchestration completed: No work available"
+        log "  No tasks found in the source status."
+        log "  The harness will retry orchestration after a delay."
+        NO_WORK_AVAILABLE=true
+        break
+    fi
+
+    # Assignment file exists - validate its contents
     if validate_assignment "$ASSIGNMENT_FILE"; then
         log "Orchestration succeeded on attempt $attempt"
         break
@@ -350,7 +387,24 @@ This may indicate an internal error. Please try again and ensure:
     fi
 done
 
-# Check if we exhausted all attempts
+# ----------------------------------------------------------------------------
+# Handle: No Work Available
+# ----------------------------------------------------------------------------
+# If orchestration determined no work is available, exit cleanly.
+# The main loop (ralph.sh) will sleep and retry orchestration later.
+
+if [ "$NO_WORK_AVAILABLE" = true ]; then
+    log_phase "No Work Available"
+    log "No tasks are currently available in the source status."
+    log "Exiting cleanly. The harness will retry after the configured delay."
+    exit 0
+fi
+
+# ----------------------------------------------------------------------------
+# Handle: Orchestration Exhausted All Attempts
+# ----------------------------------------------------------------------------
+
+# Check if we exhausted all attempts without success
 if [ $attempt -gt $MAX_ORCHESTRATION_ATTEMPTS ]; then
     error "============================================================"
     error "FATAL: Orchestration failed after $MAX_ORCHESTRATION_ATTEMPTS attempts"

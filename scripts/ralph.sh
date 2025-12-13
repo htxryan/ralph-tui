@@ -18,11 +18,17 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="${RALPH_PROJECT_DIR:-$(pwd)}"
 RALPH_DIR="$PROJECT_DIR/.ralph"
 
+# Active project - can be set via environment or defaults to "default"
+RALPH_PROJECT="${RALPH_PROJECT:-default}"
+RALPH_PROJECT_DIR_PATH="$RALPH_DIR/projects/$RALPH_PROJECT"
+
 # User data paths (in user's project .ralph/)
-LOCKFILE="$RALPH_DIR/claude.lock"
-LOG_FILE="$RALPH_DIR/claude_output.jsonl"
-MAX_LOG_SIZE_MB=50  # Rotate when log exceeds this size
-MAX_LOG_AGE_DAYS=7  # Delete rotated logs older than this
+# Lock file is now project-specific to allow multiple projects to run simultaneously
+LOCKFILE="$RALPH_PROJECT_DIR_PATH/claude.lock"
+# Log files are now stored per-project with timestamps: .ralph/projects/<name>/claude_output/<timestamp>.jsonl
+LOG_DIR="$RALPH_PROJECT_DIR_PATH/claude_output"
+MAX_LOG_SIZE_MB=50  # Rotate when individual log exceeds this size
+MAX_LOG_AGE_DAYS=7  # Delete logs older than this
 
 # Colors for output
 RED='\033[0;31m'
@@ -77,67 +83,47 @@ release_lock() {
 }
 
 rotate_logs_if_needed() {
-    if [ ! -f "$LOG_FILE" ]; then
+    # With timestamped log files per execution, we don't need to rotate the same file
+    # Each execution creates a new file: <timestamp>.jsonl
+    # This function now compresses large completed log files in the claude_output folder
+    if [ ! -d "$LOG_DIR" ]; then
         return
     fi
 
-    local archive_dir="$RALPH_DIR/archive"
-    local size_bytes
-    # macOS uses -f%z, Linux uses -c%s
-    size_bytes=$(stat -f%z "$LOG_FILE" 2>/dev/null || stat -c%s "$LOG_FILE" 2>/dev/null || echo "0")
     local max_bytes=$((MAX_LOG_SIZE_MB * 1024 * 1024))
 
-    if [ "$size_bytes" -gt "$max_bytes" ]; then
-        mkdir -p "$archive_dir"
+    # Find completed log files larger than the max size and compress them
+    # Files are named <timestamp>.jsonl (14-digit timestamp)
+    for log_file in "$LOG_DIR"/*.jsonl; do
+        [ -f "$log_file" ] || continue
 
-        # Get timestamp from last line of file
-        local last_line last_ts filename_ts
-        last_line=$(tail -1 "$LOG_FILE" 2>/dev/null)
-        last_ts=$(echo "$last_line" | jq -r '.timestamp // empty' 2>/dev/null)
+        local size_bytes
+        size_bytes=$(stat -f%z "$log_file" 2>/dev/null || stat -c%s "$log_file" 2>/dev/null || echo "0")
 
-        if [[ -n "$last_ts" ]]; then
-            # Convert ISO to filename format: 2025-11-30T18:45:32.456Z -> 20251130_184532_456
-            # Extract date/time parts using parameter expansion
-            local dt_part="${last_ts%%.*}"  # Remove .456Z
-            dt_part="${dt_part//[-T:]/}"    # Remove - T : -> 20251130184532
-            local date_part="${dt_part:0:8}"
-            local time_part="${dt_part:8:6}"
-            # Extract milliseconds
-            local millis="${last_ts#*.}"
-            millis="${millis%Z}"
-            millis="${millis:0:3}"
-            filename_ts="${date_part}_${time_part}_${millis:-000}"
-        else
-            filename_ts=$(date -u "+%Y%m%d_%H%M%S_000")
+        if [ "$size_bytes" -gt "$max_bytes" ]; then
+            log "Compressing large log file: $log_file (${size_bytes} bytes)"
+            if command -v gzip &> /dev/null; then
+                gzip "$log_file" &
+            fi
         fi
-
-        local rotated_file="$archive_dir/claude_output.${filename_ts}.jsonl"
-
-        # Handle collision
-        local counter=1
-        while [[ -f "$rotated_file" ]] || [[ -f "${rotated_file}.gz" ]]; do
-            rotated_file="$archive_dir/claude_output.${filename_ts}_${counter}.jsonl"
-            counter=$((counter + 1))
-        done
-
-        log "Rotating log file (${size_bytes} bytes > ${max_bytes} bytes)"
-        mv "$LOG_FILE" "$rotated_file"
-
-        # Compress rotated log in background
-        if command -v gzip &> /dev/null; then
-            gzip "$rotated_file" &
-        fi
-    fi
+    done
 }
 
 cleanup_old_logs() {
-    local archive_dir="$RALPH_DIR/archive"
-
-    if [[ ! -d "$archive_dir" ]]; then
+    # Clean up old log files from the claude_output folder
+    if [[ ! -d "$LOG_DIR" ]]; then
         return
     fi
 
-    find "$archive_dir" -name "claude_output.*.jsonl*" -mtime +"$MAX_LOG_AGE_DAYS" -delete 2>/dev/null || true
+    # Delete log files older than MAX_LOG_AGE_DAYS
+    # Files are named <timestamp>.jsonl (14-digit timestamp)
+    find "$LOG_DIR" -name "*.jsonl*" -mtime +"$MAX_LOG_AGE_DAYS" -delete 2>/dev/null || true
+
+    # Also clean up the legacy archive directory if it exists
+    local archive_dir="$RALPH_DIR/archive"
+    if [[ -d "$archive_dir" ]]; then
+        find "$archive_dir" -name "*.jsonl*" -mtime +"$MAX_LOG_AGE_DAYS" -delete 2>/dev/null || true
+    fi
 }
 
 cleanup_chrome_tabs() {
@@ -231,9 +217,13 @@ run_iteration() {
 main() {
     log "Ralph Wiggum Method starting..."
     log "Project dir: $PROJECT_DIR"
+    log "Active project: $RALPH_PROJECT"
     log "Lock file: $LOCKFILE"
-    log "Log file: $LOG_FILE"
+    log "Log directory: $LOG_DIR"
     log "Max log size: ${MAX_LOG_SIZE_MB}MB"
+
+    # Ensure project directory exists
+    mkdir -p "$LOG_DIR"
 
     local iteration=0
     local consecutive_failures=0

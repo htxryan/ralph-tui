@@ -8,6 +8,8 @@ export interface UseRalphProcessOptions {
   basePath?: string;
   /** Active project name to pass to ralph.sh via RALPH_PROJECT env var */
   activeProjectName?: string;
+  /** Callback when a new log file is created (for app to switch to watching it) */
+  onLogFileCreated?: (logFilePath: string) => void;
 }
 
 export interface UseRalphProcessResult {
@@ -16,9 +18,23 @@ export interface UseRalphProcessResult {
   isStopping: boolean;
   isResuming: boolean;
   error: Error | null;
+  /** Current log file path being written to */
+  currentLogFile: string | null;
   start: () => void;
   stop: () => void;
   resume: (sessionId: string, userFeedback: string) => void;
+}
+
+/**
+ * Generate a timestamped log file path for a new session.
+ * Format: claude_output/<timestamp>.jsonl where timestamp is YYYYMMDDHHmmss (sortable by filename)
+ */
+function generateLogFilePath(projectDir: string): string {
+  const now = new Date();
+  const timestamp = now.toISOString()
+    .replace(/[-:T]/g, '')
+    .slice(0, 14); // YYYYMMDDHHmmss
+  return path.join(projectDir, 'claude_output', `${timestamp}.jsonl`);
 }
 
 // Get the directory where this module (and the package) is installed
@@ -61,7 +77,7 @@ function findProjectRoot(): string {
 export function useRalphProcess(
   options: UseRalphProcessOptions = {}
 ): UseRalphProcessResult {
-  const { basePath = findProjectRoot(), activeProjectName } = options;
+  const { basePath = findProjectRoot(), activeProjectName, onLogFileCreated } = options;
 
   // Package scripts directory (bundled with the npm package)
   const packageDir = getPackageDir();
@@ -70,15 +86,20 @@ export function useRalphProcess(
 
   // User data paths (in user's project)
   const userDataDir = path.join(basePath, '.ralph');
-  const lockFile = path.join(userDataDir, 'claude.lock');
   const resumeTemplate = path.join(userDataDir, 'resume.md');
-  const logFile = path.join(userDataDir, 'claude_output.jsonl');
+
+  // Project-specific paths - log files and lock are now stored per-project
+  // This allows multiple projects to run simultaneously
+  const projectName = activeProjectName || 'default';
+  const projectDir = path.join(userDataDir, 'projects', projectName);
+  const lockFile = path.join(projectDir, 'claude.lock');
 
   const [isStarting, setIsStarting] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
   const [isStopping, setIsStopping] = useState(false);
   const [isResuming, setIsResuming] = useState(false);
   const [error, setError] = useState<Error | null>(null);
+  const [currentLogFile, setCurrentLogFile] = useState<string | null>(null);
   const processRef = useRef<ResultPromise | null>(null);
   const checkIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -135,9 +156,25 @@ export function useRalphProcess(
       return;
     }
 
+    // Ensure project directory and claude_output subfolder exist
+    const claudeOutputDir = path.join(projectDir, 'claude_output');
+    if (!fs.existsSync(claudeOutputDir)) {
+      fs.mkdirSync(claudeOutputDir, { recursive: true });
+    }
+
+    // Generate timestamped log file path for this session
+    const logFilePath = generateLogFilePath(projectDir);
+    setCurrentLogFile(logFilePath);
+
+    // Notify caller about the new log file
+    if (onLogFileCreated) {
+      onLogFileCreated(logFilePath);
+    }
+
     try {
       // Spawn Ralph in detached mode so it keeps running after TUI exits
       // Pass RALPH_PROJECT_DIR so scripts know where user data lives
+      // Pass RALPH_LOG_FILE so scripts use the same log file we're watching
       // Use reject: false to prevent ExecaError from being thrown on process termination
       // We handle all exit codes gracefully in the .then() handler below
       const child = execa(ralphScript, [], {
@@ -147,7 +184,8 @@ export function useRalphProcess(
         env: {
           ...process.env,
           RALPH_PROJECT_DIR: basePath,
-          RALPH_PROJECT: activeProjectName || 'default',
+          RALPH_PROJECT: projectName,
+          RALPH_LOG_FILE: logFilePath,
         },
         reject: false,
       });
@@ -193,7 +231,7 @@ export function useRalphProcess(
       setError(err instanceof Error ? err : new Error(String(err)));
       setIsStarting(false);
     }
-  }, [isStarting, isRunning, ralphScript, userDataDir, basePath, checkIfRunning, activeProjectName]);
+  }, [isStarting, isRunning, ralphScript, userDataDir, basePath, checkIfRunning, projectName, projectDir, onLogFileCreated, packageDir]);
 
   // Stop Ralph process - comprehensive kill like kill.sh
   const stop = useCallback(async () => {
@@ -264,13 +302,13 @@ export function useRalphProcess(
     }
   }, [lockFile, isStopping]);
 
-  // Helper to inject a synthetic user event into the JSONL log
-  const injectUserEvent = useCallback((promptText: string) => {
+  // Helper to inject a synthetic user event into a JSONL log file
+  const injectUserEvent = useCallback((logFilePath: string, promptText: string) => {
     const timestamp = new Date().toISOString();
     const escapedText = JSON.stringify(promptText);
     const event = `{"type":"user","message":{"content":[{"type":"text","text":${escapedText}}]},"timestamp":"${timestamp}"}\n`;
-    fs.appendFileSync(logFile, event);
-  }, [logFile]);
+    fs.appendFileSync(logFilePath, event);
+  }, []);
 
   // Resume Ralph with a session ID and user feedback
   const resume = useCallback(async (sessionId: string, userFeedback: string) => {
@@ -286,6 +324,21 @@ export function useRalphProcess(
       // Wait for stop to complete
       await new Promise(resolve => setTimeout(resolve, 1000));
 
+      // Ensure project directory and claude_output subfolder exist
+      const claudeOutputDir = path.join(projectDir, 'claude_output');
+      if (!fs.existsSync(claudeOutputDir)) {
+        fs.mkdirSync(claudeOutputDir, { recursive: true });
+      }
+
+      // Generate timestamped log file path for this resume session
+      const logFilePath = generateLogFilePath(projectDir);
+      setCurrentLogFile(logFilePath);
+
+      // Notify caller about the new log file
+      if (onLogFileCreated) {
+        onLogFileCreated(logFilePath);
+      }
+
       // Read the resume template
       let resumeContent = '';
       if (fs.existsSync(resumeTemplate)) {
@@ -298,7 +351,7 @@ export function useRalphProcess(
       const fullPrompt = `${resumeContent.trim()}\n\n${userFeedback}`;
 
       // Inject the prompt as a user event so the TUI can display it
-      injectUserEvent(fullPrompt);
+      injectUserEvent(logFilePath, fullPrompt);
 
       // Build the claude command with --resume flag
       // Note: We run claude directly instead of through ralph.sh for resume
@@ -325,7 +378,7 @@ export function useRalphProcess(
       // Pipe output to log file
       if (child.stdout) {
         child.stdout.on('data', (data: Buffer) => {
-          fs.appendFileSync(logFile, data);
+          fs.appendFileSync(logFilePath, data);
         });
       }
 
@@ -375,7 +428,7 @@ export function useRalphProcess(
       setError(err instanceof Error ? err : new Error(String(err)));
       setIsResuming(false);
     }
-  }, [isResuming, isStarting, stop, resumeTemplate, injectUserEvent, basePath, logFile, lockFile, checkIfRunning]);
+  }, [isResuming, isStarting, stop, resumeTemplate, injectUserEvent, basePath, lockFile, checkIfRunning, projectDir, onLogFileCreated]);
 
   // Check running status on mount and periodically
   useEffect(() => {
@@ -400,6 +453,7 @@ export function useRalphProcess(
     isStopping,
     isResuming,
     error,
+    currentLogFile,
     start,
     stop,
     resume,

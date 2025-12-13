@@ -11,6 +11,7 @@ if [ -n "$CLAUDE_ENV_FILE" ]; then
   comm -13 <(echo "$ENV_BEFORE") <(echo "$ENV_AFTER") >> "$CLAUDE_ENV_FILE"
 fi
 
+# TODO RH: "prompt.md" is not right here, it needs to be either orchestrate.md or the project's execute.md
 echo -e "\n\nIMPORTANT: You MUST re-read \`./CLAUDE.md\` and \`./.ralph/prompt.md\`\n\n"
 
 exit 0

@@ -5,7 +5,6 @@ import { Command } from 'commander';
 import * as path from 'path';
 import * as fs from 'fs';
 import { App } from './app.js';
-import { archiveCurrentSession } from './lib/archive.js';
 import { runInit, formatInitOutput } from './commands/init.js';
 import { loadConfig, type CLIOptions, type RalphConfig } from './lib/config.js';
 
@@ -34,29 +33,6 @@ function findProjectRoot(): string {
   }
 
   return process.cwd();
-}
-
-// Check if Ralph is already running by looking at the lock file
-function isRalphRunning(projectRoot: string, config: RalphConfig): boolean {
-  const lockFile = path.join(projectRoot, config.process.lockPath);
-  try {
-    if (fs.existsSync(lockFile)) {
-      const pid = fs.readFileSync(lockFile, 'utf-8').trim();
-      if (pid) {
-        try {
-          // Check if process with this PID exists (signal 0 doesn't kill, just checks)
-          process.kill(parseInt(pid), 0);
-          return true;
-        } catch {
-          // Process doesn't exist, stale lock file
-          return false;
-        }
-      }
-    }
-    return false;
-  } catch {
-    return false;
-  }
 }
 
 const program = new Command();
@@ -115,51 +91,37 @@ program
       process.exit(1);
     }
 
-    // Resolve the JSONL file path from config
-    let jsonlPath = config.process.jsonlPath;
+    // Resolve the JSONL file path - sessions are now in project folders with timestamps
+    // Format: .ralph/projects/<project>/claude_output/<timestamp>.jsonl
+    let jsonlPath: string;
 
-    // If relative path, resolve from project root (not cwd)
-    if (!path.isAbsolute(jsonlPath)) {
-      jsonlPath = path.resolve(projectRoot, jsonlPath);
-    }
-
-    // Check if Ralph is already running - if so, DON'T archive or truncate!
-    // We want to reconnect to the running session with all historical messages intact.
-    const ralphAlreadyRunning = isRalphRunning(projectRoot, config);
-
-    if (!ralphAlreadyRunning) {
-      // Archive previous session if file exists with content
-      const archiveDir = path.resolve(projectRoot, config.paths.archiveDir);
-      const archiveResult = await archiveCurrentSession(jsonlPath, archiveDir);
-
-      if (archiveResult.archived) {
-        // Log to stderr so it doesn't interfere with TUI rendering
-        process.stderr.write(
-          `Archived previous session to: ${archiveResult.archivePath}\n`
-        );
-      }
-
-      if (archiveResult.error) {
-        process.stderr.write(
-          `Warning: Failed to archive previous session: ${archiveResult.error}\n`
-        );
-      }
-
-      // Ensure directory exists and create fresh JSONL file
-      const dir = path.dirname(jsonlPath);
-      if (!fs.existsSync(dir)) {
-        fs.mkdirSync(dir, { recursive: true });
-      }
-      fs.writeFileSync(jsonlPath, '', 'utf-8');
+    if (cliOptions.file) {
+      // User specified a file explicitly
+      jsonlPath = path.isAbsolute(cliOptions.file)
+        ? cliOptions.file
+        : path.resolve(projectRoot, cliOptions.file);
     } else {
-      // Ralph is running - ensure file exists but don't truncate
-      const dir = path.dirname(jsonlPath);
-      if (!fs.existsSync(dir)) {
-        fs.mkdirSync(dir, { recursive: true });
-      }
-      // Only create the file if it doesn't exist (don't truncate existing content!)
-      if (!fs.existsSync(jsonlPath)) {
-        fs.writeFileSync(jsonlPath, '', 'utf-8');
+      // Find the most recent session file in the default project's claude_output folder
+      const claudeOutputDir = path.join(projectRoot, '.ralph', 'projects', 'default', 'claude_output');
+
+      // Find all timestamped session files (if directory exists)
+      // Files are named <timestamp>.jsonl where timestamp is 14 digits (YYYYMMDDHHmmss)
+      const sessionFiles = fs.existsSync(claudeOutputDir)
+        ? fs.readdirSync(claudeOutputDir)
+            .filter(f => f.endsWith('.jsonl'))
+            .filter(f => /^(\d{14})\.jsonl$/.test(f)) // Match YYYYMMDDHHmmss.jsonl format
+            .sort()
+            .reverse() // Most recent first
+        : [];
+
+      if (sessionFiles.length > 0) {
+        // Use the most recent session
+        jsonlPath = path.join(claudeOutputDir, sessionFiles[0]!);
+      } else {
+        // No sessions exist yet - use a placeholder path
+        // The actual file will be created when Ralph starts (via use-ralph-process.ts)
+        // useJSONLStream handles non-existent files gracefully
+        jsonlPath = path.join(claudeOutputDir, 'placeholder.jsonl');
       }
     }
 
