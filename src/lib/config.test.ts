@@ -456,10 +456,11 @@ describe('config', () => {
           promptsDir: 'custom/prompts',
           planningDir: 'custom/planning',
         },
-        taskManagement: {
+        task_management: {
           provider: 'vibe-kanban',
-          autoInstall: true,
+          auto_install: true,
         },
+        variables: {},
       };
 
       expect(() => validateConfig(config)).not.toThrow();

@@ -54,10 +54,10 @@ describe('init command', () => {
 
       const content = fs.readFileSync(settingsPath, 'utf-8');
       const settings = JSON.parse(content);
-      expect(settings.taskManagement).toEqual({
+      expect(settings.task_management).toEqual({
         provider: 'github-issues',
-        providerConfig: {
-          labelFilter: 'ralph',
+        provider_config: {
+          label_filter: 'ralph',
         },
       });
       expect(settings.variables).toEqual({});
@@ -87,7 +87,7 @@ describe('init command', () => {
 
       const content = fs.readFileSync(filePath, 'utf-8');
       const settings = JSON.parse(content);
-      expect(settings.displayName).toBe('Default');
+      expect(settings.display_name).toBe('Default');
     });
 
     it('returns list of created files', () => {
@@ -298,9 +298,9 @@ describe('init command', () => {
 
       const content = fs.readFileSync(settingsPath, 'utf-8');
       const settings = JSON.parse(content);
-      expect(settings.taskManagement).toEqual({
+      expect(settings.task_management).toEqual({
         provider: 'github-issues',
-        providerConfig: { labelFilter: 'ralph' },
+        provider_config: { label_filter: 'ralph' },
       });
     });
 
@@ -327,9 +327,9 @@ describe('init command', () => {
       const content = fs.readFileSync(settingsPath, 'utf-8');
       const settings = JSON.parse(content);
       expect(settings.agent).toEqual({ type: 'codex' });
-      expect(settings.taskManagement).toEqual({
+      expect(settings.task_management).toEqual({
         provider: 'github-issues',
-        providerConfig: { labelFilter: 'ralph' },
+        provider_config: { label_filter: 'ralph' },
       });
     });
   });

@@ -1,9 +1,11 @@
 {
-    "taskManagement": {
-      "providerConfig": {
-        "labelFilter": "ralph-refine",
-        "in_progress_status": "refining"
-      }
+  "task_management": {
+    "provider_config": {
+      "label_filter": "ralph-refine"
     }
+  },
+  "variables": {
+    "in_progress_status": "Refining",
+    "complete_status": "Refined"
   }
-  
+}

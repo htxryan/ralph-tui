@@ -47,7 +47,7 @@ function loadProjectMetadata(
       const content = fs.readFileSync(settingsPath, 'utf-8');
       const settings = JSON.parse(content);
       return {
-        displayName: settings.displayName,
+        displayName: settings.display_name,
         description: settings.description,
       };
     }

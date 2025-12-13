@@ -147,8 +147,8 @@ function determineProvider(projectRoot: string, options: InitOptions): TaskProvi
     if (fs.existsSync(settingsPath)) {
       const content = fs.readFileSync(settingsPath, 'utf-8');
       const settings = JSON.parse(content);
-      if (settings.taskManagement?.provider && VALID_TASK_PROVIDERS.includes(settings.taskManagement.provider)) {
-        return settings.taskManagement.provider as TaskProvider;
+      if (settings.task_management?.provider && VALID_TASK_PROVIDERS.includes(settings.task_management.provider)) {
+        return settings.task_management.provider as TaskProvider;
       }
     }
   } catch {
@@ -175,10 +175,10 @@ function getFilesToCreate(projectRoot: string, options: InitOptions): FileToCrea
     settingsObj.agent = { type: options.agent };
   }
 
-  // Always include taskManagement config with the determined provider
-  settingsObj.taskManagement = {
+  // Always include task_management config with the determined provider
+  settingsObj.task_management = {
     provider: provider,
-    ...(provider === 'github-issues' ? { providerConfig: { labelFilter: 'ralph' } } : {}),
+    ...(provider === 'github-issues' ? { provider_config: { label_filter: 'ralph' } } : {}),
   };
 
   // Add empty variables object for user customization

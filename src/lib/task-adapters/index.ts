@@ -11,7 +11,7 @@
  *
  *   const config: TaskManagementConfig = {
  *     provider: 'vibe-kanban',
- *     autoInstall: true,
+ *     auto_install: true,
  *   };
  *
  *   const { adapter, error } = await createTaskAdapter(config);

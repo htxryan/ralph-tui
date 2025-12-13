@@ -94,7 +94,7 @@ export interface RalphConfig {
   /** Directory paths */
   paths: PathsConfig;
   /** Task management configuration */
-  taskManagement: TaskManagementConfig;
+  task_management: TaskManagementConfig;
   /** Template variables for runtime substitution */
   variables: Record<string, string>;
 }
@@ -107,7 +107,7 @@ export type PartialRalphConfig = {
   display?: Partial<DisplayConfig>;
   process?: Partial<ProcessConfig>;
   paths?: Partial<PathsConfig>;
-  taskManagement?: Partial<TaskManagementConfig>;
+  task_management?: Partial<TaskManagementConfig>;
   /** Template variables for runtime substitution */
   variables?: Record<string, string>;
 };
@@ -117,11 +117,11 @@ export type PartialRalphConfig = {
  */
 export interface ProjectConfig {
   /** Human-readable project name */
-  displayName?: string;
+  display_name?: string;
   /** Project description */
   description?: string;
   /** Task management overrides for this project */
-  taskManagement?: Partial<TaskManagementConfig>;
+  task_management?: Partial<TaskManagementConfig>;
   /** Template variables specific to this project */
   variables?: Record<string, string>;
 }
@@ -189,7 +189,7 @@ export const DEFAULT_CONFIG: RalphConfig = {
     promptsDir: '.ralph/prompts',
     planningDir: '.ralph/planning',
   },
-  taskManagement: DEFAULT_TASK_MANAGEMENT_CONFIG,
+  task_management: DEFAULT_TASK_MANAGEMENT_CONFIG,
   variables: {},
 };
 
@@ -477,19 +477,19 @@ export function validateConfig(config: RalphConfig): void {
     );
   }
 
-  // Validate taskManagement config
-  if (!VALID_TASK_PROVIDERS.includes(config.taskManagement.provider)) {
+  // Validate task_management config
+  if (!VALID_TASK_PROVIDERS.includes(config.task_management.provider)) {
     throw new ConfigValidationError(
-      'taskManagement.provider',
-      config.taskManagement.provider,
+      'task_management.provider',
+      config.task_management.provider,
       `must be one of: ${VALID_TASK_PROVIDERS.join(', ')}`
     );
   }
 
-  if (typeof config.taskManagement.autoInstall !== 'boolean') {
+  if (typeof config.task_management.auto_install !== 'boolean') {
     throw new ConfigValidationError(
-      'taskManagement.autoInstall',
-      config.taskManagement.autoInstall,
+      'task_management.auto_install',
+      config.task_management.auto_install,
       'must be a boolean'
     );
   }

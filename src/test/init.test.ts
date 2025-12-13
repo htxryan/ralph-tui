@@ -360,9 +360,9 @@ describe('init integration', () => {
 
       const configResult = loadConfigFile(getProjectConfigPath(tempDir));
       expect(configResult.loaded).toBe(true);
-      expect(configResult.config.taskManagement).toEqual({
+      expect(configResult.config.task_management).toEqual({
         provider: 'github-issues',
-        providerConfig: { labelFilter: 'ralph' },
+        provider_config: { label_filter: 'ralph' },
       });
     });
 
@@ -394,9 +394,9 @@ describe('init integration', () => {
 
       // Verify content was overwritten with default task management
       const content = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'));
-      expect(content.taskManagement).toEqual({
+      expect(content.task_management).toEqual({
         provider: 'github-issues',
-        providerConfig: { labelFilter: 'ralph' },
+        provider_config: { label_filter: 'ralph' },
       });
     });
 

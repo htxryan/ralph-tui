@@ -1,8 +1,8 @@
 {
-  "taskManagement": {
+  "task_management": {
     "provider": "github-issues",
-    "providerConfig": {
-      "labelFilter": "ralph",
+    "provider_config": {
+      "label_filter": "ralph",
       "in_progress_status": "in-progress"
     }
   },

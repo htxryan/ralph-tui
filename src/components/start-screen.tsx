@@ -61,12 +61,12 @@ function getTaskManagerInfo(config?: TaskManagementConfig): string | null {
   if (!config) return null;
 
   const providerName = getProviderDisplayName(config.provider);
-  const providerConfig = config.providerConfig;
+  const providerConfig = config.provider_config;
 
   switch (config.provider) {
     case 'github-issues': {
-      const repo = providerConfig?.githubRepo;
-      const label = providerConfig?.labelFilter;
+      const repo = providerConfig?.github_repo;
+      const label = providerConfig?.label_filter;
       if (repo) {
         const labelInfo = label ? ` (label: ${label})` : '';
         return `${providerName}: ${repo}${labelInfo}`;
@@ -75,22 +75,22 @@ function getTaskManagerInfo(config?: TaskManagementConfig): string | null {
       return `${providerName}${labelInfo}`;
     }
     case 'vibe-kanban': {
-      const projectId = providerConfig?.vibeKanbanProjectId;
+      const projectId = providerConfig?.vibe_kanban_project_id;
       if (projectId) {
         return `${providerName}: ${projectId}`;
       }
       return `${providerName} (auto-detect project)`;
     }
     case 'jira': {
-      const host = providerConfig?.jiraHost;
-      const project = providerConfig?.jiraProject;
+      const host = providerConfig?.jira_host;
+      const project = providerConfig?.jira_project;
       if (host && project) {
         return `${providerName}: ${project} @ ${host}`;
       }
       return providerName;
     }
     case 'linear': {
-      const team = providerConfig?.linearTeam;
+      const team = providerConfig?.linear_team;
       if (team) {
         return `${providerName}: ${team}`;
       }

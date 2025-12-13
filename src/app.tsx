@@ -123,7 +123,7 @@ export function App({
     refresh: refreshTask,
   } = useTask({
     taskId: effectiveTaskId,
-    taskConfig: currentConfig?.taskManagement,
+    taskConfig: currentConfig?.task_management,
   });
 
   const {
@@ -604,7 +604,7 @@ export function App({
             <StartScreen
               height={contentHeight}
               width={terminalColumns}
-              taskConfig={currentConfig?.taskManagement}
+              taskConfig={currentConfig?.task_management}
               activeProject={activeProject}
             />
           );

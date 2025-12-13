@@ -114,31 +114,31 @@ describe('use-projects', () => {
   describe('settings.json parsing logic', () => {
     it('parses valid settings.json with all fields', () => {
       const settingsContent = JSON.stringify({
-        displayName: 'My Project',
+        display_name: 'My Project',
         description: 'A test project',
         variables: { target_branch: 'main' },
       });
 
       const parsed = JSON.parse(settingsContent);
-      expect(parsed.displayName).toBe('My Project');
+      expect(parsed.display_name).toBe('My Project');
       expect(parsed.description).toBe('A test project');
       expect(parsed.variables).toEqual({ target_branch: 'main' });
     });
 
-    it('handles settings.json with only displayName', () => {
+    it('handles settings.json with only display_name', () => {
       const settingsContent = JSON.stringify({
-        displayName: 'Simple Project',
+        display_name: 'Simple Project',
       });
 
       const parsed = JSON.parse(settingsContent);
-      expect(parsed.displayName).toBe('Simple Project');
+      expect(parsed.display_name).toBe('Simple Project');
       expect(parsed.description).toBeUndefined();
     });
 
     it('handles empty settings.json', () => {
       const settingsContent = JSON.stringify({});
       const parsed = JSON.parse(settingsContent);
-      expect(parsed.displayName).toBeUndefined();
+      expect(parsed.display_name).toBeUndefined();
       expect(parsed.description).toBeUndefined();
     });
 

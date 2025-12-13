@@ -60,8 +60,8 @@ export class VibeKanbanAdapter extends BaseTaskAdapter {
     this.baseUrl = `http://localhost:${port}`;
 
     // Get project ID from config if provided
-    if (config.providerConfig?.vibeKanbanProjectId) {
-      this.projectId = config.providerConfig.vibeKanbanProjectId;
+    if (config.provider_config?.vibe_kanban_project_id) {
+      this.projectId = config.provider_config.vibe_kanban_project_id;
     }
   }
 
